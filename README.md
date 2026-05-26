@@ -34,6 +34,14 @@ data/audit_bundles/
 
 The prototype uses `v1`, `v2`, `v3` style versions and SHA-256 hashes over canonical JSON snapshots.
 
+Release records are stored as JSON files in:
+
+```text
+data/releases/
+```
+
+Release statuses are `PENDING_OPERATOR_DECISION`, `RELEASED`, `REJECTED_BY_OPERATOR`, `NEEDS_REVISION`, and `FAILED_STALE_VERSION`.
+
 ## API
 
 Start the FastAPI app:
@@ -48,6 +56,9 @@ Endpoints:
 - `POST /patch/apply` validates and applies an Intent Patch. It always writes an Audit Bundle. Accepted patches write exactly one new TRT version.
 - `GET /intent/context` returns the current TRT plus enum/path context, `llm_candidate_generation_schema`, and `intent_patch_internal_schema`.
 - `POST /intent/normalize` converts a domain-level candidate from vLLM into a full Intent Patch.
+- `POST /release/prepare` stores a reviewed candidate patch as a pending release record without applying it.
+- `POST /release/decision` records `APPROVE`, `REJECT`, or `REQUEST_REVISION`; approval delegates to existing patch application.
+- `GET /release/{release_id}` returns the persisted release record.
 - `GET /trt/current` returns the latest TRT. Optional query parameter: `trt_id`.
 - `GET /audit/{audit_id}` returns an Audit Bundle.
 

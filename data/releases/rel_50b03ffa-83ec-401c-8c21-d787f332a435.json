@@ -1,0 +1,50 @@
+{
+  "audit_id": "audit-95c6c373-beb8-4588-aafd-b8443b769507",
+  "base_version": "v2",
+  "candidate_patch": {
+    "base_version": "v2",
+    "intent_text": "Make Line 1 prioritize Trauma Set.",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_1/priority",
+        "value": 4
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "patch_test_001",
+    "reason": "Trauma Set deadline is urgent.",
+    "status": "REVIEWED",
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [
+      "/lines/line_1/priority"
+    ],
+    "affected_lines": [
+      "line_1"
+    ],
+    "intent_text": "Make Line 1 prioritize Trauma Set.",
+    "reason": "Trauma Set deadline is urgent."
+  },
+  "created_at_utc": "2026-05-26T06:21:03.620065Z",
+  "operator_decision": {
+    "comment": "Approved after review.",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-05-26T06:24:51.273563Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch_test_001",
+  "release_id": "rel_50b03ffa-83ec-401c-8c21-d787f332a435",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "updated_at_utc": "2026-05-26T06:24:51.273563Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

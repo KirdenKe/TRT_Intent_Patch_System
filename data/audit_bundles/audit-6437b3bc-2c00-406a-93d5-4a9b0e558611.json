@@ -1,0 +1,33 @@
+{
+  "audit_id": "audit-6437b3bc-2c00-406a-93d5-4a9b0e558611",
+  "intent_text": "Make Line 1 prioritize Trauma Set.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/priority",
+      "value": 4
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch_test_001",
+  "reason": "Trauma Set deadline is urgent.",
+  "rejection_reasons": [
+    "Rejected for test."
+  ],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "REJECTED_BY_OPERATOR",
+  "timestamp_utc": "2026-05-26T06:28:52.432065Z",
+  "trt_after_hash": null,
+  "trt_after_version": null,
+  "trt_before_hash": "2ba67a65139b921d9b5392be5b07e1870fc2eb7e6f372dc5a0937fc5b5858f7f",
+  "trt_before_version": "v2",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

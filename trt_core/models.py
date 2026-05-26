@@ -10,7 +10,7 @@ Goal = Literal["ROUTINE_CLASSIFICATION", "TRAUMA_SET_PRIORITY", "BACKLOG_CLEARIN
 AbnormalStrategy = Literal["STOP_LINE", "CONTINUE_FEASIBLE_TASKS", "ASK_OPERATOR"]
 LineMode = Literal["IDLE", "RUNNING", "INTERVENTION", "PAUSED", "ERROR"]
 PatchStatus = Literal["DRAFT", "REVIEWED", "VALIDATED", "RELEASED", "REJECTED"]
-AuditStatus = Literal["ACCEPTED", "REJECTED"]
+AuditStatus = Literal["ACCEPTED", "REJECTED", "REJECTED_BY_OPERATOR", "NEEDS_REVISION"]
 
 
 class KPI(TypedDict):
@@ -86,4 +86,3 @@ class AuditBundle(TypedDict, total=False):
     reason: str
     scenario_spec_id: None
     run_artifact_id: None
-

@@ -35,7 +35,7 @@ def build_audit_bundle(
         "trt_id": intent_patch.get("trt_id", trt_before.get("trt_id", "")),
         "operator_id": intent_patch.get("operator_id", ""),
         "timestamp_utc": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
-        "status": "ACCEPTED" if accepted else "REJECTED",
+        "status": status if status in {"ACCEPTED", "REJECTED", "REJECTED_BY_OPERATOR", "NEEDS_REVISION"} else "REJECTED",
         "trt_before_version": trt_before.get("version", ""),
         "trt_after_version": trt_after.get("version") if trt_after is not None else None,
         "trt_before_hash": sha256_document(dict(trt_before)),
@@ -48,4 +48,3 @@ def build_audit_bundle(
         "scenario_spec_id": None,
         "run_artifact_id": None,
     }
-

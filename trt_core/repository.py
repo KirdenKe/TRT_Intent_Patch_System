@@ -18,14 +18,19 @@ class TRTRepository:
         self.root = Path(root) if root is not None else PROJECT_ROOT
         self.trt_dir = self.root / "data" / "trt_versions"
         self.audit_dir = self.root / "data" / "audit_bundles"
+        self.release_dir = self.root / "data" / "releases"
         self.trt_dir.mkdir(parents=True, exist_ok=True)
         self.audit_dir.mkdir(parents=True, exist_ok=True)
+        self.release_dir.mkdir(parents=True, exist_ok=True)
 
     def _trt_path(self, trt_id: str, version: str) -> Path:
         return self.trt_dir / f"{trt_id}_{version}.json"
 
     def _audit_path(self, audit_id: str) -> Path:
         return self.audit_dir / f"{audit_id}.json"
+
+    def _release_path(self, release_id: str) -> Path:
+        return self.release_dir / f"{release_id}.json"
 
     @staticmethod
     def _version_number(version: str) -> int:
@@ -81,3 +86,13 @@ class TRTRepository:
             raise RepositoryError(f"Audit bundle not found: {audit_id}")
         return json.loads(path.read_text(encoding="utf-8"))
 
+    def save_release_record(self, release_record: dict[str, Any]) -> Path:
+        path = self._release_path(str(release_record["release_id"]))
+        path.write_text(json.dumps(release_record, indent=2, sort_keys=True, ensure_ascii=False), encoding="utf-8")
+        return path
+
+    def load_release_record(self, release_id: str) -> dict[str, Any]:
+        path = self._release_path(release_id)
+        if not path.exists():
+            raise RepositoryError(f"Release record not found: {release_id}")
+        return json.loads(path.read_text(encoding="utf-8"))

@@ -48,6 +48,10 @@ def validate_audit_bundle_schema(audit_bundle: dict[str, Any]) -> list[str]:
     return schema_errors(audit_bundle, "audit_bundle.schema.json")
 
 
+def validate_release_record_schema(release_record: dict[str, Any]) -> list[str]:
+    return schema_errors(release_record, "release_record.schema.json")
+
+
 def _decode_pointer(path: str) -> list[str]:
     if path == "":
         return []
@@ -108,4 +112,3 @@ def validate_firewall(intent_patch: IntentPatch | dict[str, Any], current_trt: T
             reasons.append(f"operation {index} attempts to patch read-only state path: {path}")
 
     return results, reasons
-

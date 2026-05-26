@@ -29,7 +29,7 @@
     "trt_id": { "type": "string" },
     "operator_id": { "type": "string" },
     "timestamp_utc": { "type": "string" },
-    "status": { "enum": ["ACCEPTED", "REJECTED"] },
+    "status": { "enum": ["ACCEPTED", "REJECTED", "REJECTED_BY_OPERATOR", "NEEDS_REVISION"] },
     "trt_before_version": { "type": "string" },
     "trt_after_version": { "type": ["string", "null"] },
     "trt_before_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
@@ -57,4 +57,3 @@
     "run_artifact_id": { "type": "null" }
   }
 }
-

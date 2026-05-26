@@ -1,0 +1,32 @@
+{
+  "operator_id": "op_001",
+  "candidate_patch": {
+    "patch_id": "patch_test_001",
+    "trt_id": "trt-demo",
+    "base_version": "v2",
+    "operator_id": "op_001",
+    "intent_text": "Make Line 1 prioritize Trauma Set.",
+    "reason": "Trauma Set deadline is urgent.",
+    "status": "REVIEWED",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_1/priority",
+        "value": 4
+      }
+    ]
+  },
+  "candidate_summary": {
+    "intent_text": "Make Line 1 prioritize Trauma Set.",
+    "reason": "Trauma Set deadline is urgent.",
+    "affected_lines": ["line_1"],
+    "affected_fields": ["/lines/line_1/priority"]
+  },
+  "validation_results": {
+    "schema": "PASS",
+    "path_whitelist": "PASS",
+    "readonly": "PASS",
+    "base_version": "PASS",
+    "semantic": "PASS"
+  }
+}

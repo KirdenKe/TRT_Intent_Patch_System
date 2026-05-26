@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/release_record.schema.json",
+  "title": "Release Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "release_id",
+    "patch_id",
+    "trt_id",
+    "base_version",
+    "operator_id",
+    "candidate_patch",
+    "candidate_summary",
+    "validation_results_at_prepare",
+    "status",
+    "operator_decision",
+    "audit_id",
+    "created_at_utc",
+    "updated_at_utc"
+  ],
+  "properties": {
+    "release_id": { "type": "string", "pattern": "^rel_" },
+    "patch_id": { "type": "string" },
+    "trt_id": { "type": "string" },
+    "base_version": { "type": "string", "pattern": "^v[0-9]+$" },
+    "operator_id": { "type": "string" },
+    "candidate_patch": { "type": "object" },
+    "candidate_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["intent_text", "reason", "affected_lines", "affected_fields"],
+      "properties": {
+        "intent_text": { "type": "string" },
+        "reason": { "type": "string" },
+        "affected_lines": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "affected_fields": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "validation_results_at_prepare": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "path_whitelist", "readonly", "base_version", "semantic"],
+      "properties": {
+        "schema": { "type": "boolean" },
+        "path_whitelist": { "type": "boolean" },
+        "readonly": { "type": "boolean" },
+        "base_version": { "type": "boolean" },
+        "semantic": { "type": "boolean" }
+      }
+    },
+    "status": {
+      "enum": [
+        "PENDING_OPERATOR_DECISION",
+        "RELEASED",
+        "REJECTED_BY_OPERATOR",
+        "NEEDS_REVISION",
+        "FAILED_STALE_VERSION"
+      ]
+    },
+    "operator_decision": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["decision", "operator_id", "comment", "timestamp_utc"],
+          "properties": {
+            "decision": { "enum": ["APPROVE", "REJECT", "REQUEST_REVISION"] },
+            "operator_id": { "type": "string" },
+            "comment": { "type": "string" },
+            "timestamp_utc": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "audit_id": { "type": ["string", "null"] },
+    "created_at_utc": { "type": "string" },
+    "updated_at_utc": { "type": "string" }
+  }
+}

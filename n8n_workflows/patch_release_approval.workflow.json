@@ -1,0 +1,389 @@
+{
+  "id": "PatchReleaseApprovalDemo",
+  "name": "Patch Release Approval Orchestration",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "patch-release-approval",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "d6f9c5db-8c61-4f2b-b4ea-ff6955bce8f3",
+      "name": "Receive Reviewed Candidate Patch",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "patch-release-approval-demo"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/release/prepare",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body.candidate_patch || $json.body }}",
+        "options": {}
+      },
+      "id": "b912cc8d-5e9a-43b9-97fd-db8f199fed32",
+      "name": "Prepare Pending Release",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { release_id: $json.release_id, status: 'PENDING_OPERATOR_DECISION', approval_url: $execution.resumeUrl || null } }}",
+        "options": {}
+      },
+      "id": "608f5684-76bd-4fdd-8168-c4d5298e3e1c",
+      "name": "Return Pending Release",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "httpMethod": "POST",
+        "options": {}
+      },
+      "id": "89d79fb6-c6bd-4ed5-8e64-2d60227e68e9",
+      "name": "Wait for Operator Decision",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        780,
+        0
+      ],
+      "notes": "Resume with JSON fields: decision, comment, operator_id. The release_id comes from the prepared release record."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/release/decision",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { release_id: $('Prepare Pending Release').item.json.release_id, operator_id: $json.body.operator_id || $('Receive Reviewed Candidate Patch').item.json.body.operator_id || $('Receive Reviewed Candidate Patch').item.json.body.candidate_patch?.operator_id, decision: $json.body.decision, comment: $json.body.comment || '' } }}",
+        "options": {}
+      },
+      "id": "df8f9193-c863-404c-b61f-5e8b5521a320",
+      "name": "Record Release Decision",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f93b4e74-1030-4bcf-a330-6b284eea5248",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "RELEASED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d91617d5-04de-4df5-a2c0-306effd7d1b3",
+      "name": "Released?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1300,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "33e0b37a-a5e5-4535-bb58-86cd92c5b7ed",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "REJECTED_BY_OPERATOR",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9c15c538-1cb3-486d-968e-83c5504d1e31",
+      "name": "Rejected?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1560,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=http://host.docker.internal:8000/audit/{{ $json.audit_id }}",
+        "options": {}
+      },
+      "id": "44809c0f-b883-4871-8e93-c4e8737e4338",
+      "name": "Fetch Release Audit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dd35b958-21b2-4718-a91a-94ec19f4e4d9",
+              "name": "status",
+              "value": "RELEASED",
+              "type": "string"
+            },
+            {
+              "id": "e3f61c09-4870-480f-8d30-91c4c1efbdbd",
+              "name": "trt_after_version",
+              "value": "={{ $json.trt_after_version }}",
+              "type": "string"
+            },
+            {
+              "id": "b38df379-e704-4933-af63-cb976d8e9f97",
+              "name": "audit_id",
+              "value": "={{ $json.audit_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e2a4ce8a-a831-4734-afc3-fe4b7a165886",
+      "name": "Released Notification Output",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1820,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ec1cd4b6-b41e-494f-9318-5e5963af4e91",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "14eae5e9-63fd-41d0-916c-07aa790482a0",
+              "name": "audit_id",
+              "value": "={{ $json.audit_id }}",
+              "type": "string"
+            },
+            {
+              "id": "f79972c0-a503-48d4-82c2-4bf56bba2d73",
+              "name": "comment",
+              "value": "={{ $json.operator_decision.comment }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f178318d-5aac-4521-ad9e-7996f0814e9e",
+      "name": "Rejected Notification Output",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1820,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "81a22d62-d992-4bd8-bc91-bb8f6522802c",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "688d66c5-2ff0-4bb1-8739-533f73ca5a78",
+              "name": "comment",
+              "value": "={{ $json.operator_decision.comment }}",
+              "type": "string"
+            },
+            {
+              "id": "c8b472db-2414-4421-ad7c-b98a97a54b85",
+              "name": "instruction",
+              "value": "Revise the operator intent and generate a new reviewed candidate patch.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ad05b8a8-f420-458a-9973-e2c0e39f86e1",
+      "name": "Revision Notification Output",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1820,
+        220
+      ]
+    }
+  ],
+  "connections": {
+    "Receive Reviewed Candidate Patch": {
+      "main": [
+        [
+          {
+            "node": "Prepare Pending Release",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Pending Release": {
+      "main": [
+        [
+          {
+            "node": "Return Pending Release",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return Pending Release": {
+      "main": [
+        [
+          {
+            "node": "Wait for Operator Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Operator Decision": {
+      "main": [
+        [
+          {
+            "node": "Record Release Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Release Decision": {
+      "main": [
+        [
+          {
+            "node": "Released?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Released?": {
+      "main": [
+        [
+          {
+            "node": "Fetch Release Audit",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Rejected?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Release Audit": {
+      "main": [
+        [
+          {
+            "node": "Released Notification Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rejected?": {
+      "main": [
+        [
+          {
+            "node": "Rejected Notification Output",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Revision Notification Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "bc07e861-4578-4ae1-b0da-84ee68c75716",
+  "triggerCount": 0,
+  "tags": []
+}

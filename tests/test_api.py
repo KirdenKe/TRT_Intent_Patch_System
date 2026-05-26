@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 import trt_core.api as api
 from trt_core.repository import TRTRepository
+from trt_core.validator import validate_release_record_schema
 
 
 def make_client(tmp_path, fixture_loader) -> TestClient:
@@ -224,3 +225,220 @@ def test_normalized_patch_passes_patch_validate(tmp_path, fixture_loader):
     assert normalize_response.status_code == 200
     assert validate_response.status_code == 200
     assert validate_response.json()["status"] == "ACCEPTED"
+
+
+def prepare_release(client: TestClient, valid_patch: dict) -> dict:
+    response = client.post("/release/prepare", json=valid_patch)
+    assert response.status_code == 200
+    return response.json()
+
+
+def test_prepare_release_valid_patch_creates_pending_release_without_applying(tmp_path, fixture_loader, valid_patch):
+    client = make_client(tmp_path, fixture_loader)
+
+    prepared = prepare_release(client, valid_patch)
+    release = client.get(f"/release/{prepared['release_id']}").json()
+
+    assert prepared["status"] == "PENDING_OPERATOR_DECISION"
+    assert prepared["patch_id"] == valid_patch["patch_id"]
+    assert prepared["current_trt_version"] == "v1"
+    assert prepared["validation_results"]["semantic"] is True
+    assert prepared["release_id"].startswith("rel_")
+    assert release["candidate_patch"]["patch_id"] == valid_patch["patch_id"]
+    assert release["release_id"] == prepared["release_id"]
+    assert release["base_version"] == "v1"
+    assert release["candidate_summary"]["affected_lines"] == ["line_1"]
+    assert release["candidate_summary"]["affected_fields"] == [
+        "/lines/line_1/goal",
+        "/lines/line_1/priority",
+        "/lines/line_1/kpi/deadline_minutes",
+    ]
+    assert release["validation_results_at_prepare"]["semantic"] is True
+    assert release["operator_decision"] is None
+    assert validate_release_record_schema(release) == []
+    assert (api.repository.release_dir / f"{prepared['release_id']}.json").exists()
+    assert api.repository.get_current_trt("trt-demo")["version"] == "v1"
+    assert list(api.repository.audit_dir.glob("*.json")) == []
+
+
+def test_approve_release_applies_patch_and_marks_released(tmp_path, fixture_loader, valid_patch):
+    client = make_client(tmp_path, fixture_loader)
+    prepared = prepare_release(client, valid_patch)
+
+    response = client.post(
+        "/release/decision",
+        json={
+            "release_id": prepared["release_id"],
+            "operator_id": "op_001",
+            "decision": "APPROVE",
+            "comment": "Approved for release.",
+        },
+    )
+    body = response.json()
+    audit = api.repository.load_audit_bundle(body["audit_id"])
+
+    assert response.status_code == 200
+    assert body["status"] == "RELEASED"
+    assert body["operator_decision"]["decision"] == "APPROVE"
+    assert body["operator_decision"]["comment"] == "Approved for release."
+    assert validate_release_record_schema(body) == []
+    assert api.repository.get_current_trt("trt-demo")["version"] == "v2"
+    assert audit["status"] in {"ACCEPTED", "RELEASED"}
+
+
+def test_reject_release_is_auditable_without_applying(tmp_path, fixture_loader, valid_patch):
+    client = make_client(tmp_path, fixture_loader)
+    prepared = prepare_release(client, valid_patch)
+
+    response = client.post(
+        "/release/decision",
+        json={
+            "release_id": prepared["release_id"],
+            "operator_id": "op_001",
+            "decision": "REJECT",
+            "comment": "Do not release during shift change.",
+        },
+    )
+    body = response.json()
+    audit = api.repository.load_audit_bundle(body["audit_id"])
+
+    assert response.status_code == 200
+    assert body["status"] == "REJECTED_BY_OPERATOR"
+    assert body["operator_decision"]["decision"] == "REJECT"
+    assert body["operator_decision"]["comment"] == "Do not release during shift change."
+    assert validate_release_record_schema(body) == []
+    assert api.repository.get_current_trt("trt-demo")["version"] == "v1"
+    assert audit["status"] == "REJECTED_BY_OPERATOR"
+    assert audit["operator_id"] == "op_001"
+    assert audit["trt_after_version"] is None
+    assert audit["rejection_reasons"] == ["Do not release during shift change."]
+
+
+def test_request_revision_is_auditable_without_applying(tmp_path, fixture_loader, valid_patch):
+    client = make_client(tmp_path, fixture_loader)
+    prepared = prepare_release(client, valid_patch)
+
+    response = client.post(
+        "/release/decision",
+        json={
+            "release_id": prepared["release_id"],
+            "operator_id": "op_001",
+            "decision": "REQUEST_REVISION",
+            "comment": "Add more operator rationale.",
+        },
+    )
+    body = response.json()
+    audit = api.repository.load_audit_bundle(body["audit_id"])
+
+    assert response.status_code == 200
+    assert body["status"] == "NEEDS_REVISION"
+    assert body["operator_decision"]["decision"] == "REQUEST_REVISION"
+    assert body["operator_decision"]["comment"] == "Add more operator rationale."
+    assert validate_release_record_schema(body) == []
+    assert api.repository.get_current_trt("trt-demo")["version"] == "v1"
+    assert audit["status"] == "NEEDS_REVISION"
+    assert audit["operator_id"] == "op_001"
+    assert audit["rejection_reasons"] == ["Add more operator rationale."]
+
+
+def test_stale_release_approval_rejects_stale_base_version_without_overwrite(tmp_path, fixture_loader, valid_patch):
+    client = make_client(tmp_path, fixture_loader)
+    prepared = prepare_release(client, valid_patch)
+
+    other_patch = deepcopy(valid_patch)
+    other_patch["patch_id"] = "patch-advance-version"
+    applied = client.post("/patch/apply", json=other_patch)
+    response = client.post(
+        "/release/decision",
+        json={
+            "release_id": prepared["release_id"],
+            "operator_id": "op_001",
+            "decision": "APPROVE",
+            "comment": "Approve stale candidate.",
+        },
+    )
+    body = response.json()
+    audit = api.repository.load_audit_bundle(body["audit_id"])
+
+    assert applied.json()["status"] == "ACCEPTED"
+    assert response.status_code == 200
+    assert body["status"] == "FAILED_STALE_VERSION"
+    assert validate_release_record_schema(body) == []
+    assert api.repository.get_current_trt("trt-demo")["version"] == "v2"
+    assert audit["status"] == "REJECTED"
+
+
+def test_double_approval_blocked_for_released_release(tmp_path, fixture_loader, valid_patch):
+    client = make_client(tmp_path, fixture_loader)
+    prepared = prepare_release(client, valid_patch)
+    first = client.post(
+        "/release/decision",
+        json={
+            "release_id": prepared["release_id"],
+            "operator_id": "op_001",
+            "decision": "APPROVE",
+            "comment": "Approved once.",
+        },
+    )
+
+    second_approve = client.post(
+        "/release/decision",
+        json={
+            "release_id": prepared["release_id"],
+            "operator_id": "op_001",
+            "decision": "APPROVE",
+            "comment": "Approve again.",
+        },
+    )
+    reject_after_release = client.post(
+        "/release/decision",
+        json={
+            "release_id": prepared["release_id"],
+            "operator_id": "op_001",
+            "decision": "REJECT",
+            "comment": "Reject after release.",
+        },
+    )
+
+    assert first.status_code == 200
+    assert first.json()["status"] == "RELEASED"
+    assert second_approve.status_code == 400
+    assert "not pending" in second_approve.json()["detail"]
+    assert reject_after_release.status_code == 400
+    assert "not pending" in reject_after_release.json()["detail"]
+    assert api.repository.get_current_trt("trt-demo")["version"] == "v2"
+
+
+def test_unknown_release_id_is_rejected(tmp_path, fixture_loader):
+    client = make_client(tmp_path, fixture_loader)
+
+    response = client.post(
+        "/release/decision",
+        json={
+            "release_id": "rel_missing",
+            "operator_id": "op_001",
+            "decision": "APPROVE",
+            "comment": "Unknown release.",
+        },
+    )
+
+    assert response.status_code == 404
+    assert "Release record not found" in response.json()["detail"]
+
+
+def test_invalid_release_decision_is_rejected(tmp_path, fixture_loader, valid_patch):
+    client = make_client(tmp_path, fixture_loader)
+    prepared = prepare_release(client, valid_patch)
+
+    response = client.post(
+        "/release/decision",
+        json={
+            "release_id": prepared["release_id"],
+            "operator_id": "op_001",
+            "decision": "MAYBE",
+            "comment": "Invalid decision.",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "Unsupported release decision" in response.json()["detail"]

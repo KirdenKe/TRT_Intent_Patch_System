@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException
 from trt_core.errors import RepositoryError
 from trt_core.intent_normalizer import DOMAIN_CANDIDATE_SCHEMA, LLM_EXTRACTED_FIELDS_SCHEMA, normalize_domain_candidate
 from trt_core.patch_apply import apply_intent_patch, validate_intent_patch
+from trt_core.release import prepare_release, record_release_decision
 from trt_core.repository import TRTRepository
 from trt_core.validator import SUPPORTED_OPERATIONS
 
@@ -179,3 +180,44 @@ def post_intent_normalize(candidate: dict[str, Any]) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/release/prepare")
+def post_release_prepare(intent_patch: dict[str, Any]) -> dict[str, Any]:
+    try:
+        release_record = prepare_release(intent_patch, repository)
+        current_trt = repository.get_current_trt(intent_patch.get("trt_id"))
+        return {
+            "release_id": release_record["release_id"],
+            "patch_id": release_record["patch_id"],
+            "current_trt_version": current_trt["version"],
+            "candidate_summary": release_record["candidate_summary"],
+            "validation_results": release_record["validation_results_at_prepare"],
+            "status": release_record["status"],
+        }
+    except RepositoryError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/release/decision")
+def post_release_decision(decision_request: dict[str, Any]) -> dict[str, Any]:
+    required = {"release_id", "operator_id", "decision", "comment"}
+    missing = sorted(required - set(decision_request))
+    if missing:
+        raise HTTPException(status_code=400, detail=f"Missing release decision fields: {', '.join(missing)}")
+    if decision_request["decision"] not in {"APPROVE", "REJECT", "REQUEST_REVISION"}:
+        raise HTTPException(status_code=400, detail=f"Unsupported release decision: {decision_request['decision']}")
+    try:
+        return record_release_decision(decision_request, repository)
+    except RepositoryError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/release/{release_id}")
+def get_release(release_id: str) -> dict[str, Any]:
+    try:
+        return repository.load_release_record(release_id)
+    except RepositoryError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
