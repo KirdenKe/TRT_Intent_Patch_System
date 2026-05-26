@@ -1,0 +1,16 @@
+{
+  "patch_id": "patch-semantic-001",
+  "trt_id": "trt-demo",
+  "base_version": "v1",
+  "operator_id": "operator-a",
+  "intent_text": "Allow clamps on line A.",
+  "reason": "Creates allowed/excluded overlap.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/allowed_instruments",
+      "value": ["SCISSORS", "CLAMPS"]
+    }
+  ],
+  "status": "REVIEWED"
+}

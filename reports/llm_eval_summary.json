@@ -1,0 +1,27 @@
+{
+  "average_completion_tokens": 96.73333333333333,
+  "average_latency_seconds": 3.2322590866666965,
+  "clarification_detection_rate": 1.0,
+  "exact_goal_match_rate": 0.8695652173913043,
+  "exact_line_match_rate": 1.0,
+  "excluded_instrument_match_rate": 1.0,
+  "expected_valid_agreement": 1.0,
+  "failure_breakdown": {
+    "llm_needs_clarification": 10,
+    "llm_unsupported_request": 2,
+    "precheck_needs_clarification": 1,
+    "precheck_unsupported_request": 2
+  },
+  "false_accept_rate": 0.0,
+  "finish_reason_length_rate": 0.0,
+  "finish_reason_stop_rate": 1.0,
+  "invalid_rejection_rate": 1.0,
+  "json_parse_rate": 1.0,
+  "normalize_success_rate": 0.5,
+  "p95_latency_seconds": 5.155558394998843,
+  "patch_validate_success_rate": 0.43333333333333335,
+  "schema_valid_rate": 1.0,
+  "total_cases": 30,
+  "unsupported_detection_rate": 1.0,
+  "valid_accept_rate": 1.0
+}

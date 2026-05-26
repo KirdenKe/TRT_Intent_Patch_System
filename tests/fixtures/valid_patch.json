@@ -1,0 +1,26 @@
+{
+  "patch_id": "patch-valid-001",
+  "trt_id": "trt-demo",
+  "base_version": "v1",
+  "operator_id": "operator-a",
+  "intent_text": "Increase line A urgency and make it trauma priority.",
+  "reason": "Incoming trauma set requires a positive deadline.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/goal",
+      "value": "TRAUMA_SET_PRIORITY"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/priority",
+      "value": 5
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/deadline_minutes",
+      "value": 20
+    }
+  ],
+  "status": "REVIEWED"
+}

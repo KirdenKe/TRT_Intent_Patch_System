@@ -1,0 +1,43 @@
+{
+  "audit_id": "audit-2ec0f7c6-b644-4125-8e73-0c673de23f22",
+  "intent_text": "Increase line A urgency and make it trauma priority.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_a/goal",
+      "value": "TRAUMA_SET_PRIORITY"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_a/priority",
+      "value": 5
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_a/kpi/deadline_minutes",
+      "value": 20
+    }
+  ],
+  "operator_id": "operator-a",
+  "patch_id": "patch-valid-001",
+  "reason": "Incoming trauma set requires a positive deadline.",
+  "rejection_reasons": [
+    "base_version mismatch: patch targets trt-demo@v1, current is trt-demo@v2"
+  ],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "REJECTED",
+  "timestamp_utc": "2026-05-24T14:26:20.877768Z",
+  "trt_after_hash": null,
+  "trt_after_version": null,
+  "trt_before_hash": "b2d84f96fa058faeea3d0c2b3635d335d9d7158f32325fc5b888b2419f98648b",
+  "trt_before_version": "v2",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": false,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/intent_patch.schema.json",
+  "title": "Intent Patch",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["patch_id", "trt_id", "base_version", "operator_id", "intent_text", "reason", "operations", "status"],
+  "properties": {
+    "patch_id": { "type": "string", "minLength": 1 },
+    "trt_id": { "type": "string", "minLength": 1 },
+    "base_version": { "type": "string", "pattern": "^v[0-9]+$" },
+    "operator_id": { "type": "string", "minLength": 1 },
+    "intent_text": { "type": "string" },
+    "reason": { "type": "string" },
+    "operations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["op", "path"],
+        "properties": {
+          "op": {
+            "enum": ["test", "add", "replace", "remove", "move", "copy"]
+          },
+          "path": { "type": "string", "minLength": 1 },
+          "from": { "type": "string" },
+          "value": {}
+        }
+      }
+    },
+    "status": {
+      "enum": ["DRAFT", "REVIEWED", "VALIDATED", "RELEASED", "REJECTED"]
+    }
+  }
+}
+

@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/trt.schema.json",
+  "title": "Task Requirements Table",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["trt_id", "version", "lines"],
+  "properties": {
+    "trt_id": { "type": "string", "minLength": 1 },
+    "version": { "type": "string", "pattern": "^v[0-9]+$" },
+    "lines": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["goal", "allowed_instruments", "excluded_instruments", "priority", "kpi", "abnormal_strategy", "state"],
+        "properties": {
+          "goal": {
+            "enum": ["ROUTINE_CLASSIFICATION", "TRAUMA_SET_PRIORITY", "BACKLOG_CLEARING"]
+          },
+          "allowed_instruments": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/instrument" },
+            "uniqueItems": true
+          },
+          "excluded_instruments": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/instrument" },
+            "uniqueItems": true
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "kpi": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["deadline_minutes", "max_downtime_seconds", "min_throughput_per_hour"],
+            "properties": {
+              "deadline_minutes": {
+                "type": ["integer", "null"],
+                "minimum": 0
+              },
+              "max_downtime_seconds": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "min_throughput_per_hour": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "abnormal_strategy": {
+            "enum": ["STOP_LINE", "CONTINUE_FEASIBLE_TASKS", "ASK_OPERATOR"]
+          },
+          "state": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["mode", "current_task", "wip_count", "last_exception"],
+            "properties": {
+              "mode": {
+                "enum": ["IDLE", "RUNNING", "INTERVENTION", "PAUSED", "ERROR"]
+              },
+              "current_task": {
+                "type": ["string", "null"]
+              },
+              "wip_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "last_exception": {
+                "type": ["string", "null"]
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "instrument": {
+      "enum": ["SCISSORS", "FORCEPS", "CLAMPS", "RETRACTOR"]
+    }
+  }
+}
+

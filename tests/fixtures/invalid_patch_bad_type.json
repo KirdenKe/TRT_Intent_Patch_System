@@ -1,0 +1,16 @@
+{
+  "patch_id": "patch-bad-type-001",
+  "trt_id": "trt-demo",
+  "base_version": "v1",
+  "operator_id": "operator-a",
+  "intent_text": "Set priority to urgent.",
+  "reason": "Bad type fixture.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/priority",
+      "value": "urgent"
+    }
+  ],
+  "status": "REVIEWED"
+}

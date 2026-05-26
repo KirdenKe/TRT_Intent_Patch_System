@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/audit_bundle.schema.json",
+  "title": "Audit Bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "audit_id",
+    "patch_id",
+    "trt_id",
+    "operator_id",
+    "timestamp_utc",
+    "status",
+    "trt_before_version",
+    "trt_after_version",
+    "trt_before_hash",
+    "trt_after_hash",
+    "operations",
+    "validation_results",
+    "rejection_reasons",
+    "intent_text",
+    "reason",
+    "scenario_spec_id",
+    "run_artifact_id"
+  ],
+  "properties": {
+    "audit_id": { "type": "string", "minLength": 1 },
+    "patch_id": { "type": "string" },
+    "trt_id": { "type": "string" },
+    "operator_id": { "type": "string" },
+    "timestamp_utc": { "type": "string" },
+    "status": { "enum": ["ACCEPTED", "REJECTED"] },
+    "trt_before_version": { "type": "string" },
+    "trt_after_version": { "type": ["string", "null"] },
+    "trt_before_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "trt_after_hash": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+    "operations": { "type": "array" },
+    "validation_results": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "path_whitelist", "readonly", "base_version", "semantic"],
+      "properties": {
+        "schema": { "type": "boolean" },
+        "path_whitelist": { "type": "boolean" },
+        "readonly": { "type": "boolean" },
+        "base_version": { "type": "boolean" },
+        "semantic": { "type": "boolean" }
+      }
+    },
+    "rejection_reasons": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "intent_text": { "type": "string" },
+    "reason": { "type": "string" },
+    "scenario_spec_id": { "type": "null" },
+    "run_artifact_id": { "type": "null" }
+  }
+}
+

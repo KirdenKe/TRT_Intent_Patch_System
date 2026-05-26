@@ -1,0 +1,325 @@
+{
+  "id": "IntentToPatchReviewDemo",
+  "name": "Intent to Patch Review Orchestration",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "intent-to-patch-review",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1e9e2478-9796-4ea9-9634-cb3f34d85c79",
+      "name": "Receive Operator Intent",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "intent-to-patch-review-demo"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8000/intent/context",
+        "options": {}
+      },
+      "id": "00a461ce-77dc-4d14-8434-40fda389b124",
+      "name": "Get Intent Context",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.50.168:29987/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: 'cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit', messages: [ { role: 'system', content: 'You extract only task intent fields. Return only JSON. Do not generate patch_id, trt_id, base_version, operator_id, intent_text, reason, status, or operations. Use action=PROPOSE_PATCH only when the request names exactly one valid line, one clear goal, and only supported instruments. Use NEEDS_CLARIFICATION for ambiguous, missing, conflicting, or multi-line requests. Use UNSUPPORTED_REQUEST for invalid lines, unsupported instruments, or read-only state changes.' }, { role: 'user', content: `Operator intent: ${$('Receive Operator Intent').first().json.body.intent_text}. Extract action, line_id, goal, excluded_instruments, clarification_questions, unsupported_terms, and detected_request_types. Valid lines are line_1, line_2, line_3, line_4. Valid goals are ROUTINE_CLASSIFICATION, TRAUMA_SET_PRIORITY, BACKLOG_CLEARING. Valid excluded instruments are SCISSORS, FORCEPS, CLAMPS, RETRACTOR.` } ], temperature: 0.0, max_tokens: 160, structured_outputs: { json: $('Get Intent Context').first().json.llm_candidate_generation_schema } } }}",
+        "options": {}
+      },
+      "id": "e8f2a2d8-5023-43a5-93f1-b998f0da2168",
+      "name": "LLM Generate Intent Patch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        0
+      ],
+      "notes": "Calls vLLM for a domain-level candidate only. It does not generate JSON Patch operations and does not validate semantics."
+    },
+    {
+      "parameters": {
+        "jsCode": "const choice = $json.choices?.[0];\nconst content = choice?.message?.content;\nconst finishReason = choice?.finish_reason;\n\nif (finishReason === 'length') {\n  throw new Error('vLLM stopped because max_tokens was reached; candidate JSON may be incomplete.');\n}\nif (!content) {\n  throw new Error('vLLM response did not include choices[0].message.content');\n}\n\nlet extracted;\ntry {\n  extracted = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (error) {\n  throw new Error(`Could not parse vLLM candidate JSON: ${error.message}`);\n}\n\nconst webhookBody = $('Receive Operator Intent').first().json.body || {};\nconst context = $('Get Intent Context').first().json;\nconst candidate = {\n  patch_id: `patch-${Date.now()}`,\n  trt_id: context.current_trt.trt_id,\n  base_version: context.current_trt.version,\n  operator_id: webhookBody.operator_id,\n  intent_text: webhookBody.intent_text,\n  reason: webhookBody.reason,\n  line_id: extracted.line_id,\n  goal: extracted.goal,\n  excluded_instruments: extracted.excluded_instruments || [],\n  status: 'REVIEWED'\n};\nconst rejection_reasons = extracted.action === 'PROPOSE_PATCH' ? [] : [extracted.action, ...(extracted.clarification_questions || []), ...(extracted.unsupported_terms || [])];\n\nreturn [{ json: { candidate, llm_extracted: extracted, llm_action: extracted.action, rejection_reasons, llm_raw_content: content, llm_finish_reason: finishReason, llm_usage: $json.usage } }];"
+      },
+      "id": "1558ffdf-9b06-4618-bdc0-0ec68275c1fd",
+      "name": "Normalize Candidate Patch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        0
+      ],
+      "notes": "Parses the structured vLLM response into a domain-level candidate object only. Deterministic normalization happens in Python."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "af8b60c7-b6c3-4869-9ef1-af304e52c943",
+              "leftValue": "={{ $json.llm_action }}",
+              "rightValue": "PROPOSE_PATCH",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "778da8cb-6fb1-4a8d-bf9b-523e984412a7",
+      "name": "LLM Proposes Patch?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/intent/normalize",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.candidate }}",
+        "options": {}
+      },
+      "id": "0892601f-6e98-4265-a814-503628a9b207",
+      "name": "Normalize Domain Candidate with Python",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/patch/validate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.intent_patch }}",
+        "options": {}
+      },
+      "id": "36cbdf89-f461-42b6-bd9b-cfb5d47d89bf",
+      "name": "Validate Candidate Patch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "844427d9-d170-4b2e-94c4-80f8f386f483",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "ACCEPTED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b59d8e36-9450-4bd4-b74e-78337ced3598",
+      "name": "Candidate Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1820,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { status: 'REVIEWED', candidate_patch: $('Normalize Domain Candidate with Python').item.json.intent_patch, validation_results: $json.validation_results, message: 'Candidate patch is valid. Operator confirmation is required before release.' } }}",
+        "options": {}
+      },
+      "id": "5749854e-755a-4c89-b7d1-34ec0c96fbf3",
+      "name": "Return Reviewed Candidate",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2080,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { status: 'NEEDS_REVISION', rejection_reasons: $json.rejection_reasons || ['Candidate was not accepted for review.'], clarification_prompt: 'Please revise the request or provide missing fields.' } }}",
+        "options": {}
+      },
+      "id": "9cbdd8f9-a3f8-426c-8143-211104f44bb8",
+      "name": "Return Revision Request",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2080,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Receive Operator Intent": {
+      "main": [
+        [
+          {
+            "node": "Get Intent Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Intent Context": {
+      "main": [
+        [
+          {
+            "node": "LLM Generate Intent Patch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Generate Intent Patch": {
+      "main": [
+        [
+          {
+            "node": "Normalize Candidate Patch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Candidate Patch": {
+      "main": [
+        [
+          {
+            "node": "LLM Proposes Patch?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Proposes Patch?": {
+      "main": [
+        [
+          {
+            "node": "Normalize Domain Candidate with Python",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Revision Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Domain Candidate with Python": {
+      "main": [
+        [
+          {
+            "node": "Validate Candidate Patch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Candidate Patch": {
+      "main": [
+        [
+          {
+            "node": "Candidate Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Candidate Valid?": {
+      "main": [
+        [
+          {
+            "node": "Return Reviewed Candidate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Revision Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "3d1bbf41-c932-4f0a-998d-dbc3773ee07a",
+  "triggerCount": 0,
+  "tags": []
+}

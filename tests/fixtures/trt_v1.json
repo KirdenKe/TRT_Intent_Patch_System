@@ -1,0 +1,42 @@
+{
+  "trt_id": "trt-demo",
+  "version": "v1",
+  "lines": {
+    "line_1": {
+      "goal": "ROUTINE_CLASSIFICATION",
+      "allowed_instruments": ["SCISSORS"],
+      "excluded_instruments": ["CLAMPS"],
+      "priority": 3,
+      "kpi": {
+        "deadline_minutes": 20,
+        "max_downtime_seconds": 30,
+        "min_throughput_per_hour": 120
+      },
+      "abnormal_strategy": "ASK_OPERATOR",
+      "state": {
+        "mode": "RUNNING",
+        "current_task": "sort_set",
+        "wip_count": 4,
+        "last_exception": null
+      }
+    },
+    "line_2": {
+      "goal": "BACKLOG_CLEARING",
+      "allowed_instruments": ["RETRACTOR"],
+      "excluded_instruments": ["SCISSORS"],
+      "priority": 2,
+      "kpi": {
+        "deadline_minutes": 45,
+        "max_downtime_seconds": 60,
+        "min_throughput_per_hour": 80
+      },
+      "abnormal_strategy": "STOP_LINE",
+      "state": {
+        "mode": "ERROR",
+        "current_task": null,
+        "wip_count": 0,
+        "last_exception": "jam_detected"
+      }
+    }
+  }
+}
