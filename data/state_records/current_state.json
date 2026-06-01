@@ -1,0 +1,30 @@
+{
+  "state_records": [
+    {
+      "checkpoint": "TRAY_COMPLETE",
+      "current_instruments": [
+        "SCISSORS"
+      ],
+      "current_task": "TRAUMA_SET_PRIORITY",
+      "last_exception": null,
+      "line_id": "line_1",
+      "locked_resources": [
+        "robot_arm_1"
+      ],
+      "mode": "RUNNING",
+      "wip_count": 4
+    },
+    {
+      "checkpoint": "MANUAL_CLEARANCE_REQUIRED",
+      "current_instruments": [],
+      "current_task": null,
+      "last_exception": "jam_detected",
+      "line_id": "line_2",
+      "locked_resources": [
+        "robot_arm_2"
+      ],
+      "mode": "ERROR",
+      "wip_count": 0
+    }
+  ]
+}

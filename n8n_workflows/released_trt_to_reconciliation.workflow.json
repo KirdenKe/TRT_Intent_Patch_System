@@ -1,0 +1,290 @@
+{
+  "id": "ReleasedTRTToReconciliationDemo",
+  "name": "Released TRT to Reconciliation Orchestration",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "released-trt-to-reconciliation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c274337f-c946-4af8-a44f-08b19d111a0f",
+      "name": "Receive Released TRT",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "released-trt-to-reconciliation-demo"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/supervisor/reconcile",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { trt_id: $json.body.trt_id } }}",
+        "options": {}
+      },
+      "id": "92aa1fbb-ccdb-47f5-89fa-8062d67e08ce",
+      "name": "Create Reconciliation Plan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "notes": "Python Supervisor reads the current released TRT and current State Records. This node does not modify TRT."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e26b24b8-460d-4f43-9e41-1fc0661d5039",
+              "leftValue": "={{ $json.overall_status }}",
+              "rightValue": "READY",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "131240dc-084c-4526-bdd2-674e899818f1",
+      "name": "Ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e8550bc3-4a10-4b32-9b54-7e5f09d2c5e9",
+              "leftValue": "={{ $json.overall_status }}",
+              "rightValue": "WAITING",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8cdf2a14-d77f-4744-a214-348fd3491b3f",
+      "name": "Waiting?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        780,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bb537091-57d0-44d9-a39e-755938e7cf3f",
+              "leftValue": "={{ $json.overall_status }}",
+              "rightValue": "DEGRADED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8ea01e0e-d521-4921-a2d7-09965a5a2fed",
+      "name": "Degraded?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { status: 'ready-to-simulate', plan: $json } }}",
+        "options": {}
+      },
+      "id": "5ff40427-ecb2-4f41-9f2d-b42f6e74cbbf",
+      "name": "Return Ready Plan",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        780,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { status: 'waiting-for-checkpoints', required_checkpoints: $json.line_decisions.filter(item => item.required_checkpoint).map(item => ({ line_id: item.line_id, required_checkpoint: item.required_checkpoint, reason: item.reason })), plan: $json } }}",
+        "options": {}
+      },
+      "id": "33f89c6f-7b74-4f07-8d35-d17477127631",
+      "name": "Return Waiting Plan",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1040,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { status: 'degraded-ready', degraded_strategy: $json.line_decisions.filter(item => item.degraded_strategy).map(item => ({ line_id: item.line_id, degraded_strategy: item.degraded_strategy, reason: item.reason })), plan: $json } }}",
+        "options": {}
+      },
+      "id": "5992fb43-cce4-4748-9a75-f1ef2c9c2997",
+      "name": "Return Degraded Plan",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1300,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { status: 'rejected', rejection_reasons: $json.line_decisions.filter(item => item.decision === 'REJECT_INCOMPATIBLE').map(item => ({ line_id: item.line_id, reason: item.reason, risk_flags: item.risk_flags })), plan: $json } }}",
+        "options": {}
+      },
+      "id": "e54d8ba0-9a22-4bd3-a272-feb06fc07264",
+      "name": "Return Rejected Plan",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1300,
+        360
+      ]
+    }
+  ],
+  "connections": {
+    "Receive Released TRT": {
+      "main": [
+        [
+          {
+            "node": "Create Reconciliation Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Reconciliation Plan": {
+      "main": [
+        [
+          {
+            "node": "Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ready?": {
+      "main": [
+        [
+          {
+            "node": "Return Ready Plan",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Waiting?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Waiting?": {
+      "main": [
+        [
+          {
+            "node": "Return Waiting Plan",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Degraded?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Degraded?": {
+      "main": [
+        [
+          {
+            "node": "Return Degraded Plan",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Rejected Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "8d8d8676-a853-4fde-a1bb-a32f82585652",
+  "triggerCount": 0,
+  "tags": []
+}
+

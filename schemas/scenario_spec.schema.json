@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "scenario_spec_id",
+    "release_id",
+    "trt_id",
+    "trt_version",
+    "reconciliation_plan_id",
+    "candidate_strategy_id",
+    "workspace_contract",
+    "scene_template",
+    "simulation_config",
+    "line_bindings",
+    "line_policies",
+    "operator_model",
+    "abnormal_event_policy",
+    "assertions"
+  ],
+  "properties": {
+    "scenario_spec_id": {"type": "string", "minLength": 1},
+    "release_id": {"type": "string", "minLength": 1},
+    "trt_id": {"type": "string", "minLength": 1},
+    "trt_version": {"type": "string", "minLength": 1},
+    "reconciliation_plan_id": {"type": "string", "minLength": 1},
+    "candidate_strategy_id": {"type": "string", "minLength": 1},
+    "workspace_contract": {
+      "type": "object",
+      "required": ["exchange_mode", "scenario_specs_dir", "run_artifacts_dir"],
+      "properties": {
+        "producer_workspace": {"const": "governance"},
+        "consumer_workspace": {"const": "isaac_sim"},
+        "exchange_mode": {"const": "file"},
+        "scenario_specs_dir": {"type": "string", "minLength": 1},
+        "run_artifacts_dir": {"type": "string", "minLength": 1},
+        "expected_run_artifact_path": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": true
+    },
+    "scene_template": {"type": "string", "minLength": 1},
+    "simulation_config": {"type": "object"},
+    "line_bindings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["line_id", "env_id"],
+        "properties": {
+          "line_id": {"type": "string", "minLength": 1},
+          "env_id": {"type": "integer", "minimum": 0}
+        },
+        "additionalProperties": true
+      }
+    },
+    "line_policies": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "line_id",
+          "goal",
+          "allowed_instruments",
+          "excluded_instruments",
+          "priority",
+          "kpi",
+          "abnormal_strategy"
+        ],
+        "properties": {
+          "line_id": {"type": "string", "minLength": 1},
+          "goal": {
+            "type": "string",
+            "enum": ["ROUTINE_CLASSIFICATION", "TRAUMA_SET_PRIORITY", "BACKLOG_CLEARING"]
+          },
+          "allowed_instruments": {
+            "type": "array",
+            "items": {"type": "string", "enum": ["SCISSORS", "FORCEPS", "CLAMPS", "RETRACTOR"]}
+          },
+          "excluded_instruments": {
+            "type": "array",
+            "items": {"type": "string", "enum": ["SCISSORS", "FORCEPS", "CLAMPS", "RETRACTOR"]}
+          },
+          "priority": {"type": "integer", "minimum": 1, "maximum": 5},
+          "kpi": {"type": "object"},
+          "abnormal_strategy": {"type": "string", "enum": ["STOP_LINE", "CONTINUE_FEASIBLE_TASKS"]},
+          "reconciliation_decision": {"type": "string"},
+          "required_checkpoint": {"type": ["string", "null"]},
+          "degraded_strategy": {"type": ["string", "null"]},
+          "risk_flags": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": true
+      }
+    },
+    "operator_model": {"type": "object"},
+    "abnormal_event_policy": {
+      "type": "object",
+      "required": ["entanglement"],
+      "properties": {
+        "entanglement": {
+          "type": "object",
+          "required": ["generation_mode", "enabled", "allowed_overlap_ratio"],
+          "properties": {
+            "generation_mode": {"const": "implicit_runtime_detection"},
+            "enabled": {"type": "boolean"},
+            "allowed_overlap_ratio": {"type": "number", "minimum": 0},
+            "manual_event_injection": {"const": false},
+            "predefined_entanglement_timestamps": {"type": "array", "maxItems": 0},
+            "special_tooling_markers": {"type": "array", "items": {"type": "string"}}
+          },
+          "not": {
+            "anyOf": [
+              {"required": ["event_injections"]},
+              {"required": ["manual_events"]}
+            ]
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "assertions": {"type": "object"}
+  },
+  "additionalProperties": true
+}

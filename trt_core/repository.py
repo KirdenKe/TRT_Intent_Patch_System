@@ -19,9 +19,13 @@ class TRTRepository:
         self.trt_dir = self.root / "data" / "trt_versions"
         self.audit_dir = self.root / "data" / "audit_bundles"
         self.release_dir = self.root / "data" / "releases"
+        self.state_dir = self.root / "data" / "state_records"
+        self.reconciliation_dir = self.root / "data" / "reconciliation_plans"
         self.trt_dir.mkdir(parents=True, exist_ok=True)
         self.audit_dir.mkdir(parents=True, exist_ok=True)
         self.release_dir.mkdir(parents=True, exist_ok=True)
+        self.state_dir.mkdir(parents=True, exist_ok=True)
+        self.reconciliation_dir.mkdir(parents=True, exist_ok=True)
 
     def _trt_path(self, trt_id: str, version: str) -> Path:
         return self.trt_dir / f"{trt_id}_{version}.json"
@@ -31,6 +35,9 @@ class TRTRepository:
 
     def _release_path(self, release_id: str) -> Path:
         return self.release_dir / f"{release_id}.json"
+
+    def _reconciliation_path(self, plan_id: str) -> Path:
+        return self.reconciliation_dir / f"{plan_id}.json"
 
     @staticmethod
     def _version_number(version: str) -> int:
@@ -47,6 +54,21 @@ class TRTRepository:
             prefix = f"{trt_id}_"
             paths = [path for path in paths if path.name.startswith(prefix)]
         return paths
+
+    def list_trt_version_records(self, trt_id: str | None = None) -> list[dict[str, Any]]:
+        records: list[dict[str, Any]] = []
+        for path in self.list_trt_versions(trt_id):
+            trt = json.loads(path.read_text(encoding="utf-8"))
+            records.append({"trt_id": trt["trt_id"], "version": trt["version"], "path": str(path)})
+        return sorted(records, key=lambda item: (item["trt_id"], self._version_number(item["version"])))
+
+    def list_release_records(self) -> list[dict[str, Any]]:
+        records = [json.loads(path.read_text(encoding="utf-8")) for path in sorted(self.release_dir.glob("*.json"))]
+        return sorted(records, key=lambda item: item.get("created_at_utc", ""))
+
+    def list_reconciliation_plans(self) -> list[dict[str, Any]]:
+        records = [json.loads(path.read_text(encoding="utf-8")) for path in sorted(self.reconciliation_dir.glob("*.json"))]
+        return sorted(records, key=lambda item: item.get("created_at_utc", ""))
 
     def save_trt(self, trt: TRT | dict[str, Any]) -> Path:
         path = self._trt_path(str(trt["trt_id"]), str(trt["version"]))
@@ -95,4 +117,26 @@ class TRTRepository:
         path = self._release_path(release_id)
         if not path.exists():
             raise RepositoryError(f"Release record not found: {release_id}")
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def save_state_records(self, state_records: list[dict[str, Any]]) -> Path:
+        path = self.state_dir / "current_state.json"
+        path.write_text(json.dumps({"state_records": state_records}, indent=2, sort_keys=True, ensure_ascii=False), encoding="utf-8")
+        return path
+
+    def load_state_records(self) -> list[dict[str, Any]]:
+        path = self.state_dir / "current_state.json"
+        if not path.exists():
+            raise RepositoryError("No current state records found")
+        return json.loads(path.read_text(encoding="utf-8"))["state_records"]
+
+    def save_reconciliation_plan(self, plan: dict[str, Any]) -> Path:
+        path = self._reconciliation_path(str(plan["plan_id"]))
+        path.write_text(json.dumps(plan, indent=2, sort_keys=True, ensure_ascii=False), encoding="utf-8")
+        return path
+
+    def load_reconciliation_plan(self, plan_id: str) -> dict[str, Any]:
+        path = self._reconciliation_path(plan_id)
+        if not path.exists():
+            raise RepositoryError(f"Reconciliation plan not found: {plan_id}")
         return json.loads(path.read_text(encoding="utf-8"))

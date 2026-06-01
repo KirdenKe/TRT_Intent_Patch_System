@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from copy import deepcopy
 
 from fastapi.testclient import TestClient
@@ -16,6 +17,25 @@ def make_client(tmp_path, fixture_loader) -> TestClient:
     return TestClient(api.app)
 
 
+def make_scenario_client(tmp_path, fixture_loader) -> TestClient:
+    repository = TRTRepository(tmp_path)
+    released_v1 = fixture_loader("released_trt_v1.json")
+    released_v2 = deepcopy(released_v1)
+    released_v2["version"] = "v2"
+    repository.save_trt(released_v1)
+    repository.save_trt(released_v2)
+    repository.save_state_records(fixture_loader("state_records_v1.json"))
+    repository.save_reconciliation_plan(fixture_loader("reconciliation_ready.json"))
+    registry = deepcopy(fixture_loader("scenario_templates.json"))
+    registry["default_template_id"] = "surgical_sorting_v1"
+    registry["templates"][0]["template_id"] = "surgical_sorting_v1"
+    registry_path = tmp_path / "data" / "scenario_templates.json"
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    registry_path.write_text(json.dumps(registry, indent=2), encoding="utf-8")
+    api.repository = repository
+    return TestClient(api.app)
+
+
 def test_get_current_trt_returns_current_trt(tmp_path, fixture_loader):
     client = make_client(tmp_path, fixture_loader)
 
@@ -24,6 +44,135 @@ def test_get_current_trt_returns_current_trt(tmp_path, fixture_loader):
     assert response.status_code == 200
     assert response.json()["trt_id"] == "trt-demo"
     assert response.json()["version"] == "v1"
+
+
+def test_scenario_generate_route_is_registered_in_openapi():
+    assert "/scenario/generate" in api.app.openapi()["paths"]
+
+
+def test_trt_versions_lists_stored_versions(tmp_path, fixture_loader):
+    client = make_scenario_client(tmp_path, fixture_loader)
+
+    response = client.get("/trt/versions")
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body == {"all_available_trts": [{"trt_id": "trt-demo", "versions": ["v1", "v2"]}]}
+
+
+def test_trt_versions_for_requested_trt_id_includes_grouped_all_available(tmp_path, fixture_loader):
+    client = make_scenario_client(tmp_path, fixture_loader)
+
+    response = client.get("/trt/versions", params={"trt_id": "trt-missing"})
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body == {
+        "available_for_requested_trt_id": [],
+        "all_available_trts": [{"trt_id": "trt-demo", "versions": ["v1", "v2"]}],
+    }
+
+
+def test_discovery_endpoints_for_release_reconciliation_and_scenario_templates(tmp_path, fixture_loader):
+    client = make_scenario_client(tmp_path, fixture_loader)
+
+    release_response = client.get("/release/list")
+    reconciliation_response = client.get("/reconciliation/list")
+    templates_response = client.get("/scenario/templates")
+
+    assert release_response.status_code == 200
+    assert release_response.json() == {"releases": []}
+    assert reconciliation_response.status_code == 200
+    assert reconciliation_response.json()["reconciliation_plans"][0]["plan_id"] == "rec_ready_001"
+    assert templates_response.status_code == 200
+    assert templates_response.json()["default_template_id"] == "surgical_sorting_v1"
+
+
+def test_scenario_generate_missing_trt_version_returns_available_versions(tmp_path, fixture_loader):
+    client = make_scenario_client(tmp_path, fixture_loader)
+
+    response = client.post(
+        "/scenario/generate",
+        json={
+            "release_id": "rel_api_scenario_001",
+            "trt_id": "trt-demo",
+            "trt_version": "v9",
+            "reconciliation_plan_id": "rec_ready_001",
+            "scenario_template_id": "surgical_sorting_v1",
+        },
+    )
+    body = response.json()
+
+    assert response.status_code == 404
+    assert body == {
+        "detail": "TRT version not found",
+        "requested": {"trt_id": "trt-demo", "trt_version": "v9"},
+        "available_for_requested_trt_id": ["v1", "v2"],
+        "all_available_trts": [{"trt_id": "trt-demo", "versions": ["v1", "v2"]}],
+    }
+
+
+def test_post_scenario_generate_creates_scenario_spec(tmp_path, fixture_loader):
+    client = make_scenario_client(tmp_path, fixture_loader)
+    stored_version = client.get("/trt/versions", params={"trt_id": "trt-demo"}).json()[
+        "available_for_requested_trt_id"
+    ][0]
+
+    response = client.post(
+        "/scenario/generate",
+        json={
+            "release_id": "rel_api_scenario_001",
+            "trt_id": "trt-demo",
+            "trt_version": stored_version,
+            "reconciliation_plan_id": "rec_ready_001",
+            "scenario_template_id": "surgical_sorting_v1",
+        },
+    )
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["status"] == "GENERATED"
+    assert body["scenario_spec_id"].startswith("scn_")
+    assert body["scenario_spec_path"] == f"outputs/scenario_specs/{body['scenario_spec_id']}.json"
+    assert (tmp_path / body["scenario_spec_path"]).exists()
+    assert not (tmp_path / "exchange" / "scenario_specs").exists()
+    assert body["scenario_spec"]["release_id"] == "rel_api_scenario_001"
+    assert body["scenario_spec"]["workspace_contract"]["exchange_mode"] == "file"
+    assert "outputs/scenario_specs" in body["scenario_spec"]["workspace_contract"]["expected_scenario_spec_path"]
+    assert "outputs/run_artifacts" in body["scenario_spec"]["workspace_contract"]["expected_run_artifact_path"]
+
+
+def test_scenario_generate_ask_operator_requires_operator_resolution(tmp_path, fixture_loader):
+    client = make_scenario_client(tmp_path, fixture_loader)
+    trt = api.repository.load_trt("trt-demo", "v1")
+    trt["lines"]["line_1"]["abnormal_strategy"] = "ASK_OPERATOR"
+    api.repository.save_trt(trt)
+
+    response = client.post(
+        "/scenario/generate",
+        json={
+            "release_id": "rel_api_scenario_001",
+            "trt_id": "trt-demo",
+            "trt_version": "v1",
+            "reconciliation_plan_id": "rec_ready_001",
+            "scenario_template_id": "surgical_sorting_v1",
+        },
+    )
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body == {
+        "status": "REQUIRES_OPERATOR_RESOLUTION",
+        "rejection_reason": (
+            "Line line_1 abnormal_strategy is ASK_OPERATOR. "
+            "ScenarioSpec generation requires a concrete executable policy. "
+            "Resolve this field to STOP_LINE or CONTINUE_FEASIBLE_TASKS before simulation."
+        ),
+        "line_id": "line_1",
+        "field": "/lines/line_1/abnormal_strategy",
+        "current_value": "ASK_OPERATOR",
+        "allowed_values": ["CONTINUE_FEASIBLE_TASKS", "STOP_LINE"],
+    }
 
 
 def test_patch_validate_accepts_valid_patch_without_new_version(tmp_path, fixture_loader, valid_patch):

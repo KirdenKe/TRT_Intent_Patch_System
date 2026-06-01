@@ -1,0 +1,31 @@
+{
+  "audit_id": "audit-88deadac-c425-4bdc-a689-2d20a3404650",
+  "intent_text": "Resolve Line 1 abnormal strategy for simulation.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/abnormal_strategy",
+      "value": "CONTINUE_FEASIBLE_TASKS"
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch_resolve_line1_abnormal_strategy",
+  "reason": "ScenarioSpec generation requires STOP_LINE or CONTINUE_FEASIBLE_TASKS instead of ASK_OPERATOR.",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-05-31T12:12:46.703486Z",
+  "trt_after_hash": "21de342976d3de404a6247937a5a8fdc940124d678d4bf7da5991540342933a2",
+  "trt_after_version": "v3",
+  "trt_before_hash": "2ba67a65139b921d9b5392be5b07e1870fc2eb7e6f372dc5a0937fc5b5858f7f",
+  "trt_before_version": "v2",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

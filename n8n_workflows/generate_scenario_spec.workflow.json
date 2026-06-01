@@ -1,0 +1,224 @@
+{
+  "id": "GenerateScenarioSpecDemo",
+  "name": "Generate ScenarioSpec Orchestration",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-scenario-spec",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "2f8b38de-2be1-465d-94a3-b6a7aa0a8e77",
+      "name": "Receive ScenarioSpec Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "generate-scenario-spec-demo",
+      "notes": "Receives release_id, trt_id, trt_version, reconciliation_plan_id, and scenario_template_id. This workflow does not run Isaac Sim or modify TRT."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/scenario/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body }}",
+        "options": {}
+      },
+      "id": "a75f472f-f2dc-4214-bd38-8570f9844ed2",
+      "name": "Generate ScenarioSpec",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        280,
+        0
+      ],
+      "notes": "Python governance API is the source of truth for ScenarioSpec generation. No Isaac, LLM, or TRT mutation happens here."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "13b5b0a4-dfdd-445a-81c7-0eb27dd33715",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "GENERATED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7ed28570-6079-49f5-b71e-13bd5c83ec10",
+      "name": "Generated?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        560,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fd69f455-9019-46da-839a-33021cb7772d",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "WAITING_FOR_CHECKPOINT",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2cb915d4-0558-4749-86db-cf1df40d9a2b",
+      "name": "Waiting?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        840,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { status: $json.status, scenario_spec_id: $json.scenario_spec_id, scenario_spec_path: $json.scenario_spec_path || $json.workspace_contract?.expected_scenario_spec_path } }}",
+        "options": {}
+      },
+      "id": "d3ed3c30-e143-49eb-bd49-4b4aee2c23d6",
+      "name": "Return Generated ScenarioSpec",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        840,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { status: $json.status, required_checkpoint: ($json.required_checkpoints || [])[0]?.required_checkpoint || null, reason: ($json.required_checkpoints || [])[0]?.reason || null, required_checkpoints: $json.required_checkpoints || [] } }}",
+        "options": {}
+      },
+      "id": "f9dc12e7-e892-4ac9-bd68-5415854bfe1e",
+      "name": "Return Waiting Checkpoint",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { status: $json.status || 'REJECTED', rejection_reason: $json.rejection_reason || $json.reason || $json.detail || 'ScenarioSpec generation rejected by Python API.' } }}",
+        "options": {}
+      },
+      "id": "784fb9c9-a670-45b9-a837-a081371ec7e3",
+      "name": "Return Rejected Generation",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        240
+      ]
+    }
+  ],
+  "connections": {
+    "Receive ScenarioSpec Request": {
+      "main": [
+        [
+          {
+            "node": "Generate ScenarioSpec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate ScenarioSpec": {
+      "main": [
+        [
+          {
+            "node": "Generated?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generated?": {
+      "main": [
+        [
+          {
+            "node": "Return Generated ScenarioSpec",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Waiting?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Waiting?": {
+      "main": [
+        [
+          {
+            "node": "Return Waiting Checkpoint",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Rejected Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "37833d3c-24b1-4a2f-9b52-1e61e2feb865",
+  "triggerCount": 0,
+  "tags": []
+}

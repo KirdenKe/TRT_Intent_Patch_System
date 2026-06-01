@@ -59,6 +59,10 @@ Endpoints:
 - `POST /release/prepare` stores a reviewed candidate patch as a pending release record without applying it.
 - `POST /release/decision` records `APPROVE`, `REJECT`, or `REQUEST_REVISION`; approval delegates to existing patch application.
 - `GET /release/{release_id}` returns the persisted release record.
+- `GET /state/current` returns the current production-line State Records.
+- `POST /state/update` stores the latest production-line State Records.
+- `POST /supervisor/reconcile` creates a Supervisor Reconciliation Plan from the current released TRT and State Records.
+- `GET /reconciliation/{plan_id}` returns a persisted Reconciliation Plan.
 - `GET /trt/current` returns the latest TRT. Optional query parameter: `trt_id`.
 - `GET /audit/{audit_id}` returns an Audit Bundle.
 
@@ -206,6 +210,85 @@ Milestone 3.6 target metrics:
 - `invalid_rejection_rate >= 0.80`
 - `valid_accept_rate >= 0.90`
 
+## Milestone 5: Supervisor Reconciliation
+
+The Supervisor reads the current released TRT plus production-line State Records and produces a Reconciliation Plan. It never edits TRT versions and does not call an LLM, ROS, Omniverse, ScenarioSpecs, or RunArtifacts.
+
+Decision values:
+
+- `IMMEDIATE_SWITCH`
+- `WAIT_FOR_CHECKPOINT`
+- `DEGRADED_SWITCH`
+- `REJECT_INCOMPATIBLE`
+- `NO_CHANGE`
+
+Typical API flow:
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://127.0.0.1:8000/state/update `
+  -ContentType "application/json" `
+  -InFile tests/fixtures/state_records_running_with_wip.json
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://127.0.0.1:8000/supervisor/reconcile `
+  -ContentType "application/json" `
+  -Body '{}'
+```
+
+Plans are stored in `data/reconciliation_plans/` and include `source_state_hash` and `source_trt_hash` for traceability.
+
+## Milestone 6: ScenarioSpec Generation
+
+The governance workspace can now generate Isaac-adapter-compatible `ScenarioSpec` JSON files without importing Isaac Sim modules or running simulation code. The output is written through file exchange only under `outputs/scenario_specs/`; the digital twin writes results under `outputs/run_artifacts/`.
+
+Generation inputs:
+
+- released TRT version
+- State Records
+- Reconciliation Plan
+- scenario template registry
+
+The generator refuses `REJECTED` reconciliation plans, rejects Isaac-incompatible `ASK_OPERATOR` strategies, and always preserves implicit runtime entanglement semantics. It does not emit `event_injections`, manual event lists, or predefined entanglement timestamps.
+
+Default output paths in generated ScenarioSpecs are relative:
+
+- `outputs/scenario_specs/<scenario_spec_id>.json`
+- `outputs/run_artifacts/<scenario_spec_id>_run_artifact.json`
+
+Example API call:
+
+```powershell
+curl -X POST http://127.0.0.1:8000/scenario/generate `
+  -H "Content-Type: application/json" `
+  -d "{\"release_id\":\"rel_001\",\"trt_id\":\"trt-demo\",\"trt_version\":\"v1\",\"reconciliation_plan_id\":\"rec_ready_001\",\"scenario_template_id\":\"surgical_sorting_v1\"}"
+```
+
+Expected generated response shape:
+
+```json
+{
+  "status": "GENERATED",
+  "scenario_spec_id": "scn_...",
+  "scenario_spec_path": "outputs/scenario_specs/scn_....json"
+}
+```
+
+Relevant files:
+
+- `scenario_generation/`
+- `schemas/scenario_spec.schema.json`
+- `schemas/scenario_template_registry.schema.json`
+- `tests/fixtures/scenario_templates.json`
+
+Run the tests:
+
+```powershell
+.venv\Scripts\python.exe -m pytest tests\test_scenario_generation.py tests\test_scenario_template_registry.py tests\test_scenario_export.py
+```
+
 ## Scope
 
 Implemented:
@@ -220,14 +303,14 @@ Implemented:
 - file-backed TRT version repository
 - Audit Bundle generation for accepted and rejected patches
 - minimal FastAPI integration surface for future n8n workflows
+- Supervisor state reconciliation and Reconciliation Plan generation
+- ScenarioSpec generation and file export for the Isaac Sim adapter boundary
 
 Not implemented in this milestone:
 
 - LLM calls
 - speech recognition
-- Supervisor
 - Omniverse
 - ROS
 - digital twin simulation
-- ScenarioSpecs
 - RunArtifacts

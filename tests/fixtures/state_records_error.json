@@ -1,0 +1,13 @@
+[
+  {
+    "line_id": "line_1",
+    "mode": "ERROR",
+    "current_task": "ROUTINE_CLASSIFICATION",
+    "wip_count": 0,
+    "current_instruments": [],
+    "locked_resources": ["robot_arm_1"],
+    "checkpoint": "MANUAL_CLEARANCE_REQUIRED",
+    "last_exception": "jam_detected",
+    "updated_at_utc": "2026-05-26T00:00:00Z"
+  }
+]

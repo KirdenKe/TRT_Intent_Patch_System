@@ -1,0 +1,13 @@
+[
+  {
+    "line_id": "line_1",
+    "mode": "IDLE",
+    "current_task": "ROUTINE_CLASSIFICATION",
+    "wip_count": 0,
+    "current_instruments": [],
+    "locked_resources": [],
+    "checkpoint": "NONE",
+    "last_exception": null,
+    "updated_at_utc": "2026-05-26T00:00:00Z"
+  }
+]

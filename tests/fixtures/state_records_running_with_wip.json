@@ -1,0 +1,13 @@
+[
+  {
+    "line_id": "line_1",
+    "mode": "RUNNING",
+    "current_task": "ROUTINE_CLASSIFICATION",
+    "wip_count": 3,
+    "current_instruments": ["SCISSORS"],
+    "locked_resources": ["robot_arm_1"],
+    "checkpoint": "NONE",
+    "last_exception": null,
+    "updated_at_utc": "2026-05-26T00:00:00Z"
+  }
+]

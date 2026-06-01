@@ -1,0 +1,53 @@
+{
+  "default_template_id": "ur5_pick_place_minimal",
+  "templates": [
+    {
+      "template_id": "ur5_pick_place_minimal",
+      "scene_template": "pick_up_example.py",
+      "workspace_contract": {
+        "producer_workspace": "governance",
+        "consumer_workspace": "isaac_sim",
+        "exchange_mode": "file",
+        "scenario_specs_dir": "outputs/scenario_specs",
+        "run_artifacts_dir": "outputs/run_artifacts"
+      },
+      "simulation_config": {
+        "num_envs": 4,
+        "headless": true,
+        "global_seed": 123,
+        "layout_source": "auto",
+        "episode_success_requires_reset_cycles": 1,
+        "max_seed_trials": 1,
+        "add_reference_number": 6
+      },
+      "line_bindings": [
+        {
+          "line_id": "line_1",
+          "env_id": 2
+        },
+        {
+          "line_id": "line_2",
+          "env_id": 0
+        }
+      ],
+      "operator_model": {
+        "travel_time": 2.0,
+        "fix_duration": 4.0,
+        "resume_delay": 0.5
+      },
+      "abnormal_event_policy": {
+        "entanglement": {
+          "generation_mode": "implicit_runtime_detection",
+          "enabled": true,
+          "allowed_overlap_ratio": 0.25,
+          "special_tooling_markers": [
+            "entanglement_candidate_tooling"
+          ]
+        }
+      },
+      "assertions": {
+        "use_existing_validation_module": true
+      }
+    }
+  ]
+}

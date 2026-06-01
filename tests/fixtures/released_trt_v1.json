@@ -1,0 +1,43 @@
+{
+  "trt_id": "trt-demo",
+  "version": "v1",
+  "lines": {
+    "line_1": {
+      "goal": "TRAUMA_SET_PRIORITY",
+      "allowed_instruments": ["SCISSORS", "CLAMPS"],
+      "excluded_instruments": ["FORCEPS"],
+      "priority": 5,
+      "kpi": {
+        "deadline_minutes": 15,
+        "max_downtime_seconds": 30,
+        "min_throughput_per_hour": 120
+      },
+      "abnormal_strategy": "CONTINUE_FEASIBLE_TASKS",
+      "state": {
+        "mode": "RUNNING",
+        "current_task": "TRAUMA_SET_PRIORITY",
+        "wip_count": 1,
+        "last_exception": null
+      }
+    },
+    "line_2": {
+      "goal": "BACKLOG_CLEARING",
+      "allowed_instruments": ["RETRACTOR"],
+      "excluded_instruments": ["SCISSORS"],
+      "priority": 2,
+      "kpi": {
+        "deadline_minutes": 45,
+        "max_downtime_seconds": 60,
+        "min_throughput_per_hour": 80
+      },
+      "abnormal_strategy": "CONTINUE_FEASIBLE_TASKS",
+      "state": {
+        "mode": "IDLE",
+        "current_task": null,
+        "wip_count": 0,
+        "last_exception": null
+      }
+    }
+  }
+}
+

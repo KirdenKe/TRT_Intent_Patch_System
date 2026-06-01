@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["default_template_id", "templates"],
+  "properties": {
+    "default_template_id": {"type": "string", "minLength": 1},
+    "templates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "template_id",
+          "scene_template",
+          "workspace_contract",
+          "simulation_config",
+          "line_bindings",
+          "operator_model",
+          "abnormal_event_policy",
+          "assertions"
+        ],
+        "properties": {
+          "template_id": {"type": "string", "minLength": 1},
+          "scene_template": {"type": "string", "minLength": 1},
+          "workspace_contract": {
+            "type": "object",
+            "required": ["exchange_mode", "scenario_specs_dir", "run_artifacts_dir"],
+            "properties": {
+              "producer_workspace": {"type": "string"},
+              "consumer_workspace": {"type": "string"},
+              "exchange_mode": {"type": "string", "enum": ["file", "file_exchange"]},
+              "scenario_specs_dir": {"type": "string", "minLength": 1},
+              "run_artifacts_dir": {"type": "string", "minLength": 1}
+            },
+            "additionalProperties": true
+          },
+          "simulation_config": {
+            "type": "object",
+            "required": ["num_envs", "headless", "global_seed", "layout_source", "episode_success_requires_reset_cycles"],
+            "properties": {
+              "num_envs": {"type": "integer", "minimum": 0},
+              "headless": {"type": "boolean"},
+              "global_seed": {"type": "integer", "minimum": 0},
+              "layout_source": {"type": "string", "enum": ["online", "database", "auto", "fresh", "cached"]},
+              "episode_success_requires_reset_cycles": {"type": "integer", "minimum": 0}
+            },
+            "additionalProperties": true
+          },
+          "line_bindings": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["line_id", "env_id"],
+              "properties": {
+                "line_id": {"type": "string", "minLength": 1},
+                "env_id": {"type": "integer", "minimum": 0}
+              },
+              "additionalProperties": true
+            }
+          },
+          "operator_model": {
+            "type": "object",
+            "required": ["travel_time", "fix_duration", "resume_delay"],
+            "properties": {
+              "travel_time": {"type": "number", "minimum": 0},
+              "fix_duration": {"type": "number", "minimum": 0},
+              "resume_delay": {"type": "number", "minimum": 0}
+            },
+            "additionalProperties": true
+          },
+          "abnormal_event_policy": {
+            "type": "object",
+            "required": ["entanglement"],
+            "properties": {
+              "entanglement": {
+                "type": "object",
+                "required": ["generation_mode", "enabled", "allowed_overlap_ratio"],
+                "properties": {
+                  "generation_mode": {"const": "implicit_runtime_detection"},
+                  "enabled": {"type": "boolean"},
+                  "allowed_overlap_ratio": {"type": "number", "minimum": 0},
+                  "special_tooling_markers": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                  }
+                },
+                "additionalProperties": true
+              }
+            },
+            "additionalProperties": true
+          },
+          "assertions": {"type": "object"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}
