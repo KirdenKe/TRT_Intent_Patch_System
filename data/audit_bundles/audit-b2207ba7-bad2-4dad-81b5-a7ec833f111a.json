@@ -1,0 +1,27 @@
+{
+  "audit_id": "audit-b2207ba7-bad2-4dad-81b5-a7ec833f111a",
+  "intent_text": "",
+  "operations": [],
+  "operator_id": "op_001",
+  "patch_id": "",
+  "reason": "",
+  "rejection_reasons": [
+    "APPROVE: Test for the Milestone 6.5C"
+  ],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "NEEDS_REVISION",
+  "timestamp_utc": "2026-06-01T09:40:31.536139Z",
+  "trt_after_hash": null,
+  "trt_after_version": null,
+  "trt_before_hash": "8350db8324dc5d1a13420fde173cf43892ffa00d9c8165515ac2a82fe0b055d3",
+  "trt_before_version": "v6",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": false,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": false,
+    "semantic": true
+  }
+}

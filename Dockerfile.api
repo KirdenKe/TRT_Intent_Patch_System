@@ -1,0 +1,20 @@
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY pyproject.toml README.md ./
+COPY trt_core ./trt_core
+COPY scenario_generation ./scenario_generation
+COPY schemas ./schemas
+COPY data ./data
+
+RUN pip install --no-cache-dir .
+
+RUN mkdir -p /app/data/trt_versions /app/data/audit_bundles /app/data/releases /app/data/state_records /app/data/reconciliation_plans /app/outputs/scenario_specs /app/outputs/run_artifacts
+
+EXPOSE 8000
+
+CMD ["uvicorn", "trt_core.api:app", "--host", "0.0.0.0", "--port", "8000"]

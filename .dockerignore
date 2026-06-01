@@ -1,0 +1,9 @@
+.git
+.pytest_cache
+.venv
+__pycache__
+*.pyc
+n8n_data
+reports
+outputs
+trt_intent_patch_system.egg-info

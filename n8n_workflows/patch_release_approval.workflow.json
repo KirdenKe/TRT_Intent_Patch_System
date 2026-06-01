@@ -4,29 +4,87 @@
   "active": false,
   "nodes": [
     {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "patch-release-approval",
-        "responseMode": "responseNode",
-        "options": {}
-      },
+      "parameters": {},
       "id": "d6f9c5db-8c61-4f2b-b4ea-ff6955bce8f3",
       "name": "Receive Reviewed Candidate Patch",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
       "position": [
         0,
         0
       ],
-      "webhookId": "patch-release-approval-demo"
+      "notes": "Sub-workflow trigger. Expected input may be {payload:{candidate_patch}}, {candidate_patch}, or webhook-compatible {body:{candidate_patch}}."
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst candidatePatch = input.candidate_patch || input.payload?.candidate_patch || input.body?.candidate_patch || null;\nconst operatorDecision = input.operator_decision || input.payload?.operator_decision || input.body?.operator_decision || {};\nconst decision = operatorDecision.decision || input.decision || input.payload?.decision || input.body?.decision || 'REQUEST_REVISION';\nconst comment = operatorDecision.comment || input.comment || input.payload?.comment || input.body?.comment || '';\nconst operatorId = input.operator_id || input.context?.operator_id || input.body?.operator_id || candidatePatch?.operator_id || 'operator_pending';\n\nreturn [{\n  json: {\n    ...input,\n    candidate_patch: candidatePatch,\n    decision,\n    comment,\n    operator_id: operatorId,\n    operator_decision: {\n      decision,\n      comment,\n      raw_reply: operatorDecision.raw_reply || input.payload?.raw_release_decision_reply || null\n    },\n    context: input.context || {},\n    payload: {\n      ...(input.payload || {}),\n      candidate_patch: candidatePatch,\n      decision,\n      comment,\n      operator_decision: {\n        decision,\n        comment,\n        raw_reply: operatorDecision.raw_reply || input.payload?.raw_release_decision_reply || null\n      }\n    },\n    body: {\n      candidate_patch: candidatePatch,\n      decision,\n      comment,\n      operator_id: operatorId,\n      operator_decision: {\n        decision,\n        comment,\n        raw_reply: operatorDecision.raw_reply || input.payload?.raw_release_decision_reply || null\n      }\n    }\n  }\n}];"
+      },
+      "id": "5d514975-b379-45b0-927b-0f9f2dd408c7",
+      "name": "Normalize Release Approval Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ],
+      "notes": "Extracts candidate_patch, decision, comment, and operator_id from the parent workflow envelope before release preparation."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3bbb7160-6c67-4bbd-98df-ce44df58f234",
+              "leftValue": "={{ !!$json.candidate_patch }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "01fdc53d-cf7a-4957-a5ed-3fb59ffefed1",
+      "name": "Candidate Patch Present?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        520,
+        0
+      ],
+      "notes": "Prevents /release/prepare from receiving decision metadata when the candidate patch is missing."
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst error = 'Release approval input is missing candidate_patch.';\nreturn [{\n  json: {\n    status: 'NEEDS_REVISION',\n    context: input.context || {},\n    ids: {\n      release_id: null,\n      patch_id: input.context?.patch_id || null,\n      audit_id: null,\n      trt_id: input.context?.trt_id || null,\n      trt_version: input.context?.trt_version || null,\n      reconciliation_plan_id: input.context?.reconciliation_plan_id || null,\n      scenario_spec_id: null\n    },\n    payload: {\n      message: 'Release needs revision.',\n      comment: error,\n      decision: input.decision || 'REQUEST_REVISION'\n    },\n    errors: [error]\n  }\n}];"
+      },
+      "id": "a63844c7-baa4-4898-8c04-dda610b30c76",
+      "name": "Missing Candidate Patch Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        160
+      ],
+      "notes": "Returns a normalized revision envelope when the parent workflow did not send a candidate_patch."
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:8000/release/prepare",
+        "url": "http://trt-api:8000/release/prepare",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ $json.body.candidate_patch || $json.body }}",
+        "jsonBody": "={{ $json.candidate_patch }}",
         "options": {}
       },
       "id": "b912cc8d-5e9a-43b9-97fd-db8f199fed32",
@@ -34,48 +92,64 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        260,
-        0
+        780,
+        -80
       ]
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { release_id: $json.release_id, status: 'PENDING_OPERATOR_DECISION', approval_url: $execution.resumeUrl || null } }}",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "91ec60d0-61cc-47f2-a7c2-fcb1b0dbc41c",
+              "name": "status",
+              "value": "PENDING_OPERATOR_DECISION",
+              "type": "string"
+            },
+            {
+              "id": "9dbd9702-4200-4c3d-9b9e-3f13e36db9f6",
+              "name": "context",
+              "value": "={{ { ...($('Normalize Release Approval Input').first().json.context || {}), patch_id: $json.patch_id || $('Normalize Release Approval Input').first().json.context?.patch_id || null, release_id: $json.release_id, audit_id: $('Normalize Release Approval Input').first().json.context?.audit_id || null, trt_id: $('Normalize Release Approval Input').first().json.context?.trt_id || $('Normalize Release Approval Input').first().json.payload?.candidate_patch?.trt_id || $('Normalize Release Approval Input').first().json.body?.candidate_patch?.trt_id || null, trt_version: $('Normalize Release Approval Input').first().json.context?.trt_version || $('Normalize Release Approval Input').first().json.payload?.candidate_patch?.base_version || $('Normalize Release Approval Input').first().json.body?.candidate_patch?.base_version || null, reconciliation_plan_id: $('Normalize Release Approval Input').first().json.context?.reconciliation_plan_id || null, scenario_batch_id: $('Normalize Release Approval Input').first().json.context?.scenario_batch_id || null, scenario_spec_ids: $('Normalize Release Approval Input').first().json.context?.scenario_spec_ids || [] } }}",
+              "type": "object"
+            },
+            {
+              "id": "20ef178b-8027-4129-98f6-90988674954e",
+              "name": "ids",
+              "value": "={{ { patch_id: $json.patch_id || null, release_id: $json.release_id, audit_id: null, trt_id: $('Normalize Release Approval Input').first().json.context?.trt_id || $('Normalize Release Approval Input').first().json.payload?.candidate_patch?.trt_id || null, trt_version: $('Normalize Release Approval Input').first().json.context?.trt_version || $('Normalize Release Approval Input').first().json.payload?.candidate_patch?.base_version || null, reconciliation_plan_id: null, scenario_spec_id: null } }}",
+              "type": "object"
+            },
+            {
+              "id": "15106400-6f4f-4763-9e91-fcb546099637",
+              "name": "payload",
+              "value": "={{ $json }}",
+              "type": "object"
+            },
+            {
+              "id": "6bc990d3-c62b-432d-93b5-f85e8d0889ba",
+              "name": "errors",
+              "value": "={{ [] }}",
+              "type": "array"
+            }
+          ]
+        },
         "options": {}
       },
       "id": "608f5684-76bd-4fdd-8168-c4d5298e3e1c",
       "name": "Return Pending Release",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
-        520,
-        0
+        1040,
+        -80
       ]
     },
     {
       "parameters": {
-        "resume": "webhook",
-        "httpMethod": "POST",
-        "options": {}
-      },
-      "id": "89d79fb6-c6bd-4ed5-8e64-2d60227e68e9",
-      "name": "Wait for Operator Decision",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        780,
-        0
-      ],
-      "notes": "Resume with JSON fields: decision, comment, operator_id. The release_id comes from the prepared release record."
-    },
-    {
-      "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:8000/release/decision",
+        "url": "http://trt-api:8000/release/decision",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { release_id: $('Prepare Pending Release').item.json.release_id, operator_id: $json.body.operator_id || $('Receive Reviewed Candidate Patch').item.json.body.operator_id || $('Receive Reviewed Candidate Patch').item.json.body.candidate_patch?.operator_id, decision: $json.body.decision, comment: $json.body.comment || '' } }}",
+        "jsonBody": "={{ { release_id: $('Prepare Pending Release').first().json.release_id, operator_id: $('Normalize Release Approval Input').first().json.operator_id, decision: $('Normalize Release Approval Input').first().json.decision, comment: $('Normalize Release Approval Input').first().json.comment } }}",
         "options": {}
       },
       "id": "df8f9193-c863-404c-b61f-5e8b5521a320",
@@ -83,8 +157,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1040,
-        0
+        1300,
+        -80
       ]
     },
     {
@@ -155,7 +229,7 @@
     },
     {
       "parameters": {
-        "url": "=http://host.docker.internal:8000/audit/{{ $json.audit_id }}",
+        "url": "=http://trt-api:8000/audit/{{ $json.audit_id }}",
         "options": {}
       },
       "id": "44809c0f-b883-4871-8e93-c4e8737e4338",
@@ -172,22 +246,34 @@
         "assignments": {
           "assignments": [
             {
-              "id": "dd35b958-21b2-4718-a91a-94ec19f4e4d9",
+              "id": "12189575-010f-443a-a81d-956d0891887a",
               "name": "status",
               "value": "RELEASED",
               "type": "string"
             },
             {
-              "id": "e3f61c09-4870-480f-8d30-91c4c1efbdbd",
-              "name": "trt_after_version",
-              "value": "={{ $json.trt_after_version }}",
-              "type": "string"
+              "id": "06cc6281-dc8f-4ca7-90dc-0f4dcc61654d",
+              "name": "context",
+              "value": "={{ { ...($('Normalize Release Approval Input').first().json.context || {}), patch_id: $('Prepare Pending Release').item.json.patch_id || $('Normalize Release Approval Input').first().json.context?.patch_id || null, release_id: $('Prepare Pending Release').item.json.release_id, audit_id: $json.audit_id || null, trt_id: $json.trt_id || $('Normalize Release Approval Input').first().json.context?.trt_id || $('Normalize Release Approval Input').first().json.payload?.candidate_patch?.trt_id || null, trt_version: $json.trt_after_version || $('Normalize Release Approval Input').first().json.context?.trt_version || null, reconciliation_plan_id: $('Normalize Release Approval Input').first().json.context?.reconciliation_plan_id || null, scenario_batch_id: $('Normalize Release Approval Input').first().json.context?.scenario_batch_id || null, scenario_spec_ids: $('Normalize Release Approval Input').first().json.context?.scenario_spec_ids || [] } }}",
+              "type": "object"
             },
             {
-              "id": "b38df379-e704-4933-af63-cb976d8e9f97",
-              "name": "audit_id",
-              "value": "={{ $json.audit_id }}",
-              "type": "string"
+              "id": "3b8ab4ad-e0c3-4424-8224-b515b1f66b92",
+              "name": "ids",
+              "value": "={{ { release_id: $('Prepare Pending Release').item.json.release_id, patch_id: $('Prepare Pending Release').item.json.patch_id || null, audit_id: $json.audit_id || null, trt_id: $json.trt_id || null, trt_version: $json.trt_after_version || null, reconciliation_plan_id: null, scenario_spec_id: null } }}",
+              "type": "object"
+            },
+            {
+              "id": "a44b134e-dd87-4e57-b608-4be0dd7aec65",
+              "name": "payload",
+              "value": "={{ $json }}",
+              "type": "object"
+            },
+            {
+              "id": "f24b1764-259e-4382-be92-9c530ebae1d0",
+              "name": "errors",
+              "value": "={{ [] }}",
+              "type": "array"
             }
           ]
         },
@@ -204,73 +290,31 @@
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "ec1cd4b6-b41e-494f-9318-5e5963af4e91",
-              "name": "status",
-              "value": "={{ $json.status }}",
-              "type": "string"
-            },
-            {
-              "id": "14eae5e9-63fd-41d0-916c-07aa790482a0",
-              "name": "audit_id",
-              "value": "={{ $json.audit_id }}",
-              "type": "string"
-            },
-            {
-              "id": "f79972c0-a503-48d4-82c2-4bf56bba2d73",
-              "name": "comment",
-              "value": "={{ $json.operator_decision.comment }}",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
+        "jsCode": "const input = $input.first().json;\nconst original = $('Normalize Release Approval Input').first().json;\nconst prepared = $('Prepare Pending Release').item.json;\nconst comment = input.operator_decision?.comment || original.comment || input.comment || 'Release rejected.';\nreturn [{\n  json: {\n    status: input.status || 'REJECTED_BY_OPERATOR',\n    context: {\n      ...(original.context || {}),\n      patch_id: prepared.patch_id || original.context?.patch_id || null,\n      release_id: prepared.release_id,\n      audit_id: input.audit_id || null,\n      trt_id: original.context?.trt_id || original.candidate_patch?.trt_id || null,\n      trt_version: original.context?.trt_version || original.candidate_patch?.base_version || null,\n      reconciliation_plan_id: original.context?.reconciliation_plan_id || null,\n      scenario_batch_id: original.context?.scenario_batch_id || null,\n      scenario_spec_ids: original.context?.scenario_spec_ids || []\n    },\n    ids: {\n      release_id: prepared.release_id,\n      patch_id: prepared.patch_id || null,\n      audit_id: input.audit_id || null,\n      trt_id: null,\n      trt_version: null,\n      reconciliation_plan_id: null,\n      scenario_spec_id: null\n    },\n    payload: {\n      ...input,\n      message: 'Release rejected.',\n      comment\n    },\n    errors: [comment]\n  }\n}];"
       },
       "id": "f178318d-5aac-4521-ad9e-7996f0814e9e",
       "name": "Rejected Notification Output",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         1820,
         40
-      ]
+      ],
+      "notes": "Code node to guarantee errors is a real array for rejected release decisions."
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "81a22d62-d992-4bd8-bc91-bb8f6522802c",
-              "name": "status",
-              "value": "={{ $json.status }}",
-              "type": "string"
-            },
-            {
-              "id": "688d66c5-2ff0-4bb1-8739-533f73ca5a78",
-              "name": "comment",
-              "value": "={{ $json.operator_decision.comment }}",
-              "type": "string"
-            },
-            {
-              "id": "c8b472db-2414-4421-ad7c-b98a97a54b85",
-              "name": "instruction",
-              "value": "Revise the operator intent and generate a new reviewed candidate patch.",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
+        "jsCode": "const input = $input.first().json;\nconst original = $('Normalize Release Approval Input').first().json;\nconst prepared = $('Prepare Pending Release').item.json;\nconst comment = input.operator_decision?.comment || input.comment || 'Release needs revision.';\nreturn [{\n  json: {\n    status: 'NEEDS_REVISION',\n    context: {\n      ...(original.context || {}),\n      patch_id: prepared.patch_id || original.context?.patch_id || null,\n      release_id: prepared.release_id,\n      audit_id: input.audit_id || null,\n      trt_id: original.context?.trt_id || null,\n      trt_version: original.context?.trt_version || null,\n      reconciliation_plan_id: original.context?.reconciliation_plan_id || null,\n      scenario_batch_id: original.context?.scenario_batch_id || null,\n      scenario_spec_ids: original.context?.scenario_spec_ids || []\n    },\n    ids: {\n      release_id: prepared.release_id,\n      patch_id: prepared.patch_id || null,\n      audit_id: input.audit_id || null,\n      trt_id: null,\n      trt_version: null,\n      reconciliation_plan_id: null,\n      scenario_spec_id: null\n    },\n    payload: {\n      ...input,\n      message: 'Release needs revision.',\n      comment\n    },\n    errors: [comment]\n  }\n}];"
       },
       "id": "ad05b8a8-f420-458a-9973-e2c0e39f86e1",
       "name": "Revision Notification Output",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         1820,
         220
-      ]
+      ],
+      "notes": "Code node to guarantee errors is a real array for revision decisions."
     }
   ],
   "connections": {
@@ -278,7 +322,7 @@
       "main": [
         [
           {
-            "node": "Prepare Pending Release",
+            "node": "Normalize Release Approval Input",
             "type": "main",
             "index": 0
           }
@@ -297,17 +341,6 @@
       ]
     },
     "Return Pending Release": {
-      "main": [
-        [
-          {
-            "node": "Wait for Operator Decision",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Wait for Operator Decision": {
       "main": [
         [
           {
@@ -370,6 +403,35 @@
         [
           {
             "node": "Revision Notification Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Release Approval Input": {
+      "main": [
+        [
+          {
+            "node": "Candidate Patch Present?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Candidate Patch Present?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Pending Release",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Missing Candidate Patch Output",
             "type": "main",
             "index": 0
           }

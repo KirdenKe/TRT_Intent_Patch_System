@@ -1,0 +1,35 @@
+{
+  "audit_id": "audit-072d104f-f09d-4f66-84c1-95bd02ea67e4",
+  "base_version": null,
+  "candidate_patch": {
+    "comment": "Test for the Milestone 6.5C",
+    "decision": "APPROVE",
+    "operator_id": "op_001"
+  },
+  "candidate_summary": {
+    "affected_fields": [],
+    "affected_lines": [],
+    "intent_text": null,
+    "reason": null
+  },
+  "created_at_utc": "2026-06-01T10:01:29.804112Z",
+  "operator_decision": {
+    "comment": "Test for the Milestone 6.5C",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-06-01T10:01:29.832490Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": null,
+  "release_id": "rel_c4d8ffcc-2eba-4b64-bd33-e644cd7ed688",
+  "status": "FAILED_STALE_VERSION",
+  "trt_id": null,
+  "updated_at_utc": "2026-06-01T10:01:29.832490Z",
+  "validation_results_at_prepare": {
+    "base_version": false,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": false,
+    "semantic": true
+  }
+}

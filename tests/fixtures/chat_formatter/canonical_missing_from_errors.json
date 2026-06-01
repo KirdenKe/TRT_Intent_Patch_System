@@ -1,0 +1,19 @@
+{
+  "input": {
+    "status": "NEEDS_CLARIFICATION",
+    "context": {},
+    "payload": {
+      "raw_chat_input": "Make Line 1 prioritize trauma sets"
+    },
+    "errors": [
+      "Missing required chat field: operator_id",
+      "Missing required chat field: reason"
+    ]
+  },
+  "expected": {
+    "missing_fields": ["operator_id", "reason"],
+    "intent_summary": "Make Line 1 prioritize trauma sets",
+    "debug": false
+  }
+}
+

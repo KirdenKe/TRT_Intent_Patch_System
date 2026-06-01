@@ -1,0 +1,31 @@
+{
+  "created_at_utc": "2026-06-01T07:33:03.306982Z",
+  "line_decisions": [
+    {
+      "decision": "WAIT_FOR_CHECKPOINT",
+      "degraded_strategy": null,
+      "line_id": "line_1",
+      "next_action": "Wait for a checkpoint before switching.",
+      "reason": "Line is running with active WIP.",
+      "required_checkpoint": "TRAY_COMPLETE",
+      "risk_flags": [
+        "active_wip"
+      ]
+    },
+    {
+      "decision": "NO_CHANGE",
+      "degraded_strategy": null,
+      "line_id": "line_2",
+      "next_action": "No supervisor action required.",
+      "reason": "Target TRT does not change this line.",
+      "required_checkpoint": null,
+      "risk_flags": []
+    }
+  ],
+  "overall_status": "WAITING",
+  "plan_id": "rec_d975c398-6c73-43cb-ada5-ef69f8605213",
+  "source_state_hash": "sha256:94f794b282019497d502b7dc414e6e66a477302ec4bea4fd095af11f80478fe8",
+  "source_trt_hash": "sha256:9291de9a829162cebbdd82f94a4fa073f0d65cc4b63d4fc829ae8294b9c80dec",
+  "trt_id": "trt-demo",
+  "trt_version": "v4"
+}

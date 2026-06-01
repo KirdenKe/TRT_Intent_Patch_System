@@ -1,0 +1,58 @@
+{
+  "audit_id": "audit-8156cd61-d183-4737-a813-4606461410ad",
+  "base_version": "v5",
+  "candidate_patch": {
+    "base_version": "v5",
+    "intent_text": "Line 1 should prioritize Trauma Set. Exclude forceps if possible. If entanglement occurs, continue feasible tasks when safe.",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_1/goal",
+        "value": "TRAUMA_SET_PRIORITY"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/excluded_instruments",
+        "value": [
+          "FORCEPS"
+        ]
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "patch-1780300253469",
+    "reason": "Trauma Set deadline is urgent.",
+    "status": "REVIEWED",
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [
+      "/lines/line_1/goal",
+      "/lines/line_1/excluded_instruments"
+    ],
+    "affected_lines": [
+      "line_1"
+    ],
+    "intent_text": "Line 1 should prioritize Trauma Set. Exclude forceps if possible. If entanglement occurs, continue feasible tasks when safe.",
+    "reason": "Trauma Set deadline is urgent."
+  },
+  "created_at_utc": "2026-06-01T07:50:53.596456Z",
+  "operator_decision": {
+    "comment": "Approved for milestone 6.5 validation.",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-06-01T07:51:16.582318Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1780300253469",
+  "release_id": "rel_ac89b8a5-e658-464b-9966-daf5afd8f965",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "updated_at_utc": "2026-06-01T07:51:16.582318Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

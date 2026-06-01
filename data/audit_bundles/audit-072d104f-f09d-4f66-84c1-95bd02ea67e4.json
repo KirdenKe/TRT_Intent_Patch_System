@@ -1,0 +1,35 @@
+{
+  "audit_id": "audit-072d104f-f09d-4f66-84c1-95bd02ea67e4",
+  "intent_text": "",
+  "operations": [],
+  "operator_id": "op_001",
+  "patch_id": "",
+  "reason": "",
+  "rejection_reasons": [
+    "schema: Additional properties are not allowed ('comment', 'decision' were unexpected)",
+    "schema: 'patch_id' is a required property",
+    "schema: 'trt_id' is a required property",
+    "schema: 'base_version' is a required property",
+    "schema: 'intent_text' is a required property",
+    "schema: 'reason' is a required property",
+    "schema: 'operations' is a required property",
+    "schema: 'status' is a required property",
+    "base_version mismatch: patch targets None@None, current is trt-demo@v6"
+  ],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "REJECTED",
+  "timestamp_utc": "2026-06-01T10:01:29.847584Z",
+  "trt_after_hash": null,
+  "trt_after_version": null,
+  "trt_before_hash": "8350db8324dc5d1a13420fde173cf43892ffa00d9c8165515ac2a82fe0b055d3",
+  "trt_before_version": "v6",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": false,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": false,
+    "semantic": true
+  }
+}

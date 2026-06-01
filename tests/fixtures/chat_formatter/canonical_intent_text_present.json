@@ -1,0 +1,20 @@
+{
+  "input": {
+    "status": "NEEDS_CLARIFICATION",
+    "context": {},
+    "payload": {
+      "intent_text": "Prioritize trauma set on line 1.",
+      "missing_fields": [
+        "Missing required chat field: intent_text",
+        "Missing required chat field: operator_id"
+      ]
+    },
+    "errors": []
+  },
+  "expected": {
+    "missing_fields": ["operator_id"],
+    "intent_summary": "Prioritize trauma set on line 1.",
+    "debug": false
+  }
+}
+

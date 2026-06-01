@@ -1,0 +1,1574 @@
+{
+  "id": "ChatOperatorTaskAllocationDemo",
+  "name": "Chat Operator Task Allocation Orchestration",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "initialMessages": "Tell me the operator_id, task request, and reason for the task allocation request. You can send JSON or plain text.",
+        "options": {
+          "responseMode": "responseNodes"
+        }
+      },
+      "id": "f7ea77bc-faf2-4bf2-a0c4-38b225116ab0",
+      "name": "Receive Operator Intent",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst fieldLabels = {\n  operator_id: 'operator ID',\n  intent_text: 'task request',\n  reason: 'reason for the change'\n};\nconst intentText = input.intent_text || input.raw_chat_input || '';\nconst missing = [];\nif (!input.operator_id) missing.push('operator_id');\nif (!intentText) missing.push('intent_text');\nif (!input.reason) missing.push('reason');\nreturn [{\n  json: {\n    status: missing.length ? 'NEEDS_CLARIFICATION' : 'READY_FOR_INTENT_EXTRACTION',\n    missing_fields: missing,\n    field_labels: fieldLabels,\n    operator_id: input.operator_id || null,\n    intent_text: intentText,\n    reason: input.reason || null,\n    raw_chat_input: input.raw_chat_input || intentText,\n    confirmations: input.confirmations || {},\n    debug: input.debug === true,\n    context: { ...(input.context || {}), operator_id: input.operator_id || null, debug: input.debug === true },\n    body: {\n      operator_id: input.operator_id || null,\n      intent_text: intentText,\n      reason: input.reason || null\n    },\n    errors: []\n  }\n}];"
+      },
+      "id": "b6dd51e2-358f-4ec8-9e1c-3d061fb5e9a1",
+      "name": "Check Required Chat Fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        0
+      ],
+      "notes": "Checks only operator_id, intent_text, and reason. Outputs canonical missing_fields only; never raw error strings."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fccff5ea-69be-4ed9-99f4-d308c7956ad7",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "NEEDS_CLARIFICATION",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a490a1b9-1793-45a6-b2f3-726a4ce5c104",
+      "name": "IF Missing Required Fields",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        780,
+        0
+      ],
+      "notes": "Routes canonical missing-field clarifications before the intent LLM can run."
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nreturn [{\n  json: {\n    status: 'NEEDS_CLARIFICATION',\n    intent_summary: input.intent_text || input.raw_chat_input || '',\n    missing_fields: input.missing_fields || [],\n    field_labels: input.field_labels || {\n      operator_id: 'operator ID',\n      intent_text: 'task request',\n      reason: 'reason for the change'\n    },\n    example: {\n      operator_id: 'op_001',\n      reason: 'urgent trauma set deadline'\n    },\n    debug: input.debug === true,\n    raw_backend_response: null\n  }\n}];"
+      },
+      "id": "78ee59b9-dadd-400f-b67e-31df5daf734a",
+      "name": "Build Canonical Clarification Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        160
+      ],
+      "notes": "Builds canonical formatter input from the required-field check. Raw backend errors are not present on this branch."
+    },
+    {
+      "parameters": {
+        "workflowId": "IntentToPatchReviewDemo",
+        "options": {}
+      },
+      "id": "9061f64e-e6ca-42f6-806a-e73f62bf9999",
+      "name": "Execute Intent Review Sub-workflow",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        -80
+      ],
+      "notes": "Runs only after Check Required Chat Fields returns READY_FOR_INTENT_EXTRACTION. The intent LLM lives inside the review sub-workflow."
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first().json;\nconst previous = current.previous_context ?? current.context ?? {};\nconst ids = current.ids ?? {};\nconst payload = current.payload ?? {};\nfunction firstNonNull(...values) { return values.find(v => v !== undefined && v !== null && v !== ''); }\nreturn [{ json: { status: current.status, context: { ...previous, ...(current.context ?? {}), ...Object.fromEntries(Object.entries(ids).filter(([_, v]) => v !== null && v !== undefined && v !== '')), release_id: firstNonNull(current.context?.release_id, ids.release_id, previous.release_id), audit_id: firstNonNull(current.context?.audit_id, ids.audit_id, previous.audit_id), trt_id: firstNonNull(current.context?.trt_id, ids.trt_id, payload.plan?.trt_id, previous.trt_id), trt_version: firstNonNull(current.context?.trt_version, ids.trt_version, payload.plan?.trt_version, previous.trt_version), reconciliation_plan_id: firstNonNull(current.context?.reconciliation_plan_id, ids.reconciliation_plan_id, payload.plan?.plan_id, previous.reconciliation_plan_id), scenario_batch_id: firstNonNull(current.context?.scenario_batch_id, ids.scenario_batch_id, previous.scenario_batch_id), scenario_spec_ids: firstNonNull(current.context?.scenario_spec_ids, ids.scenario_spec_ids, previous.scenario_spec_ids, []) }, payload, errors: current.errors ?? [] } }];"
+      },
+      "id": "ec701c3a-cd8a-467d-8953-988e9982e722",
+      "name": "Normalize Context After Intent Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "93d66ea0-8e06-40a3-8a08-beee3d261022",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "54b091e1-eaa1-49ba-9935-ff01561a52b8",
+              "name": "context",
+              "value": "={{ $json.context }}",
+              "type": "object"
+            },
+            {
+              "id": "0e7a19a0-061a-452c-8e34-3bcfa24daa54",
+              "name": "payload",
+              "value": "={{ { candidate_patch: $json.payload.candidate_patch || null, candidate_patch_summary: { patch_id: $json.context.patch_id, operations: $json.payload.candidate_patch?.operations || [], intent_text: $json.payload.candidate_patch?.intent_text || null, reason: $json.payload.candidate_patch?.reason || null }, validation_status: $json.status, validation_results: $json.payload.validation_results || null, message: $json.status === 'REVIEWED' ? 'Candidate patch is valid. Confirm release approval to continue.' : 'Candidate patch needs revision.' } }}",
+              "type": "object"
+            },
+            {
+              "id": "a5b1dc82-c676-43a9-ba79-c0615eac763e",
+              "name": "errors",
+              "value": "={{ $json.errors }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "97f880f4-7ba9-4e40-9c08-c1546f4ae481",
+      "name": "Chat Candidate Patch Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1300,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "51d00f1d-1134-4bc9-bcd2-cb05c7f88dca",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "REVIEWED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "37729679-37f7-4d47-bc9e-0da4b0750f7d",
+      "name": "Candidate Reviewed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1560,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": "PatchReleaseApprovalDemo",
+        "options": {}
+      },
+      "id": "0a83973d-223f-4f10-9495-8c0e50773c1d",
+      "name": "Execute Release Approval Sub-workflow",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        1820,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first().json;\nconst previous = current.previous_context ?? current.context ?? {};\nconst ids = current.ids ?? {};\nconst payload = current.payload ?? {};\nfunction firstNonNull(...values) { return values.find(v => v !== undefined && v !== null && v !== ''); }\nreturn [{ json: { status: current.status, context: { ...previous, ...(current.context ?? {}), ...Object.fromEntries(Object.entries(ids).filter(([_, v]) => v !== null && v !== undefined && v !== '')), release_id: firstNonNull(current.context?.release_id, ids.release_id, previous.release_id), audit_id: firstNonNull(current.context?.audit_id, ids.audit_id, previous.audit_id), trt_id: firstNonNull(current.context?.trt_id, ids.trt_id, payload.plan?.trt_id, previous.trt_id), trt_version: firstNonNull(current.context?.trt_version, ids.trt_version, payload.plan?.trt_version, previous.trt_version), reconciliation_plan_id: firstNonNull(current.context?.reconciliation_plan_id, ids.reconciliation_plan_id, payload.plan?.plan_id, previous.reconciliation_plan_id), scenario_batch_id: firstNonNull(current.context?.scenario_batch_id, ids.scenario_batch_id, previous.scenario_batch_id), scenario_spec_ids: firstNonNull(current.context?.scenario_spec_ids, ids.scenario_spec_ids, previous.scenario_spec_ids, []) }, payload, errors: current.errors ?? [] } }];"
+      },
+      "id": "2c81b672-2369-4327-80b0-f962775face3",
+      "name": "Normalize Context After Release Approval",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d6ab81c3-759a-4aa7-85a7-277a13b1a5ea",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "30f6e8c4-15ba-4dc9-8cb1-7f03ecdd77bf",
+              "name": "context",
+              "value": "={{ $json.context }}",
+              "type": "object"
+            },
+            {
+              "id": "ddfca2af-cc68-49d0-91aa-5acd51e2f0b1",
+              "name": "payload",
+              "value": "={{ { release_status: $json.status, release_id: $json.context.release_id, audit_id: $json.context.audit_id, trt_version: $json.context.trt_version, message: $json.status === 'RELEASED' ? 'Release approved and TRT version updated.' : 'Release did not complete.' } }}",
+              "type": "object"
+            },
+            {
+              "id": "eb97890a-3520-4bde-b2a0-dcb1c82c1ad0",
+              "name": "errors",
+              "value": "={{ $json.errors }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "71a71f93-d059-4acb-923d-e6e2f3ae7526",
+      "name": "Chat Release Status Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2340,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e62c939a-8597-4e8f-b7fb-df0a91c90258",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "RELEASED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b6d7e88e-3bdf-4e94-8c1f-ceb8fa7a0b67",
+      "name": "Release Completed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2600,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": "ReleasedTRTToReconciliationDemo",
+        "options": {}
+      },
+      "id": "2b6c943d-374a-476e-9ae4-ce3066212ab5",
+      "name": "Execute Supervisor Reconciliation Sub-workflow",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        2860,
+        -280
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first().json;\nconst previous = current.previous_context ?? current.context ?? {};\nconst ids = current.ids ?? {};\nconst payload = current.payload ?? {};\nfunction firstNonNull(...values) { return values.find(v => v !== undefined && v !== null && v !== ''); }\nreturn [{ json: { status: current.status, context: { ...previous, ...(current.context ?? {}), ...Object.fromEntries(Object.entries(ids).filter(([_, v]) => v !== null && v !== undefined && v !== '')), release_id: firstNonNull(current.context?.release_id, ids.release_id, previous.release_id), audit_id: firstNonNull(current.context?.audit_id, ids.audit_id, previous.audit_id), trt_id: firstNonNull(current.context?.trt_id, ids.trt_id, payload.plan?.trt_id, previous.trt_id), trt_version: firstNonNull(current.context?.trt_version, ids.trt_version, payload.plan?.trt_version, previous.trt_version), reconciliation_plan_id: firstNonNull(current.context?.reconciliation_plan_id, ids.reconciliation_plan_id, payload.plan?.plan_id, previous.reconciliation_plan_id), scenario_batch_id: firstNonNull(current.context?.scenario_batch_id, ids.scenario_batch_id, previous.scenario_batch_id), scenario_spec_ids: firstNonNull(current.context?.scenario_spec_ids, ids.scenario_spec_ids, previous.scenario_spec_ids, []) }, payload, errors: current.errors ?? [] } }];"
+      },
+      "id": "60775ea6-fbea-4d67-9818-c0ef89781ca2",
+      "name": "Normalize Context After Reconciliation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3120,
+        -280
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3d99aa2a-1e72-4dc4-81c4-c100edf0fab9",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "84f8ee70-38c0-4ec7-b656-7e954d7edb4a",
+              "name": "context",
+              "value": "={{ $json.context }}",
+              "type": "object"
+            },
+            {
+              "id": "b96a4176-0d07-4104-b8f1-c0fe550da819",
+              "name": "payload",
+              "value": "={{ { reconciliation_status: $json.status, plan_id: $json.context.reconciliation_plan_id, overall_status: $json.payload.plan?.overall_status || $json.status, line_decisions: $json.payload.plan?.line_decisions || [], message: $json.status === 'READY' || $json.status === 'DEGRADED' ? 'Reconciliation is ready for ScenarioSpec generation.' : 'Reconciliation is not ready for ScenarioSpec generation.' } }}",
+              "type": "object"
+            },
+            {
+              "id": "785d4748-4052-47ab-a757-7568aab059b5",
+              "name": "errors",
+              "value": "={{ $json.errors }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d803f8c5-4980-44ea-98ee-e9a5a29d01b7",
+      "name": "Chat Reconciliation Plan Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3380,
+        -280
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c9741bb8-0b11-4bbe-9386-2e61ae017632",
+              "leftValue": "={{ ['READY', 'DEGRADED'].includes($json.status) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b9017322-cc1e-443d-9545-8b397e1d674c",
+      "name": "Ready for ScenarioSpec?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3640,
+        -280
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": "GenerateScenarioSpecDemo",
+        "options": {}
+      },
+      "id": "86eacf60-8978-4a73-a6fb-22f211545c10",
+      "name": "Execute ScenarioSpec Generation Sub-workflow",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        3900,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first().json;\nconst previous = current.previous_context ?? current.context ?? {};\nconst ids = current.ids ?? {};\nconst payload = current.payload ?? {};\nfunction firstNonNull(...values) { return values.find(v => v !== undefined && v !== null && v !== ''); }\nreturn [{ json: { status: current.status, context: { ...previous, ...(current.context ?? {}), ...Object.fromEntries(Object.entries(ids).filter(([_, v]) => v !== null && v !== undefined && v !== '')), release_id: firstNonNull(current.context?.release_id, ids.release_id, previous.release_id), audit_id: firstNonNull(current.context?.audit_id, ids.audit_id, previous.audit_id), trt_id: firstNonNull(current.context?.trt_id, ids.trt_id, payload.plan?.trt_id, previous.trt_id), trt_version: firstNonNull(current.context?.trt_version, ids.trt_version, payload.plan?.trt_version, previous.trt_version), reconciliation_plan_id: firstNonNull(current.context?.reconciliation_plan_id, ids.reconciliation_plan_id, payload.plan?.plan_id, previous.reconciliation_plan_id), scenario_batch_id: firstNonNull(current.context?.scenario_batch_id, ids.scenario_batch_id, previous.scenario_batch_id), scenario_spec_ids: firstNonNull(current.context?.scenario_spec_ids, ids.scenario_spec_ids, previous.scenario_spec_ids, []) }, payload, errors: current.errors ?? [] } }];"
+      },
+      "id": "9b0aa5ba-c159-4217-959a-4b657f8659d0",
+      "name": "Normalize Context After ScenarioSpec Generation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4160,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "14833c40-86eb-4822-a361-7757c8eaafa9",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "33a20749-6e91-419a-ae25-45d7ddd43e42",
+              "name": "context",
+              "value": "={{ $json.context }}",
+              "type": "object"
+            },
+            {
+              "id": "75c6e5e0-18e3-4347-9bdc-de002ab78aa2",
+              "name": "payload",
+              "value": "={{ { scenario_spec_id: $json.context.scenario_spec_ids?.slice(-1)?.[0] || $json.payload.scenario_spec_id || null, scenario_spec_path: $json.payload.scenario_spec_path || null, message: $json.status === 'GENERATED' ? `ScenarioSpec generated at ${$json.payload.scenario_spec_path}.` : 'ScenarioSpec was not generated.' } }}",
+              "type": "object"
+            },
+            {
+              "id": "d34015d3-4dc7-46e0-beeb-555a39bff1eb",
+              "name": "errors",
+              "value": "={{ $json.errors }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "215e0acd-9aa7-4985-a0b3-d55d21f35000",
+      "name": "Chat ScenarioSpec Path Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4420,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0cebe8ff-d4fc-4aec-85c7-8d8fd02d59f0",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "45a601a5-6d9e-49c1-8b92-4dbdde596c34",
+              "name": "context",
+              "value": "={{ $json.context }}",
+              "type": "object"
+            },
+            {
+              "id": "1d2efada-a47d-4f85-be0d-7a849e9e0059",
+              "name": "payload",
+              "value": "={{ { message: $json.payload.message, generated_scenario_spec_path: $json.payload.scenario_spec_path || null, final_context: $json.context } }}",
+              "type": "object"
+            },
+            {
+              "id": "7482b042-20a7-4abc-8622-d51762160201",
+              "name": "errors",
+              "value": "={{ $json.errors }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a7cfd25b-fdf4-4516-83ee-0ccde7524310",
+      "name": "Chat Final Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4680,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "063cd316-8ce6-4db9-9afc-af0e4563590f",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "b737da85-3a56-4983-9d47-2d0c0775b6e5",
+              "name": "context",
+              "value": "={{ $json.context }}",
+              "type": "object"
+            },
+            {
+              "id": "a75d9f1d-53ea-43c0-9219-0e6b4a34fa37",
+              "name": "payload",
+              "value": "={{ { message: 'Workflow stopped before ScenarioSpec generation.', summary: $json.payload } }}",
+              "type": "object"
+            },
+            {
+              "id": "267c3b46-6b7e-4725-b35e-dc48aa701f4d",
+              "name": "errors",
+              "value": "={{ $json.errors }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b72033bd-820a-4d30-aeee-7364daab9eb5",
+      "name": "Chat Stop Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1820,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "message": "={{$json.user_message}}",
+        "waitUserReply": false,
+        "options": {}
+      },
+      "id": "3de73c71-c3f7-47f6-ae2d-891411674dbf",
+      "name": "Send Chat Response",
+      "type": "@n8n/n8n-nodes-langchain.chat",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        160
+      ],
+      "notes": "Real Chat response node. Sends only the user_message string to the chat UI; structured data remains internal upstream."
+    },
+    {
+      "parameters": {
+        "message": "={{$json.user_message}}",
+        "waitUserReply": true,
+        "options": {}
+      },
+      "id": "9d2bc219-8f89-4986-b9df-069369b3474f",
+      "name": "Ask Clarification Reply",
+      "type": "@n8n/n8n-nodes-langchain.chat",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        160
+      ],
+      "notes": "Inline chat prompt for missing operator fields. This is a Chat node with waitUserReply=true."
+    },
+    {
+      "parameters": {
+        "message": "={{$json.user_message + \"\\n\\nReply with APPROVE, REJECT, or REQUEST_REVISION. You may add a comment after a colon, for example: APPROVE: urgent trauma set deadline\"}}",
+        "waitUserReply": true,
+        "options": {}
+      },
+      "id": "d486ab62-1cf9-4482-8d10-113a2bce2dae",
+      "name": "Ask Release Decision",
+      "type": "@n8n/n8n-nodes-langchain.chat",
+      "typeVersion": 1,
+      "position": [
+        1820,
+        -180
+      ],
+      "notes": "Inline chat approval prompt. Uses waitUserReply=true instead of an n8n Wait node."
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst payload = input.payload || {};\nconst context = input.context || {};\nconst errors = Array.isArray(input.errors) ? input.errors : (input.errors ? [input.errors] : []);\nconst cleanErrors = errors.map(value => String(value || '').trim()).filter(value => value && !value.startsWith('Missing required chat field:'));\nconst status = input.status || 'ERROR';\nconst missingFields = Array.isArray(input.missing_fields) ? input.missing_fields : [];\nconst fieldLabels = input.field_labels || {\n  operator_id: 'operator ID',\n  intent_text: 'task request',\n  reason: 'reason for the change'\n};\nconst example = input.example || {\n  operator_id: 'op_001',\n  reason: 'urgent trauma set deadline'\n};\nconst intentSummary = input.intent_summary || payload.intent_text || payload.raw_chat_input || payload.message || '';\nconst ids = { ...(input.ids || {}), ...context };\nconst debug = input.debug === true || context.debug === true || payload.debug === true;\nlet nextAction = 'WAIT';\nif (status === 'NEEDS_CLARIFICATION') nextAction = 'PROVIDE_MISSING_FIELDS';\nelse if (status === 'REVIEWED') nextAction = 'CONFIRM_PATCH';\nelse if (['REJECTED', 'REJECTED_BY_OPERATOR', 'NEEDS_REVISION', 'REQUIRES_OPERATOR_RESOLUTION'].includes(status)) nextAction = 'REVISE_REQUEST';\nelse if (status === 'GENERATED') nextAction = 'DONE';\nelse if (status === 'ERROR') nextAction = 'ERROR';\n\nconst canonical = {\n  status,\n  next_action: nextAction,\n  intent_summary: intentSummary,\n  missing_fields: missingFields,\n  field_labels: fieldLabels,\n  example,\n  ids,\n  payload,\n  errors: cleanErrors,\n  debug\n};\n\nconst schema = {\n  type: 'object',\n  additionalProperties: false,\n  required: ['user_message', 'suggested_reply'],\n  properties: {\n    user_message: { type: 'string' },\n    suggested_reply: { type: 'string' }\n  }\n};\n\nconst NL = String.fromCharCode(10);\nconst formatterExamples = [\n  {\n    input_status: 'NEEDS_CLARIFICATION',\n    output: {\n      user_message: 'I understood your request as: Line 1 should prioritize Trauma Set. Before I can submit this for review, I still need operator ID and reason for the change.',\n      suggested_reply: 'operator_id: op_001' + NL + 'reason: urgent trauma set deadline'\n    }\n  },\n  {\n    input_status: 'REVIEWED',\n    output: {\n      user_message: 'Candidate patch reviewed successfully. Please approve, reject, or request revision.',\n      suggested_reply: 'APPROVE: urgent trauma set deadline'\n    }\n  },\n  {\n    input_status: 'GENERATED',\n    output: {\n      user_message: 'ScenarioSpec generated at outputs/scenario_specs/example.json.',\n      suggested_reply: ''\n    }\n  }\n];\n\nconst userPrompt = [\n  'Format this backend result into a concise user-facing chat message.',\n  'Do not show raw JSON.',\n  'Do not invent IDs or fields.',\n  'Do not change workflow status, required fields, IDs, validation results, or rejection reasons.',\n  '',\n  'Status-specific instructions:',\n  'NEEDS_CLARIFICATION: Summarize what was understood from intent_summary. List missing_fields using field_labels. Provide a suggested reply using example values. Ask only for missing fields.',\n  'REVIEWED: Summarize that the candidate patch passed validation. Ask the operator to approve, reject, or request revision. Do not claim it has been released.',\n  'RELEASED: State that release completed. Include release_id, trt_version, and audit_id only if present in ids. Mention the next step is reconciliation or simulation preparation.',\n  'READY / DEGRADED: Summarize reconciliation status. READY means ready for ScenarioSpec generation or simulation preparation. DEGRADED means proceed with the degraded strategy and mention any degraded details if present.',\n  'GENERATED: State that ScenarioSpec generation completed. Include scenario_spec_path or generated_scenario_spec_path if present.',\n  'REJECTED / NEEDS_REVISION: Explain errors or rejection reasons in plain language. Ask the operator to revise the request. Do not invent a successful release.',\n  '',\n  'Examples with valid JSON outputs matching the formatter schema:',\n  JSON.stringify(formatterExamples[0]),\n  JSON.stringify(formatterExamples[1]),\n  JSON.stringify(formatterExamples[2]),\n  '',\n  'Backend canonical result:',\n  JSON.stringify(canonical)\n].join(NL);\n\nconst vllmBody = {\n  model: 'cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit',\n  messages: [\n    {\n      role: 'system',\n      content: [\n        'You format backend workflow results for an operator chat UI.',\n        'Return only JSON matching the schema.',\n        'You may only write user-facing wording.',\n        'Do not decide workflow state.',\n        'Do not change status, required fields, IDs, validation results, or rejection reasons.',\n        'Do not expose raw JSON.'\n      ].join(' ')\n    },\n    {\n      role: 'user',\n      content: userPrompt\n    }\n  ],\n  temperature: 0,\n  max_tokens: 320,\n  structured_outputs: {\n    json: schema\n  }\n};\n\nreturn [{\n  json: {\n    vllm_body: vllmBody,\n    formatter_canonical: canonical\n  }\n}];"
+      },
+      "id": "2e2f6678-26f6-48ef-9446-f35a211d8bf9",
+      "name": "Build vLLM User Response Format Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4940,
+        -160
+      ],
+      "notes": "Builds vLLM formatter request from canonical backend output. It does not decide workflow state."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.50.168:29987/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.vllm_body }}",
+        "options": {}
+      },
+      "id": "881e16c9-8e92-4d9d-ae25-e6f8cc043e62",
+      "name": "vLLM Format User Response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5200,
+        -160
+      ],
+      "notes": "Formats user-facing wording only. Deterministic state is normalized afterward."
+    },
+    {
+      "parameters": {
+        "jsCode": "const llmResponse = $input.first().json;\nconst canonical = $('Build vLLM User Response Format Body').first().json.formatter_canonical;\nlet content = null;\nif (llmResponse.choices?.[0]?.message?.content) {\n  content = llmResponse.choices[0].message.content;\n} else if (llmResponse.user_message !== undefined) {\n  content = llmResponse;\n} else {\n  content = llmResponse;\n}\n\nlet parsed = {};\nif (typeof content === 'string') {\n  try {\n    parsed = JSON.parse(content);\n  } catch (error) {\n    parsed = {};\n  }\n} else if (typeof content === 'object' && content !== null) {\n  parsed = content;\n}\n\nfunction fallbackMessage() {\n  if (canonical.status === 'NEEDS_CLARIFICATION') {\n    const labels = canonical.field_labels || {};\n    const example = canonical.example || {};\n    const bullets = (canonical.missing_fields || []).map(field => `- ${labels[field] || field}`).join(String.fromCharCode(10));\n    const reply = (canonical.missing_fields || []).map(field => `${field}: ${example[field] || '<value>'}`).join(String.fromCharCode(10));\n    return `I understood your request as: ${canonical.intent_summary || ''}${String.fromCharCode(10)}${String.fromCharCode(10)}Before I can submit this for review, I still need:${String.fromCharCode(10)}${bullets}${String.fromCharCode(10)}${String.fromCharCode(10)}You can reply with:${String.fromCharCode(10)}${reply}`;\n  }\n  if (canonical.status === 'REVIEWED') return 'Candidate patch reviewed successfully. Please approve, reject, or request revision.';\n  if (canonical.status === 'GENERATED') return `ScenarioSpec generated at ${canonical.payload?.generated_scenario_spec_path || canonical.payload?.scenario_spec_path || 'the configured output path'}.`;\n  if (canonical.errors?.length) return `The request cannot continue yet: ${canonical.errors.join('; ')}. Please revise the request.`;\n  return `Workflow status: ${canonical.status}.`;\n}\n\nconst userMessage = parsed.user_message && !parsed.user_message.includes('{') ? parsed.user_message : fallbackMessage();\nconst suggestedReply = parsed.suggested_reply || (canonical.status === 'NEEDS_CLARIFICATION'\n  ? (canonical.missing_fields || []).map(field => `${field}: ${(canonical.example || {})[field] || '<value>'}`).join(String.fromCharCode(10))\n  : '');\n\nreturn [{\n  json: {\n    user_message: userMessage,\n    next_action: canonical.next_action,\n    required_fields: canonical.missing_fields || [],\n    suggested_reply: suggestedReply,\n    debug_json: canonical.debug === true ? canonical : null,\n    status: canonical.status,\n    context: canonical.ids || {},\n    payload: canonical.payload || {},\n    errors: canonical.errors || []\n  }\n}];"
+      },
+      "id": "3d0eaebf-39ac-4843-a566-443b8d482766",
+      "name": "Normalize Formatted User Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5460,
+        -160
+      ],
+      "notes": "Normalizes vLLM wording and restores canonical next_action, required_fields, IDs, and errors."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ca611c64-66b5-4e1b-9d75-9741f7750475",
+              "leftValue": "={{ $json.next_action }}",
+              "rightValue": "PROVIDE_MISSING_FIELDS",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "fa16a5f1-d2c9-4c75-a957-315ee668b5d9",
+      "name": "Formatted Response Needs Reply?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5720,
+        -160
+      ],
+      "notes": "Routes formatted clarification prompts to a waiting Chat node and terminal messages to a one-way Chat response."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e1fd3c94-9106-4653-9614-92c71138e8fd",
+              "leftValue": "={{ $json.next_action }}",
+              "rightValue": "CONFIRM_PATCH",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0b1c90d1-b6fb-4436-992b-e2237b95c702c",
+      "name": "Formatted Response Needs Release Decision?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5980,
+        -160
+      ],
+      "notes": "Routes formatted reviewed-candidate prompts to the waiting release-decision Chat node."
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst rawMessage = input.chatInput || input.text || input.message || input.response || input.output || (input.body && input.body.message) || input.body || \"\";\nconst rawChatInput = typeof rawMessage === \"string\" ? rawMessage : JSON.stringify(rawMessage);\nlet previous = null;\nlet reviewed = null;\ntry {\n  previous = $('Check Required Chat Fields').first().json;\n} catch (error) {\n  previous = null;\n}\ntry {\n  reviewed = $('Chat Candidate Patch Summary').first().json;\n} catch (error) {\n  reviewed = null;\n}\nconst NL = String.fromCharCode(10);\n\nconst schema = {\n  type: \"object\",\n  additionalProperties: false,\n  required: [\"turn_type\", \"operator_id\", \"intent_text\", \"reason\", \"decision\", \"comment\", \"raw_chat_input\", \"debug\"],\n  properties: {\n    turn_type: {\n      type: \"string\",\n      enum: [\"SMALL_TALK\", \"CANCEL\", \"CONFUSED\", \"UNKNOWN\", \"TASK_REQUEST\", \"CLARIFICATION_VALUES\", \"APPROVAL_DECISION\"]\n    },\n    operator_id: { type: [\"string\", \"null\"] },\n    intent_text: { type: [\"string\", \"null\"] },\n    reason: { type: [\"string\", \"null\"] },\n    decision: { type: [\"string\", \"null\"], enum: [\"APPROVE\", \"REJECT\", \"REQUEST_REVISION\", \"UNKNOWN\", null] },\n    comment: { type: [\"string\", \"null\"] },\n    raw_chat_input: { type: \"string\" },\n    debug: { type: \"boolean\" }\n  }\n};\n\nconst examples = [\n  {\n    input: \"hi\",\n    output: { turn_type: \"SMALL_TALK\", operator_id: null, intent_text: null, reason: null, decision: null, comment: null, raw_chat_input: \"hi\", debug: false }\n  },\n  {\n    input: \"???\",\n    output: { turn_type: \"CONFUSED\", operator_id: null, intent_text: null, reason: null, decision: null, comment: null, raw_chat_input: \"???\", debug: false }\n  },\n  {\n    input: \"cancel\",\n    output: { turn_type: \"CANCEL\", operator_id: null, intent_text: null, reason: null, decision: null, comment: null, raw_chat_input: \"cancel\", debug: false }\n  },\n  {\n    input: \"operator_id: op_001 reason: urgent trauma set deadline Line 1 should prioritize Trauma Set and exclude forceps.\",\n    output: { turn_type: \"TASK_REQUEST\", operator_id: \"op_001\", intent_text: \"Line 1 should prioritize Trauma Set and exclude forceps.\", reason: \"urgent trauma set deadline\", decision: null, comment: null, raw_chat_input: \"operator_id: op_001 reason: urgent trauma set deadline Line 1 should prioritize Trauma Set and exclude forceps.\", debug: false }\n  },\n  {\n    input: \"operator_id: op_001 reason: urgent trauma set deadline\",\n    output: { turn_type: \"CLARIFICATION_VALUES\", operator_id: \"op_001\", intent_text: null, reason: \"urgent trauma set deadline\", decision: null, comment: null, raw_chat_input: \"operator_id: op_001 reason: urgent trauma set deadline\", debug: false }\n  },\n  {\n    input: \"APPROVE: urgent trauma set deadline\",\n    output: { turn_type: \"APPROVAL_DECISION\", operator_id: null, intent_text: null, reason: null, decision: \"APPROVE\", comment: \"urgent trauma set deadline\", raw_chat_input: \"APPROVE: urgent trauma set deadline\", debug: false }\n  },\n  {\n    input: \"no\",\n    output: { turn_type: \"APPROVAL_DECISION\", operator_id: null, intent_text: null, reason: null, decision: \"REJECT\", comment: null, raw_chat_input: \"no\", debug: false }\n  }\n];\n\nconst userPrompt = [\n  \"Classify this chat turn before any workflow validation or branching.\",\n  \"User chat input:\",\n  rawChatInput,\n  \"\",\n  \"Previous required-field context, if any:\",\n  JSON.stringify(previous),\n  \"Reviewed patch context, if any:\",\n  JSON.stringify(reviewed),\n  \"\",\n  \"Classification rules:\",\n  \"SMALL_TALK is for greetings or conversational filler such as hi, hello, thanks, ok, or casual chatter without task content.\",\n  \"CANCEL is for explicit cancellation or stopping the workflow.\",\n  \"CONFUSED is for unclear messages such as ???, gibberish, or expressions of confusion.\",\n  \"UNKNOWN is for anything that does not fit the other classes.\",\n  \"TASK_REQUEST is a new operator task allocation request. Extract operator_id only from explicit operator markers. Extract reason only from explicit markers: reason:, because, justification:, or purpose:. Put only the task request in intent_text and remove operator_id/reason metadata.\",\n  \"CLARIFICATION_VALUES provides missing required chat fields such as operator_id or reason for a previous task request, without introducing a new task request.\",\n  \"APPROVAL_DECISION is approval, rejection, or revision of a reviewed patch, such as APPROVE, REJECT, REQUEST_REVISION, yes, or no. Extract decision and comment. Use UNKNOWN decision only if unclear.\",\n  \"Preserve the complete input in raw_chat_input. Return only JSON matching the schema.\",\n  \"\",\n  \"Examples with valid JSON outputs:\",\n  JSON.stringify(examples[0]),\n  JSON.stringify(examples[1]),\n  JSON.stringify(examples[2]),\n  JSON.stringify(examples[3]),\n  JSON.stringify(examples[4]),\n  JSON.stringify(examples[5]),\n  JSON.stringify(examples[6])\n].join(NL);\n\nconst vllmBody = {\n  model: \"cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit\",\n  messages: [\n    {\n      role: \"system\",\n      content: [\n        \"You classify operator chat turns for a task-allocation workflow.\",\n        \"Return only JSON matching the schema.\",\n        \"Do not generate patches.\",\n        \"Do not validate production policy.\",\n        \"Do not decide deterministic workflow state beyond the requested chat turn class.\"\n      ].join(\" \")\n    },\n    { role: \"user\", content: userPrompt }\n  ],\n  temperature: 0,\n  max_tokens: 260,\n  structured_outputs: { json: schema }\n};\n\nreturn [{\n  json: {\n    vllm_body: vllmBody,\n    raw_chat_input: rawChatInput,\n    original_input: input,\n    previous_context: previous,\n    reviewed_context: reviewed\n  }\n}];"
+      },
+      "id": "b10adbbb-77dd-4d29-9d16-19db404ec85c",
+      "name": "Build vLLM Chat Turn Parse Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ],
+      "notes": "Builds the vLLM request that classifies every user chat turn before workflow branching."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.50.168:29987/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.vllm_body }}",
+        "options": {}
+      },
+      "id": "fdc7d9ad-293d-48f8-a285-c9656dfe0f06",
+      "name": "vLLM Parse Chat Turn",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        0
+      ],
+      "notes": "Classifies the chat turn and extracts structured fields only."
+    },
+    {
+      "parameters": {
+        "jsCode": "const llmResponse = $input.first().json;\nconst source = $('Build vLLM Chat Turn Parse Body').first().json;\nconst previous = source.previous_context || null;\nconst reviewed = source.reviewed_context || null;\nconst original = source.original_input || {};\n\nlet content = null;\nif (llmResponse.choices?.[0]?.message?.content) {\n  content = llmResponse.choices[0].message.content;\n} else if (llmResponse.turn_type !== undefined) {\n  content = llmResponse;\n} else {\n  content = llmResponse;\n}\n\nlet parsed = {};\nif (typeof content === \"string\") {\n  try {\n    parsed = JSON.parse(content);\n  } catch (error) {\n    parsed = {};\n  }\n} else if (typeof content === \"object\" && content !== null) {\n  parsed = content;\n}\n\nconst allowedTurns = [\"SMALL_TALK\", \"CANCEL\", \"CONFUSED\", \"UNKNOWN\", \"TASK_REQUEST\", \"CLARIFICATION_VALUES\", \"APPROVAL_DECISION\"];\nconst turnType = allowedTurns.includes(parsed.turn_type) ? parsed.turn_type : \"UNKNOWN\";\nconst previousContext = previous?.context || original.context || {};\nconst operatorId = parsed.operator_id || (turnType === \"CLARIFICATION_VALUES\" ? previous?.operator_id : null) || null;\nconst intentText = parsed.intent_text || previous?.intent_text || parsed.raw_chat_input || source.raw_chat_input || \"\";\nconst reason = parsed.reason || (turnType === \"CLARIFICATION_VALUES\" ? previous?.reason : null) || null;\nconst debug = parsed.debug === true || previous?.debug === true || original.debug === true;\nconst reviewedPatchExists = !!(reviewed && reviewed.status === \"REVIEWED\");\n\nreturn [{\n  json: {\n    turn_type: turnType,\n    operator_id: operatorId,\n    intent_text: intentText,\n    reason,\n    decision: parsed.decision || null,\n    comment: parsed.comment || null,\n    raw_chat_input: parsed.raw_chat_input || source.raw_chat_input || \"\",\n    debug,\n    reviewed_patch_exists: reviewedPatchExists,\n    reviewed_context: reviewed,\n    confirmations: previous?.confirmations || original.confirmations || {},\n    context: {\n      ...previousContext,\n      operator_id: operatorId || previousContext.operator_id || null,\n      debug\n    },\n    body: {\n      operator_id: operatorId,\n      intent_text: intentText,\n      reason\n    },\n    errors: []\n  }\n}];"
+      },
+      "id": "084cda5d-e6cf-4f79-b7b4-4a68794455ba",
+      "name": "Normalize Parsed Chat Turn",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        0
+      ],
+      "notes": "Normalizes structured vLLM chat-turn output. Does not parse raw user dialogue."
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $input.first().json }];"
+      },
+      "id": "b214c244-f6da-48fb-bd8e-3ef02f34933d",
+      "name": "Route Chat Turn",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        0
+      ],
+      "notes": "Single routing point after vLLM chat-turn classification. Downstream IF nodes branch by turn_type."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "chat-turn-small-talk?",
+              "leftValue": "={{ $json.turn_type === 'SMALL_TALK' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0d5e7292-722f-45e5-8f85-a861261ce101",
+      "name": "Chat Turn Small Talk?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1300,
+        -260
+      ],
+      "notes": "Routes greetings and conversational filler to a friendly instruction message."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "chat-turn-cancel?",
+              "leftValue": "={{ $json.turn_type === 'CANCEL' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0d5e7292-722f-45e5-8f85-a861261ce102",
+      "name": "Chat Turn Cancel?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1560,
+        -180
+      ],
+      "notes": "Routes explicit cancellation to a terminal cancelled response."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "chat-turn-confused-or-unknown?",
+              "leftValue": "={{ ['CONFUSED', 'UNKNOWN'].includes($json.turn_type) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0d5e7292-722f-45e5-8f85-a861261ce103",
+      "name": "Chat Turn Confused Or Unknown?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1820,
+        -100
+      ],
+      "notes": "Routes unclear turns without repeating missing-field prompts."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "chat-turn-approval-decision?",
+              "leftValue": "={{ $json.turn_type === 'APPROVAL_DECISION' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0d5e7292-722f-45e5-8f85-a861261ce104",
+      "name": "Chat Turn Approval Decision?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2080,
+        -20
+      ],
+      "notes": "Routes approval decisions only after a reviewed patch exists."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "approval-has-reviewed-patch?",
+              "leftValue": "={{ $json.reviewed_patch_exists === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0d5e7292-722f-45e5-8f85-a861261ce105",
+      "name": "Approval Has Reviewed Patch?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2340,
+        -120
+      ],
+      "notes": "Rejects out-of-place approval decisions."
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { user_message: \"Hi. I can help prepare a task allocation change for review. Tell me the line, target goal, any instrument constraints, your operator_id, and the reason for the change.\", next_action: 'WAIT', required_fields: [], suggested_reply: '', debug_json: null, status: $json.turn_type, context: $json.context || {}, payload: {}, errors: [] } }];"
+      },
+      "id": "0342aeac-0bb1-47c8-bb71-62f333000001",
+      "name": "Return Small Talk Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { user_message: \"Cancelled. No task allocation workflow was submitted.\", next_action: 'WAIT', required_fields: [], suggested_reply: '', debug_json: null, status: $json.turn_type, context: $json.context || {}, payload: {}, errors: [] } }];"
+      },
+      "id": "0342aeac-0bb1-47c8-bb71-62f333000002",
+      "name": "Return Cancelled Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { user_message: \"I could not tell what task change you want. Please provide a task request with the line, goal, operator_id, and reason, or type cancel.\", next_action: 'WAIT', required_fields: [], suggested_reply: '', debug_json: null, status: $json.turn_type, context: $json.context || {}, payload: {}, errors: [] } }];"
+      },
+      "id": "0342aeac-0bb1-47c8-bb71-62f333000003",
+      "name": "Return Confused Chat Turn Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { user_message: \"There is no patch waiting for approval. Please start with a task request, or type cancel.\", next_action: 'WAIT', required_fields: [], suggested_reply: '', debug_json: null, status: $json.turn_type, context: $json.context || {}, payload: {}, errors: [] } }];"
+      },
+      "id": "0342aeac-0bb1-47c8-bb71-62f333000004",
+      "name": "Return No Patch Waiting Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2600,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst reviewed = input.reviewed_context || {};\nconst candidatePatch = reviewed.payload?.candidate_patch || reviewed.body?.candidate_patch || null;\nconst allowed = [\"APPROVE\", \"REJECT\", \"REQUEST_REVISION\"];\nconst decision = allowed.includes(input.decision) ? input.decision : \"REQUEST_REVISION\";\nconst comment = input.comment || input.raw_chat_input || \"\";\nconst operatorDecision = {\n  decision,\n  comment,\n  raw_reply: input.raw_chat_input || null\n};\n\nreturn [{\n  json: {\n    ...reviewed,\n    decision,\n    comment,\n    operator_decision: operatorDecision,\n    body: {\n      ...(reviewed.body || {}),\n      candidate_patch: candidatePatch,\n      decision,\n      comment,\n      operator_decision: operatorDecision,\n      operator_id: reviewed.context?.operator_id || input.context?.operator_id || candidatePatch?.operator_id || 'operator_pending'\n    },\n    payload: {\n      ...(reviewed.payload || {}),\n      candidate_patch: candidatePatch,\n      decision,\n      comment,\n      operator_decision: operatorDecision,\n      raw_release_decision_reply: input.raw_chat_input || null\n    }\n  }\n}];"
+      },
+      "id": "31d910ce-c031-40b8-bdd3-891ca7ec806a",
+      "name": "Normalize Classified Approval Decision",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2600,
+        -180
+      ],
+      "notes": "Normalizes structured classifier output for release approval. Does not parse raw user dialogue."
+    }
+  ],
+  "connections": {
+    "Execute Intent Review Sub-workflow": {
+      "main": [
+        [
+          {
+            "node": "Normalize Context After Intent Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Context After Intent Review": {
+      "main": [
+        [
+          {
+            "node": "Chat Candidate Patch Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Candidate Patch Summary": {
+      "main": [
+        [
+          {
+            "node": "Candidate Reviewed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Candidate Reviewed?": {
+      "main": [
+        [
+          {
+            "node": "Build vLLM User Response Format Body",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chat Stop Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Release Approval Sub-workflow": {
+      "main": [
+        [
+          {
+            "node": "Normalize Context After Release Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Context After Release Approval": {
+      "main": [
+        [
+          {
+            "node": "Chat Release Status Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Release Status Summary": {
+      "main": [
+        [
+          {
+            "node": "Release Completed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Release Completed?": {
+      "main": [
+        [
+          {
+            "node": "Execute Supervisor Reconciliation Sub-workflow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chat Stop Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Supervisor Reconciliation Sub-workflow": {
+      "main": [
+        [
+          {
+            "node": "Normalize Context After Reconciliation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Context After Reconciliation": {
+      "main": [
+        [
+          {
+            "node": "Chat Reconciliation Plan Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Reconciliation Plan Summary": {
+      "main": [
+        [
+          {
+            "node": "Ready for ScenarioSpec?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ready for ScenarioSpec?": {
+      "main": [
+        [
+          {
+            "node": "Execute ScenarioSpec Generation Sub-workflow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chat Stop Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute ScenarioSpec Generation Sub-workflow": {
+      "main": [
+        [
+          {
+            "node": "Normalize Context After ScenarioSpec Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Context After ScenarioSpec Generation": {
+      "main": [
+        [
+          {
+            "node": "Chat ScenarioSpec Path Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat ScenarioSpec Path Summary": {
+      "main": [
+        [
+          {
+            "node": "Chat Final Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Stop Summary": {
+      "main": [
+        [
+          {
+            "node": "Build vLLM User Response Format Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Final Summary": {
+      "main": [
+        [
+          {
+            "node": "Build vLLM User Response Format Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Receive Operator Intent": {
+      "main": [
+        [
+          {
+            "node": "Build vLLM Chat Turn Parse Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Required Chat Fields": {
+      "main": [
+        [
+          {
+            "node": "IF Missing Required Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Missing Required Fields": {
+      "main": [
+        [
+          {
+            "node": "Build Canonical Clarification Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute Intent Review Sub-workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Canonical Clarification Payload": {
+      "main": [
+        [
+          {
+            "node": "Build vLLM User Response Format Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask Clarification Reply": {
+      "main": [
+        [
+          {
+            "node": "Build vLLM Chat Turn Parse Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask Release Decision": {
+      "main": [
+        [
+          {
+            "node": "Build vLLM Chat Turn Parse Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build vLLM User Response Format Body": {
+      "main": [
+        [
+          {
+            "node": "vLLM Format User Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "vLLM Format User Response": {
+      "main": [
+        [
+          {
+            "node": "Normalize Formatted User Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Formatted User Response": {
+      "main": [
+        [
+          {
+            "node": "Formatted Response Needs Reply?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatted Response Needs Reply?": {
+      "main": [
+        [
+          {
+            "node": "Ask Clarification Reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Formatted Response Needs Release Decision?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatted Response Needs Release Decision?": {
+      "main": [
+        [
+          {
+            "node": "Ask Release Decision",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Chat Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build vLLM Chat Turn Parse Body": {
+      "main": [
+        [
+          {
+            "node": "vLLM Parse Chat Turn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "vLLM Parse Chat Turn": {
+      "main": [
+        [
+          {
+            "node": "Normalize Parsed Chat Turn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Parsed Chat Turn": {
+      "main": [
+        [
+          {
+            "node": "Route Chat Turn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Chat Turn": {
+      "main": [
+        [
+          {
+            "node": "Chat Turn Small Talk?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Turn Small Talk?": {
+      "main": [
+        [
+          {
+            "node": "Return Small Talk Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chat Turn Cancel?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Turn Cancel?": {
+      "main": [
+        [
+          {
+            "node": "Return Cancelled Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chat Turn Confused Or Unknown?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Turn Confused Or Unknown?": {
+      "main": [
+        [
+          {
+            "node": "Return Confused Chat Turn Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chat Turn Approval Decision?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Turn Approval Decision?": {
+      "main": [
+        [
+          {
+            "node": "Approval Has Reviewed Patch?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Required Chat Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approval Has Reviewed Patch?": {
+      "main": [
+        [
+          {
+            "node": "Normalize Classified Approval Decision",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return No Patch Waiting Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Classified Approval Decision": {
+      "main": [
+        [
+          {
+            "node": "Execute Release Approval Sub-workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return Small Talk Message": {
+      "main": [
+        [
+          {
+            "node": "Send Chat Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return Cancelled Message": {
+      "main": [
+        [
+          {
+            "node": "Send Chat Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return Confused Chat Turn Message": {
+      "main": [
+        [
+          {
+            "node": "Send Chat Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return No Patch Waiting Message": {
+      "main": [
+        [
+          {
+            "node": "Send Chat Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "ba63ef4e-949d-4c61-bf34-a7e847a6c546",
+  "triggerCount": 0,
+  "tags": []
+}

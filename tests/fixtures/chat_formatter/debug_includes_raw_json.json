@@ -1,0 +1,20 @@
+{
+  "input": {
+    "status": "NEEDS_CLARIFICATION",
+    "context": {
+      "debug": true
+    },
+    "payload": {
+      "raw_chat_input": "Prioritize trauma sets"
+    },
+    "errors": [
+      "Missing required chat field: operator_id"
+    ]
+  },
+  "expected": {
+    "next_action": "PROVIDE_MISSING_FIELDS",
+    "required_fields": ["operator_id"],
+    "user_message_contains": ["operator ID"],
+    "raw_json_present": true
+  }
+}

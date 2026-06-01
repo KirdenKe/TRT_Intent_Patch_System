@@ -1,0 +1,32 @@
+{
+  "input": {
+    "status": "REVIEWED",
+    "context": {
+      "operator_id": "op_001",
+      "patch_id": "patch_001"
+    },
+    "payload": {
+      "candidate_patch": {
+        "patch_id": "patch_001",
+        "operations": [
+          {
+            "op": "replace",
+            "path": "/lines/line_1/goal",
+            "value": "TRAUMA_SET_PRIORITY"
+          }
+        ]
+      },
+      "validation_results": {
+        "semantic": true
+      }
+    },
+    "errors": []
+  },
+  "expected": {
+    "next_action": "CONFIRM_PATCH",
+    "required_fields": [],
+    "user_message_contains": ["Candidate patch reviewed", "approve", "reject", "revision"],
+    "raw_json_present": false
+  }
+}
+

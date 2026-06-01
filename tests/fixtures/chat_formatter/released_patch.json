@@ -1,0 +1,19 @@
+{
+  "input": {
+    "status": "RELEASED",
+    "context": {
+      "release_id": "rel_001",
+      "audit_id": "audit_001",
+      "trt_version": "v7"
+    },
+    "payload": {},
+    "errors": []
+  },
+  "expected": {
+    "next_action": "WAIT",
+    "required_fields": [],
+    "user_message_contains": ["Release completed", "rel_001", "v7", "audit_001"],
+    "raw_json_present": false
+  }
+}
+

@@ -1,0 +1,17 @@
+{
+  "input": {
+    "status": "NEEDS_CLARIFICATION",
+    "context": {
+      "debug": true
+    },
+    "payload": {
+      "raw_chat_input": "Prioritize trauma set",
+      "missing_fields": ["operator_id"]
+    },
+    "errors": []
+  },
+  "expected": {
+    "missing_fields": ["operator_id"],
+    "debug": true
+  }
+}

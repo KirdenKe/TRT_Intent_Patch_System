@@ -1,0 +1,33 @@
+{
+  "input": {
+    "status": "NEEDS_CLARIFICATION",
+    "context": {},
+    "payload": {
+      "raw_chat_input": "Prioritize trauma set",
+      "missing_fields": [
+        "Missing required chat field: operator_id",
+        "Missing required chat field: reason"
+      ]
+    },
+    "errors": []
+  },
+  "llm_output": {
+    "user_message": "Missing required chat field: operator_id {raw}",
+    "next_action": "DONE",
+    "required_fields": [
+      "Missing required chat field: operator_id",
+      "operator_id",
+      "operator_id"
+    ],
+    "suggested_reply": "Missing required chat field: reason",
+    "debug_json": {
+      "leak": true
+    }
+  },
+  "expected": {
+    "missing_fields": ["operator_id", "reason"],
+    "fallback": true,
+    "debug": false
+  }
+}
+

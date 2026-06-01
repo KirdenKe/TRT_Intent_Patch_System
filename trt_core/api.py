@@ -40,6 +40,11 @@ def _all_available_trts() -> list[dict[str, Any]]:
     return [{"trt_id": trt_id, "versions": versions} for trt_id, versions in sorted(grouped.items())]
 
 
+@app.get("/health")
+def get_health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
 def build_intent_context(current_trt: dict[str, Any]) -> dict[str, Any]:
     return {
         "current_trt": current_trt,
@@ -315,7 +320,7 @@ def get_scenario_templates() -> dict[str, Any]:
 @app.post("/scenario/generate")
 def post_scenario_generate(payload: dict[str, Any]) -> dict[str, Any]:
     required = {"release_id", "trt_id", "trt_version", "reconciliation_plan_id", "scenario_template_id"}
-    missing = sorted(required - set(payload))
+    missing = sorted(field for field in required if not payload.get(field))
     if missing:
         raise HTTPException(status_code=400, detail=f"Missing scenario generation fields: {', '.join(missing)}")
     try:
@@ -340,6 +345,17 @@ def post_scenario_generate(payload: dict[str, Any]) -> dict[str, Any]:
         state_records = load_current_state(repository)
         reconciliation_plan = load_plan(payload["reconciliation_plan_id"], repository)
         reconciliation_plan["release_id"] = payload["release_id"]
+        line_decisions = reconciliation_plan.get("line_decisions") or []
+        affected_lines = payload.get("affected_lines") or []
+        allow_baseline = bool(payload.get("allow_baseline_on_no_change", False))
+        only_no_change = bool(line_decisions) and all(
+            decision.get("decision") == "NO_CHANGE" for decision in line_decisions
+        )
+        if only_no_change and not affected_lines and not allow_baseline:
+            raise HTTPException(
+                status_code=409,
+                detail="Reconciliation plan contains no changed lines.",
+            )
         result = generate_scenario_spec(
             released_trt=released_trt,
             state_records=state_records,

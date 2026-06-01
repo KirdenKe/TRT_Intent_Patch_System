@@ -1,0 +1,17 @@
+{
+  "input": {
+    "status": "REJECTED",
+    "context": {},
+    "payload": {},
+    "errors": [
+      "allowed_instruments and excluded_instruments must not overlap"
+    ]
+  },
+  "expected": {
+    "next_action": "REVISE_REQUEST",
+    "required_fields": [],
+    "user_message_contains": ["cannot continue", "allowed_instruments", "revise"],
+    "raw_json_present": false
+  }
+}
+

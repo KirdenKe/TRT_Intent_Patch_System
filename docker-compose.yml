@@ -1,0 +1,34 @@
+services:
+  trt-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: trt-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./outputs:/app/outputs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).read()"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  n8n:
+    image: n8nio/n8n:stable
+    container_name: n8n
+    depends_on:
+      trt-api:
+        condition: service_healthy
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - N8N_DIAGNOSTICS_ENABLED=false
+    volumes:
+      - C:/Users/$93I000-7RFCRA0J9IC9/Documents/Docker/n8n_data:/home/node/.n8n:/home/node/.n8n
+      - ./n8n_workflows:/home/node/.n8n/imports:ro

@@ -4,25 +4,20 @@
   "active": false,
   "nodes": [
     {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "intent-to-patch-review",
-        "responseMode": "responseNode",
-        "options": {}
-      },
+      "parameters": {},
       "id": "1e9e2478-9796-4ea9-9634-cb3f34d85c79",
       "name": "Receive Operator Intent",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
       "position": [
         0,
         0
       ],
-      "webhookId": "intent-to-patch-review-demo"
+      "notes": "Sub-workflow trigger. Expected input keeps the webhook-compatible shape: { body: { operator_id, intent_text, reason } }."
     },
     {
       "parameters": {
-        "url": "http://host.docker.internal:8000/intent/context",
+        "url": "http://trt-api:8000/intent/context",
         "options": {}
       },
       "id": "00a461ce-77dc-4d14-8434-40fda389b124",
@@ -112,7 +107,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:8000/intent/normalize",
+        "url": "http://trt-api:8000/intent/normalize",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ $json.candidate }}",
@@ -130,7 +125,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:8000/patch/validate",
+        "url": "http://trt-api:8000/patch/validate",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ $json.intent_patch }}",
@@ -180,14 +175,46 @@
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { status: 'REVIEWED', candidate_patch: $('Normalize Domain Candidate with Python').item.json.intent_patch, validation_results: $json.validation_results, message: 'Candidate patch is valid. Operator confirmation is required before release.' } }}",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bd23bc5a-ae9c-43c7-9267-3930bb7e1958",
+              "name": "status",
+              "value": "REVIEWED",
+              "type": "string"
+            },
+            {
+              "id": "17c216b4-b3a4-45eb-99d8-e1ef174b96a9",
+              "name": "context",
+              "value": "={{ { ...($('Receive Operator Intent').first().json.context || {}), operator_id: $('Receive Operator Intent').first().json.context?.operator_id || $('Receive Operator Intent').first().json.body?.operator_id || $('Receive Operator Intent').first().json.operator_id || null, patch_id: $('Normalize Domain Candidate with Python').item.json.intent_patch.patch_id, release_id: $('Receive Operator Intent').first().json.context?.release_id || null, audit_id: $('Receive Operator Intent').first().json.context?.audit_id || null, trt_id: $('Normalize Domain Candidate with Python').item.json.intent_patch.trt_id, trt_version: $('Normalize Domain Candidate with Python').item.json.intent_patch.base_version, reconciliation_plan_id: $('Receive Operator Intent').first().json.context?.reconciliation_plan_id || null, scenario_batch_id: $('Receive Operator Intent').first().json.context?.scenario_batch_id || null, scenario_spec_ids: $('Receive Operator Intent').first().json.context?.scenario_spec_ids || [] } }}",
+              "type": "object"
+            },
+            {
+              "id": "8fbb1660-a2af-4ed6-8f95-8804f585d77e",
+              "name": "ids",
+              "value": "={{ { patch_id: $('Normalize Domain Candidate with Python').item.json.intent_patch.patch_id, release_id: null, audit_id: null, trt_id: $('Normalize Domain Candidate with Python').item.json.intent_patch.trt_id, trt_version: $('Normalize Domain Candidate with Python').item.json.intent_patch.base_version, reconciliation_plan_id: null, scenario_spec_id: null } }}",
+              "type": "object"
+            },
+            {
+              "id": "7b52a3fd-da1c-42c8-b5d3-a5e423eea6b8",
+              "name": "payload",
+              "value": "={{ { candidate_patch: $('Normalize Domain Candidate with Python').item.json.intent_patch, validation_results: $json.validation_results, message: 'Candidate patch is valid. Operator confirmation is required before release.' } }}",
+              "type": "object"
+            },
+            {
+              "id": "98d05440-14e3-4e75-a626-89b29fdd0c7e",
+              "name": "errors",
+              "value": "={{ [] }}",
+              "type": "array"
+            }
+          ]
+        },
         "options": {}
       },
       "id": "5749854e-755a-4c89-b7d1-34ec0c96fbf3",
       "name": "Return Reviewed Candidate",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
         2080,
         -120
@@ -195,14 +222,46 @@
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { status: 'NEEDS_REVISION', rejection_reasons: $json.rejection_reasons || ['Candidate was not accepted for review.'], clarification_prompt: 'Please revise the request or provide missing fields.' } }}",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "44b98b4f-eb4b-4ae2-ad35-3f2201a4abb0",
+              "name": "status",
+              "value": "NEEDS_REVISION",
+              "type": "string"
+            },
+            {
+              "id": "4c528df8-a1be-408a-a091-e69bdc965a5c",
+              "name": "context",
+              "value": "={{ { ...($('Receive Operator Intent').first().json.context || {}), operator_id: $('Receive Operator Intent').first().json.context?.operator_id || $('Receive Operator Intent').first().json.body?.operator_id || $('Receive Operator Intent').first().json.operator_id || null, scenario_spec_ids: $('Receive Operator Intent').first().json.context?.scenario_spec_ids || [] } }}",
+              "type": "object"
+            },
+            {
+              "id": "76370691-02f0-4a81-a959-f790515897cf",
+              "name": "ids",
+              "value": "={{ { patch_id: null, release_id: null, audit_id: null, trt_id: null, trt_version: null, reconciliation_plan_id: null, scenario_spec_id: null } }}",
+              "type": "object"
+            },
+            {
+              "id": "db798d67-696d-419d-8c87-97a7a0be24d8",
+              "name": "payload",
+              "value": "={{ { rejection_reasons: $json.rejection_reasons || ['Candidate was not accepted for review.'], clarification_prompt: 'Please revise the request or provide missing fields.' } }}",
+              "type": "object"
+            },
+            {
+              "id": "99e912a8-0786-4329-82ce-5f2e4ebd57dc",
+              "name": "errors",
+              "value": "={{ $json.rejection_reasons || ['Candidate was not accepted for review.'] }}",
+              "type": "array"
+            }
+          ]
+        },
         "options": {}
       },
       "id": "9cbdd8f9-a3f8-426c-8143-211104f44bb8",
       "name": "Return Revision Request",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
         2080,
         120

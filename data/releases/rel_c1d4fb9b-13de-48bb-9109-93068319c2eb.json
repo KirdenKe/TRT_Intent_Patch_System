@@ -1,0 +1,67 @@
+{
+  "audit_id": null,
+  "base_version": null,
+  "candidate_patch": {
+    "context": {
+      "debug": false,
+      "operator_id": "op_001",
+      "patch_id": "patch-1780304540098",
+      "scenario_spec_ids": [],
+      "trt_id": "trt-demo",
+      "trt_version": "v6"
+    },
+    "errors": [],
+    "payload": {
+      "candidate_patch_summary": {
+        "intent_text": "Line 1 should prioritize Trauma Set and exclude forceps.",
+        "operations": [
+          {
+            "op": "replace",
+            "path": "/lines/line_1/goal",
+            "value": "TRAUMA_SET_PRIORITY"
+          },
+          {
+            "op": "replace",
+            "path": "/lines/line_1/excluded_instruments",
+            "value": [
+              "FORCEPS"
+            ]
+          }
+        ],
+        "patch_id": "patch-1780304540098",
+        "reason": "urgent trauma set deadline"
+      },
+      "message": "Candidate patch is valid. Confirm release approval to continue.",
+      "validation_results": {
+        "base_version": true,
+        "path_whitelist": true,
+        "readonly": true,
+        "schema": true,
+        "semantic": true
+      },
+      "validation_status": "REVIEWED"
+    },
+    "status": "REVIEWED"
+  },
+  "candidate_summary": {
+    "affected_fields": [],
+    "affected_lines": [],
+    "intent_text": null,
+    "reason": null
+  },
+  "created_at_utc": "2026-06-01T09:02:20.198026Z",
+  "operator_decision": null,
+  "operator_id": null,
+  "patch_id": null,
+  "release_id": "rel_c1d4fb9b-13de-48bb-9109-93068319c2eb",
+  "status": "PENDING_OPERATOR_DECISION",
+  "trt_id": null,
+  "updated_at_utc": "2026-06-01T09:02:20.198026Z",
+  "validation_results_at_prepare": {
+    "base_version": false,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": false,
+    "semantic": true
+  }
+}

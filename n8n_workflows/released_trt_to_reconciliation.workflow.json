@@ -4,29 +4,24 @@
   "active": false,
   "nodes": [
     {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "released-trt-to-reconciliation",
-        "responseMode": "responseNode",
-        "options": {}
-      },
+      "parameters": {},
       "id": "c274337f-c946-4af8-a44f-08b19d111a0f",
       "name": "Receive Released TRT",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
       "position": [
         0,
         0
       ],
-      "webhookId": "released-trt-to-reconciliation-demo"
+      "notes": "Sub-workflow trigger. Expected input may include {payload:{trt_id}}, {trt_id}, or webhook-compatible {body:{trt_id}}."
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:8000/supervisor/reconcile",
+        "url": "http://trt-api:8000/supervisor/reconcile",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { trt_id: $json.body.trt_id } }}",
+        "jsonBody": "={{ { trt_id: $json.context?.trt_id || $json.payload?.trt_id || $json.trt_id || $json.body?.trt_id || null } }}",
         "options": {}
       },
       "id": "92aa1fbb-ccdb-47f5-89fa-8062d67e08ce",
@@ -140,14 +135,46 @@
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { status: 'ready-to-simulate', plan: $json } }}",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d0655791-89d5-4838-9b25-a3ffa96a3f94",
+              "name": "status",
+              "value": "READY",
+              "type": "string"
+            },
+            {
+              "id": "ff45240a-55f9-48d0-81b3-ad8e67af605e",
+              "name": "context",
+              "value": "={{ { ...($('Receive Released TRT').first().json.context || {}), release_id: $('Receive Released TRT').first().json.context?.release_id || null, audit_id: $('Receive Released TRT').first().json.context?.audit_id || null, patch_id: $('Receive Released TRT').first().json.context?.patch_id || null, trt_id: $('Receive Released TRT').first().json.context?.trt_id || $json.trt_id, trt_version: $('Receive Released TRT').first().json.context?.trt_version || $json.trt_version, reconciliation_plan_id: $json.plan_id, scenario_batch_id: $('Receive Released TRT').first().json.context?.scenario_batch_id || null, scenario_spec_ids: $('Receive Released TRT').first().json.context?.scenario_spec_ids || [] } }}",
+              "type": "object"
+            },
+            {
+              "id": "7c2f978f-1d96-49d5-87bf-3209dae6ff6b",
+              "name": "ids",
+              "value": "={{ { release_id: null, audit_id: null, trt_id: $json.trt_id, trt_version: $json.trt_version, reconciliation_plan_id: $json.plan_id, scenario_spec_id: null } }}",
+              "type": "object"
+            },
+            {
+              "id": "dcb3e219-a07b-4dde-9389-fbbfeaee9661",
+              "name": "payload",
+              "value": "={{ { plan: $json } }}",
+              "type": "object"
+            },
+            {
+              "id": "7fc260b1-0479-4a22-843f-dfc5ad9cadd7",
+              "name": "errors",
+              "value": "={{ [] }}",
+              "type": "array"
+            }
+          ]
+        },
         "options": {}
       },
       "id": "5ff40427-ecb2-4f41-9f2d-b42f6e74cbbf",
       "name": "Return Ready Plan",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
         780,
         -120
@@ -155,14 +182,46 @@
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { status: 'waiting-for-checkpoints', required_checkpoints: $json.line_decisions.filter(item => item.required_checkpoint).map(item => ({ line_id: item.line_id, required_checkpoint: item.required_checkpoint, reason: item.reason })), plan: $json } }}",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "79878ace-b524-4a92-b659-5671741bcdaa",
+              "name": "status",
+              "value": "WAITING",
+              "type": "string"
+            },
+            {
+              "id": "0a216bb9-a1a8-453c-93da-b93ac8b09875",
+              "name": "context",
+              "value": "={{ { ...($('Receive Released TRT').first().json.context || {}), release_id: $('Receive Released TRT').first().json.context?.release_id || null, audit_id: $('Receive Released TRT').first().json.context?.audit_id || null, patch_id: $('Receive Released TRT').first().json.context?.patch_id || null, trt_id: $('Receive Released TRT').first().json.context?.trt_id || $json.trt_id, trt_version: $('Receive Released TRT').first().json.context?.trt_version || $json.trt_version, reconciliation_plan_id: $json.plan_id, scenario_batch_id: $('Receive Released TRT').first().json.context?.scenario_batch_id || null, scenario_spec_ids: $('Receive Released TRT').first().json.context?.scenario_spec_ids || [] } }}",
+              "type": "object"
+            },
+            {
+              "id": "3eaba38a-483b-4820-9e0d-d06ad2f72dca",
+              "name": "ids",
+              "value": "={{ { release_id: null, audit_id: null, trt_id: $json.trt_id, trt_version: $json.trt_version, reconciliation_plan_id: $json.plan_id, scenario_spec_id: null } }}",
+              "type": "object"
+            },
+            {
+              "id": "0d658a30-9edb-444f-bf6d-7db17fca13a8",
+              "name": "payload",
+              "value": "={{ { required_checkpoints: $json.line_decisions.filter(item => item.required_checkpoint).map(item => ({ line_id: item.line_id, required_checkpoint: item.required_checkpoint, reason: item.reason })), plan: $json } }}",
+              "type": "object"
+            },
+            {
+              "id": "ea702d09-552d-495e-bd5f-28449a01ec3f",
+              "name": "errors",
+              "value": "={{ [] }}",
+              "type": "array"
+            }
+          ]
+        },
         "options": {}
       },
       "id": "33f89c6f-7b74-4f07-8d35-d17477127631",
       "name": "Return Waiting Plan",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
         1040,
         40
@@ -170,14 +229,46 @@
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { status: 'degraded-ready', degraded_strategy: $json.line_decisions.filter(item => item.degraded_strategy).map(item => ({ line_id: item.line_id, degraded_strategy: item.degraded_strategy, reason: item.reason })), plan: $json } }}",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fff9db02-bc9f-42b3-833b-0a935a5d5592",
+              "name": "status",
+              "value": "DEGRADED",
+              "type": "string"
+            },
+            {
+              "id": "33581316-30b2-41b3-8e6a-676fef3ef628",
+              "name": "context",
+              "value": "={{ { ...($('Receive Released TRT').first().json.context || {}), release_id: $('Receive Released TRT').first().json.context?.release_id || null, audit_id: $('Receive Released TRT').first().json.context?.audit_id || null, patch_id: $('Receive Released TRT').first().json.context?.patch_id || null, trt_id: $('Receive Released TRT').first().json.context?.trt_id || $json.trt_id, trt_version: $('Receive Released TRT').first().json.context?.trt_version || $json.trt_version, reconciliation_plan_id: $json.plan_id, scenario_batch_id: $('Receive Released TRT').first().json.context?.scenario_batch_id || null, scenario_spec_ids: $('Receive Released TRT').first().json.context?.scenario_spec_ids || [] } }}",
+              "type": "object"
+            },
+            {
+              "id": "f9097e34-7c35-4603-8fb8-6ff3d8c47fb2",
+              "name": "ids",
+              "value": "={{ { release_id: null, audit_id: null, trt_id: $json.trt_id, trt_version: $json.trt_version, reconciliation_plan_id: $json.plan_id, scenario_spec_id: null } }}",
+              "type": "object"
+            },
+            {
+              "id": "d8bab0b7-0e7d-4652-bc33-79f2ce1bed5e",
+              "name": "payload",
+              "value": "={{ { degraded_strategy: $json.line_decisions.filter(item => item.degraded_strategy).map(item => ({ line_id: item.line_id, degraded_strategy: item.degraded_strategy, reason: item.reason })), plan: $json } }}",
+              "type": "object"
+            },
+            {
+              "id": "c5e36b42-d0f9-4240-ba14-a7722ea941b0",
+              "name": "errors",
+              "value": "={{ [] }}",
+              "type": "array"
+            }
+          ]
+        },
         "options": {}
       },
       "id": "5992fb43-cce4-4748-9a75-f1ef2c9c2997",
       "name": "Return Degraded Plan",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
         1300,
         160
@@ -185,14 +276,46 @@
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { status: 'rejected', rejection_reasons: $json.line_decisions.filter(item => item.decision === 'REJECT_INCOMPATIBLE').map(item => ({ line_id: item.line_id, reason: item.reason, risk_flags: item.risk_flags })), plan: $json } }}",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "345919e8-6111-473e-9542-968e28363e8e",
+              "name": "status",
+              "value": "REJECTED",
+              "type": "string"
+            },
+            {
+              "id": "5219f9e3-aa47-4467-bcaa-97ddaec4fbdd",
+              "name": "context",
+              "value": "={{ { ...($('Receive Released TRT').first().json.context || {}), release_id: $('Receive Released TRT').first().json.context?.release_id || null, audit_id: $('Receive Released TRT').first().json.context?.audit_id || null, patch_id: $('Receive Released TRT').first().json.context?.patch_id || null, trt_id: $('Receive Released TRT').first().json.context?.trt_id || $json.trt_id, trt_version: $('Receive Released TRT').first().json.context?.trt_version || $json.trt_version, reconciliation_plan_id: $json.plan_id, scenario_batch_id: $('Receive Released TRT').first().json.context?.scenario_batch_id || null, scenario_spec_ids: $('Receive Released TRT').first().json.context?.scenario_spec_ids || [] } }}",
+              "type": "object"
+            },
+            {
+              "id": "b5c231ca-c72c-4454-88ef-e5c3c9d4427e",
+              "name": "ids",
+              "value": "={{ { release_id: null, audit_id: null, trt_id: $json.trt_id, trt_version: $json.trt_version, reconciliation_plan_id: $json.plan_id, scenario_spec_id: null } }}",
+              "type": "object"
+            },
+            {
+              "id": "66a6d0ff-1b2c-472b-990c-304e63c6d291",
+              "name": "payload",
+              "value": "={{ { rejection_reasons: $json.line_decisions.filter(item => item.decision === \"REJECT_INCOMPATIBLE\").map(item => ({ line_id: item.line_id, reason: item.reason, risk_flags: item.risk_flags })), plan: $json } }}",
+              "type": "object"
+            },
+            {
+              "id": "152fb80f-6ea8-4147-a955-0b819e25fb2e",
+              "name": "errors",
+              "value": "={{ $json.line_decisions.filter(item => item.decision === \"REJECT_INCOMPATIBLE\").map(item => item.reason || \"Reconciliation rejected.\") }}",
+              "type": "array"
+            }
+          ]
+        },
         "options": {}
       },
       "id": "e54d8ba0-9a22-4bd3-a272-feb06fc07264",
       "name": "Return Rejected Plan",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
         1300,
         360
@@ -287,4 +410,3 @@
   "triggerCount": 0,
   "tags": []
 }
-

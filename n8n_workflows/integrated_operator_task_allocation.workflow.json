@@ -1,0 +1,431 @@
+{
+  "id": "IntegratedOperatorTaskAllocationDemo",
+  "name": "Integrated Operator Task Allocation Orchestration",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "integrated-operator-task-allocation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "87c4e6f6-1a2b-4cb2-b9d1-b7f9ec565901",
+      "name": "Receive Operator Allocation Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "integrated-operator-task-allocation-demo",
+      "notes": "Entry point for the integrated orchestration. This workflow delegates deterministic behavior to existing sub-workflows and Python APIs."
+    },
+    {
+      "parameters": {
+        "workflowId": "IntentToPatchReviewDemo",
+        "options": {}
+      },
+      "id": "18c3aa1d-5c42-4069-a8cb-1e76424e0967",
+      "name": "Execute Intent Review Sub-workflow",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        280,
+        0
+      ],
+      "notes": "Calls intent_to_patch_review.workflow.json. Expected normalized output: status, ids, payload, errors."
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first().json;\n\nconst previous = current.previous_context ?? current.context ?? {};\nconst ids = current.ids ?? {};\nconst payload = current.payload ?? {};\n\nfunction firstNonNull(...values) {\n  return values.find(v => v !== undefined && v !== null && v !== \"\");\n}\n\nreturn [\n  {\n    json: {\n      status: current.status,\n      context: {\n        ...previous,\n        ...(current.context ?? {}),\n        ...Object.fromEntries(\n          Object.entries(ids).filter(([_, v]) => v !== null && v !== undefined && v !== \"\")\n        ),\n        release_id: firstNonNull(\n          current.context?.release_id,\n          ids.release_id,\n          previous.release_id\n        ),\n        audit_id: firstNonNull(\n          current.context?.audit_id,\n          ids.audit_id,\n          previous.audit_id\n        ),\n        trt_id: firstNonNull(\n          current.context?.trt_id,\n          ids.trt_id,\n          payload.plan?.trt_id,\n          previous.trt_id\n        ),\n        trt_version: firstNonNull(\n          current.context?.trt_version,\n          ids.trt_version,\n          payload.plan?.trt_version,\n          previous.trt_version\n        ),\n        reconciliation_plan_id: firstNonNull(\n          current.context?.reconciliation_plan_id,\n          ids.reconciliation_plan_id,\n          payload.plan?.plan_id,\n          previous.reconciliation_plan_id\n        ),\n        scenario_batch_id: firstNonNull(\n          current.context?.scenario_batch_id,\n          ids.scenario_batch_id,\n          previous.scenario_batch_id\n        ),\n        scenario_spec_ids: firstNonNull(\n          current.context?.scenario_spec_ids,\n          ids.scenario_spec_ids,\n          previous.scenario_spec_ids,\n          []\n        )\n      },\n      payload,\n      errors: current.errors ?? []\n    }\n  }\n];"
+      },
+      "id": "2f8dde12-d3d2-4537-8733-c1d2d2590040",
+      "name": "Normalize Context After Intent Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        540,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d94e6aae-8b60-40d4-8153-e04466d9c943",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "REVIEWED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "aa706f4f-778b-47b3-a72a-df4ad3179a6d",
+      "name": "Intent Reviewed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        800,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": "PatchReleaseApprovalDemo",
+        "options": {}
+      },
+      "id": "5ea890d1-6efd-4ff4-84d8-eac7f4770e41",
+      "name": "Execute Release Approval Sub-workflow",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        1080,
+        -100
+      ],
+      "notes": "Calls patch_release_approval.workflow.json. Release approval remains responsible for human decision handling."
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first().json;\n\nconst previous = current.previous_context ?? current.context ?? {};\nconst ids = current.ids ?? {};\nconst payload = current.payload ?? {};\n\nfunction firstNonNull(...values) {\n  return values.find(v => v !== undefined && v !== null && v !== \"\");\n}\n\nreturn [\n  {\n    json: {\n      status: current.status,\n      context: {\n        ...previous,\n        ...(current.context ?? {}),\n        ...Object.fromEntries(\n          Object.entries(ids).filter(([_, v]) => v !== null && v !== undefined && v !== \"\")\n        ),\n        release_id: firstNonNull(\n          current.context?.release_id,\n          ids.release_id,\n          previous.release_id\n        ),\n        audit_id: firstNonNull(\n          current.context?.audit_id,\n          ids.audit_id,\n          previous.audit_id\n        ),\n        trt_id: firstNonNull(\n          current.context?.trt_id,\n          ids.trt_id,\n          payload.plan?.trt_id,\n          previous.trt_id\n        ),\n        trt_version: firstNonNull(\n          current.context?.trt_version,\n          ids.trt_version,\n          payload.plan?.trt_version,\n          previous.trt_version\n        ),\n        reconciliation_plan_id: firstNonNull(\n          current.context?.reconciliation_plan_id,\n          ids.reconciliation_plan_id,\n          payload.plan?.plan_id,\n          previous.reconciliation_plan_id\n        ),\n        scenario_batch_id: firstNonNull(\n          current.context?.scenario_batch_id,\n          ids.scenario_batch_id,\n          previous.scenario_batch_id\n        ),\n        scenario_spec_ids: firstNonNull(\n          current.context?.scenario_spec_ids,\n          ids.scenario_spec_ids,\n          previous.scenario_spec_ids,\n          []\n        )\n      },\n      payload,\n      errors: current.errors ?? []\n    }\n  }\n];"
+      },
+      "id": "e4328e5d-90ce-497d-97c8-8b401f905fb0",
+      "name": "Normalize Context After Release Approval",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d34f555c-e3c2-4c03-bfad-b71bbb6bf0f1",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "RELEASED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8923c3ac-18c8-4f2b-b6a6-82f8b3385d1d",
+      "name": "Release Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1600,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": "ReleasedTRTToReconciliationDemo",
+        "options": {}
+      },
+      "id": "681cceea-f0ea-465d-a022-5268e6829d78",
+      "name": "Execute Supervisor Reconciliation Sub-workflow",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        1880,
+        -200
+      ],
+      "notes": "Calls released_trt_to_reconciliation.workflow.json. Supervisor Python remains the source of reconciliation decisions."
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first().json;\n\nconst previous = current.previous_context ?? current.context ?? {};\nconst ids = current.ids ?? {};\nconst payload = current.payload ?? {};\n\nfunction firstNonNull(...values) {\n  return values.find(v => v !== undefined && v !== null && v !== \"\");\n}\n\nreturn [\n  {\n    json: {\n      status: current.status,\n      context: {\n        ...previous,\n        ...(current.context ?? {}),\n        ...Object.fromEntries(\n          Object.entries(ids).filter(([_, v]) => v !== null && v !== undefined && v !== \"\")\n        ),\n        release_id: firstNonNull(\n          current.context?.release_id,\n          ids.release_id,\n          previous.release_id\n        ),\n        audit_id: firstNonNull(\n          current.context?.audit_id,\n          ids.audit_id,\n          previous.audit_id\n        ),\n        trt_id: firstNonNull(\n          current.context?.trt_id,\n          ids.trt_id,\n          payload.plan?.trt_id,\n          previous.trt_id\n        ),\n        trt_version: firstNonNull(\n          current.context?.trt_version,\n          ids.trt_version,\n          payload.plan?.trt_version,\n          previous.trt_version\n        ),\n        reconciliation_plan_id: firstNonNull(\n          current.context?.reconciliation_plan_id,\n          ids.reconciliation_plan_id,\n          payload.plan?.plan_id,\n          previous.reconciliation_plan_id\n        ),\n        scenario_batch_id: firstNonNull(\n          current.context?.scenario_batch_id,\n          ids.scenario_batch_id,\n          previous.scenario_batch_id\n        ),\n        scenario_spec_ids: firstNonNull(\n          current.context?.scenario_spec_ids,\n          ids.scenario_spec_ids,\n          previous.scenario_spec_ids,\n          []\n        )\n      },\n      payload,\n      errors: current.errors ?? []\n    }\n  }\n];"
+      },
+      "id": "4e963a16-90aa-4eef-8676-c5ade48266fc",
+      "name": "Normalize Context After Reconciliation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2140,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ed163917-3c73-4b0d-93ba-93a1cc158559",
+              "leftValue": "={{ ['ready-to-simulate', 'degraded-ready', 'READY', 'DEGRADED'].includes($json.status) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "de50668a-8f51-46bd-b5e0-4d6401cbd8fa",
+      "name": "Ready for ScenarioSpec?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2400,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": "GenerateScenarioSpecDemo",
+        "options": {}
+      },
+      "id": "3e9dac29-27fd-4af1-9c64-cf3061aac46c",
+      "name": "Execute ScenarioSpec Generation Sub-workflow",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        2680,
+        -300
+      ],
+      "notes": "Calls generate_scenario_spec.workflow.json. This does not call Isaac Sim."
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first().json;\n\nconst previous = current.previous_context ?? current.context ?? {};\nconst ids = current.ids ?? {};\nconst payload = current.payload ?? {};\n\nfunction firstNonNull(...values) {\n  return values.find(v => v !== undefined && v !== null && v !== \"\");\n}\n\nreturn [\n  {\n    json: {\n      status: current.status,\n      context: {\n        ...previous,\n        ...(current.context ?? {}),\n        ...Object.fromEntries(\n          Object.entries(ids).filter(([_, v]) => v !== null && v !== undefined && v !== \"\")\n        ),\n        release_id: firstNonNull(\n          current.context?.release_id,\n          ids.release_id,\n          previous.release_id\n        ),\n        audit_id: firstNonNull(\n          current.context?.audit_id,\n          ids.audit_id,\n          previous.audit_id\n        ),\n        trt_id: firstNonNull(\n          current.context?.trt_id,\n          ids.trt_id,\n          payload.plan?.trt_id,\n          previous.trt_id\n        ),\n        trt_version: firstNonNull(\n          current.context?.trt_version,\n          ids.trt_version,\n          payload.plan?.trt_version,\n          previous.trt_version\n        ),\n        reconciliation_plan_id: firstNonNull(\n          current.context?.reconciliation_plan_id,\n          ids.reconciliation_plan_id,\n          payload.plan?.plan_id,\n          previous.reconciliation_plan_id\n        ),\n        scenario_batch_id: firstNonNull(\n          current.context?.scenario_batch_id,\n          ids.scenario_batch_id,\n          previous.scenario_batch_id\n        ),\n        scenario_spec_ids: firstNonNull(\n          current.context?.scenario_spec_ids,\n          ids.scenario_spec_ids,\n          previous.scenario_spec_ids,\n          []\n        )\n      },\n      payload,\n      errors: current.errors ?? []\n    }\n  }\n];"
+      },
+      "id": "e6032d51-d580-48e7-8d37-0a93f89a33ea",
+      "name": "Normalize Context After ScenarioSpec Generation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2940,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { status: $json.status, context: $json.context, payload: $json.payload, errors: $json.errors } }}",
+        "options": {}
+      },
+      "id": "ec5ddf75-12cb-43d1-a7c2-d8754c4272d2",
+      "name": "Return Integrated Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        3200,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { status: $json.status, context: $json.context, payload: $json.payload, errors: $json.errors } }}",
+        "options": {}
+      },
+      "id": "f986fb0a-d731-4e73-b9bd-9fe7f77b6220",
+      "name": "Return Integrated Stop",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1080,
+        220
+      ]
+    }
+  ],
+  "connections": {
+    "Receive Operator Allocation Request": {
+      "main": [
+        [
+          {
+            "node": "Execute Intent Review Sub-workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Intent Review Sub-workflow": {
+      "main": [
+        [
+          {
+            "node": "Normalize Context After Intent Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Context After Intent Review": {
+      "main": [
+        [
+          {
+            "node": "Intent Reviewed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intent Reviewed?": {
+      "main": [
+        [
+          {
+            "node": "Execute Release Approval Sub-workflow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Integrated Stop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Release Approval Sub-workflow": {
+      "main": [
+        [
+          {
+            "node": "Normalize Context After Release Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Context After Release Approval": {
+      "main": [
+        [
+          {
+            "node": "Release Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Release Approved?": {
+      "main": [
+        [
+          {
+            "node": "Execute Supervisor Reconciliation Sub-workflow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Integrated Stop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Supervisor Reconciliation Sub-workflow": {
+      "main": [
+        [
+          {
+            "node": "Normalize Context After Reconciliation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Context After Reconciliation": {
+      "main": [
+        [
+          {
+            "node": "Ready for ScenarioSpec?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ready for ScenarioSpec?": {
+      "main": [
+        [
+          {
+            "node": "Execute ScenarioSpec Generation Sub-workflow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Integrated Stop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute ScenarioSpec Generation Sub-workflow": {
+      "main": [
+        [
+          {
+            "node": "Normalize Context After ScenarioSpec Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Context After ScenarioSpec Generation": {
+      "main": [
+        [
+          {
+            "node": "Return Integrated Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "f33a9e64-b650-429b-84be-9a37c48225ac",
+  "triggerCount": 0,
+  "tags": []
+}

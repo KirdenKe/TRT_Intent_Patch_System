@@ -4,30 +4,24 @@
   "active": false,
   "nodes": [
     {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "generate-scenario-spec",
-        "responseMode": "responseNode",
-        "options": {}
-      },
+      "parameters": {},
       "id": "2f8b38de-2be1-465d-94a3-b6a7aa0a8e77",
       "name": "Receive ScenarioSpec Request",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
       "position": [
         0,
         0
       ],
-      "webhookId": "generate-scenario-spec-demo",
-      "notes": "Receives release_id, trt_id, trt_version, reconciliation_plan_id, and scenario_template_id. This workflow does not run Isaac Sim or modify TRT."
+      "notes": "Sub-workflow trigger. Expected input may include normalized reconciliation payload or webhook-compatible body."
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:8000/scenario/generate",
+        "url": "http://trt-api:8000/scenario/generate",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ $json.body }}",
+        "jsonBody": "={{ $json.scenario_request }}",
         "options": {}
       },
       "id": "a75f472f-f2dc-4214-bd38-8570f9844ed2",
@@ -35,8 +29,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        280,
-        0
+        1360,
+        -120
       ],
       "notes": "Python governance API is the source of truth for ScenarioSpec generation. No Isaac, LLM, or TRT mutation happens here."
     },
@@ -69,8 +63,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        560,
-        0
+        1620,
+        -120
       ]
     },
     {
@@ -102,54 +96,305 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        840,
-        140
+        1900,
+        0
       ]
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { status: $json.status, scenario_spec_id: $json.scenario_spec_id, scenario_spec_path: $json.scenario_spec_path || $json.workspace_contract?.expected_scenario_spec_path } }}",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f3c8c30e-da85-4f3d-94bf-5192217dbaac",
+              "name": "status",
+              "value": "GENERATED",
+              "type": "string"
+            },
+            {
+              "id": "40b8a7ed-f16f-4971-943b-4c74ad1d0f42",
+              "name": "context",
+              "value": "={{ { ...($('Normalize ScenarioSpec Generation Input').first().json.context || {}), scenario_spec_ids: [...($('Normalize ScenarioSpec Generation Input').first().json.context?.scenario_spec_ids || []), $json.scenario_spec_id] } }}",
+              "type": "object"
+            },
+            {
+              "id": "406a70f9-4bfc-4200-ba04-8d279f7012e2",
+              "name": "ids",
+              "value": "={{ { release_id: $('Normalize ScenarioSpec Generation Input').first().json.context.release_id, audit_id: $('Normalize ScenarioSpec Generation Input').first().json.context.audit_id || null, trt_id: $('Normalize ScenarioSpec Generation Input').first().json.context.trt_id, trt_version: $('Normalize ScenarioSpec Generation Input').first().json.context.trt_version, reconciliation_plan_id: $('Normalize ScenarioSpec Generation Input').first().json.context.reconciliation_plan_id, scenario_spec_id: $json.scenario_spec_id, scenario_spec_ids: [...($('Normalize ScenarioSpec Generation Input').first().json.context?.scenario_spec_ids || []), $json.scenario_spec_id] } }}",
+              "type": "object"
+            },
+            {
+              "id": "d511846f-be13-4042-90ea-6f9e6df5b7bb",
+              "name": "payload",
+              "value": "={{ { scenario_spec_id: $json.scenario_spec_id, scenario_spec_path: $json.scenario_spec_path || $json.workspace_contract?.expected_scenario_spec_path, scenario_spec: $json.scenario_spec || $json } }}",
+              "type": "object"
+            },
+            {
+              "id": "bbe8c872-2cca-4b79-b8e0-c14e7f8e8956",
+              "name": "errors",
+              "value": "={{ [] }}",
+              "type": "array"
+            }
+          ]
+        },
         "options": {}
       },
       "id": "d3ed3c30-e143-49eb-bd49-4b4aee2c23d6",
       "name": "Return Generated ScenarioSpec",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
-        840,
-        -120
+        1900,
+        -200
       ]
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { status: $json.status, required_checkpoint: ($json.required_checkpoints || [])[0]?.required_checkpoint || null, reason: ($json.required_checkpoints || [])[0]?.reason || null, required_checkpoints: $json.required_checkpoints || [] } }}",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4abdf27f-6bee-4e56-b8f5-edd0a284cd49",
+              "name": "status",
+              "value": "WAITING_FOR_CHECKPOINT",
+              "type": "string"
+            },
+            {
+              "id": "3f1150f1-65d2-4a10-9c26-4c6477c69968",
+              "name": "context",
+              "value": "={{ $('Normalize ScenarioSpec Generation Input').first().json.context }}",
+              "type": "object"
+            },
+            {
+              "id": "52100c13-56b0-485e-9194-661fc902f20f",
+              "name": "ids",
+              "value": "={{ { release_id: $('Normalize ScenarioSpec Generation Input').first().json.context.release_id, audit_id: $('Normalize ScenarioSpec Generation Input').first().json.context.audit_id || null, trt_id: $('Normalize ScenarioSpec Generation Input').first().json.context.trt_id, trt_version: $('Normalize ScenarioSpec Generation Input').first().json.context.trt_version, reconciliation_plan_id: $('Normalize ScenarioSpec Generation Input').first().json.context.reconciliation_plan_id, scenario_spec_id: null } }}",
+              "type": "object"
+            },
+            {
+              "id": "efff3697-3077-479d-b77a-c03988ee5511",
+              "name": "payload",
+              "value": "={{ { required_checkpoint: ($json.required_checkpoints || [])[0]?.required_checkpoint || null, reason: ($json.required_checkpoints || [])[0]?.reason || null, required_checkpoints: $json.required_checkpoints || [] } }}",
+              "type": "object"
+            },
+            {
+              "id": "59161440-79f8-4b23-a126-388849d18067",
+              "name": "errors",
+              "value": "={{ [] }}",
+              "type": "array"
+            }
+          ]
+        },
         "options": {}
       },
       "id": "f9dc12e7-e892-4ac9-bd68-5415854bfe1e",
       "name": "Return Waiting Checkpoint",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
-        1120,
-        40
+        2180,
+        -40
       ]
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { status: $json.status || 'REJECTED', rejection_reason: $json.rejection_reason || $json.reason || $json.detail || 'ScenarioSpec generation rejected by Python API.' } }}",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "53c941d0-b591-4524-821c-72f98fd980c5",
+              "name": "status",
+              "value": "={{ $json.status || \"REJECTED\" }}",
+              "type": "string"
+            },
+            {
+              "id": "fb9f8a5b-80ae-4c59-b797-ee1000c95119",
+              "name": "context",
+              "value": "={{ $('Normalize ScenarioSpec Generation Input').first().json.context }}",
+              "type": "object"
+            },
+            {
+              "id": "088ee841-dfe6-4cca-a39a-c62011c616b1",
+              "name": "ids",
+              "value": "={{ { release_id: $('Normalize ScenarioSpec Generation Input').first().json.context.release_id, audit_id: $('Normalize ScenarioSpec Generation Input').first().json.context.audit_id || null, trt_id: $('Normalize ScenarioSpec Generation Input').first().json.context.trt_id, trt_version: $('Normalize ScenarioSpec Generation Input').first().json.context.trt_version, reconciliation_plan_id: $('Normalize ScenarioSpec Generation Input').first().json.context.reconciliation_plan_id, scenario_spec_id: null } }}",
+              "type": "object"
+            },
+            {
+              "id": "cc816777-c5c4-4768-9ddb-aac35f848740",
+              "name": "payload",
+              "value": "={{ $json }}",
+              "type": "object"
+            },
+            {
+              "id": "49c70f08-9a00-4756-bcae-bfe99f96bb4c",
+              "name": "errors",
+              "value": "={{ [$json.rejection_reason || $json.reason || $json.detail || \"ScenarioSpec generation rejected by Python API.\"] }}",
+              "type": "array"
+            }
+          ]
+        },
         "options": {}
       },
       "id": "784fb9c9-a670-45b9-a837-a081371ec7e3",
       "name": "Return Rejected Generation",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
-        1120,
-        240
+        2180,
+        160
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first().json;\nconst context = current.context || {};\nconst payload = current.payload || {};\nconst planCandidate = payload.plan || current.plan || {};\nconst lineDecisions =\n  payload.line_decisions ||\n  payload.plan?.line_decisions ||\n  current.line_decisions ||\n  current.plan?.line_decisions ||\n  [];\n\nfunction affectedLinesFromOperations(operations) {\n  const seen = new Set();\n  for (const operation of operations || []) {\n    const path = operation.path || '';\n    const parts = path.split('/').filter(Boolean);\n    const lineIndex = parts.indexOf('lines');\n    if (lineIndex >= 0 && parts[lineIndex + 1]) {\n      seen.add(parts[lineIndex + 1]);\n    }\n  }\n  return Array.from(seen).sort();\n}\n\nconst candidatePatch =\n  payload.candidate_patch ||\n  payload.candidate_patch_summary ||\n  current.candidate_patch ||\n  current.body?.candidate_patch ||\n  {};\nconst affectedLines =\n  context.affected_lines ||\n  payload.affected_lines ||\n  current.affected_lines ||\n  candidatePatch.affected_lines ||\n  affectedLinesFromOperations(candidatePatch.operations);\n\nconst normalizedPlan = {\n  ...planCandidate,\n  line_decisions: lineDecisions\n};\n\nconst normalizedContext = {\n  ...context,\n  trt_id: context.trt_id || normalizedPlan.trt_id || null,\n  trt_version: context.trt_version || normalizedPlan.trt_version || null,\n  reconciliation_plan_id: context.reconciliation_plan_id || normalizedPlan.plan_id || null,\n  affected_lines: affectedLines\n};\n\nconst onlyNoChange = lineDecisions.length > 0 && lineDecisions.every(item => item.decision === 'NO_CHANGE');\nconst allowBaseline = current.allow_baseline_on_no_change === true || current.body?.allow_baseline_on_no_change === true || context.allow_baseline_on_no_change === true;\nconst evaluatesReleasedPatchImpact = affectedLines.length > 0;\n\nif (onlyNoChange && !allowBaseline && !evaluatesReleasedPatchImpact) {\n  return [{\n    json: {\n      status: 'NO_EFFECT',\n      reason: 'Reconciliation plan contains no changed lines.',\n      context: normalizedContext,\n      payload: { ...payload, plan: normalizedPlan },\n      errors: []\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    status: 'READY_FOR_SCENARIO_GENERATION',\n    context: normalizedContext,\n    payload: { ...payload, plan: normalizedPlan },\n    errors: []\n  }\n}];"
+      },
+      "id": "9c0b5b95-6e3d-4750-8111-2b3a76c593c2",
+      "name": "Validate ScenarioSpec Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b9b5176e-b25d-4659-8460-5b040338b003",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "NO_EFFECT",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "91653836-fb06-4a23-ba8b-bc4abb6fc55a",
+      "name": "Generate Baseline Scenario?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        540,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1ba55df0-694f-40dd-ab43-cafabfc04e8d",
+              "name": "status",
+              "value": "NO_EFFECT",
+              "type": "string"
+            },
+            {
+              "id": "24eb1bb8-9a9f-4d75-915c-96e77613f16d",
+              "name": "context",
+              "value": "={{ $json.context }}",
+              "type": "object"
+            },
+            {
+              "id": "c8bb4450-cd4e-4857-966b-9af58f46a8ad",
+              "name": "ids",
+              "value": "={{ { release_id: $json.context.release_id, audit_id: $json.context.audit_id || null, trt_id: $json.context.trt_id, trt_version: $json.context.trt_version, reconciliation_plan_id: $json.context.reconciliation_plan_id, scenario_batch_id: $json.context.scenario_batch_id || null, scenario_spec_ids: $json.context.scenario_spec_ids || [] } }}",
+              "type": "object"
+            },
+            {
+              "id": "da76b2b7-e9ff-4a01-b6f1-cab9ea429c68",
+              "name": "payload",
+              "value": "={{ { plan: $json.payload.plan, reason: $json.reason } }}",
+              "type": "object"
+            },
+            {
+              "id": "40fcf975-de28-418d-8070-2d86a913e5b8",
+              "name": "errors",
+              "value": "={{ [] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6b5e7118-5f36-4143-acef-677118e7604b",
+      "name": "Return No Effect",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        820,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst context = input.context || {};\nconst plan = input.payload?.plan || {};\nconst missing = [];\n\nfor (const field of ['release_id', 'trt_id', 'trt_version', 'reconciliation_plan_id']) {\n  if (!context[field]) missing.push(field);\n}\n\nif (missing.length) {\n  const message = `Missing ScenarioSpec generation fields: ${missing.join(', ')}`;\n  return [{\n    json: {\n      status: 'REJECTED',\n      context,\n      ids: {\n        release_id: context.release_id || null,\n        audit_id: context.audit_id || null,\n        trt_id: context.trt_id || null,\n        trt_version: context.trt_version || null,\n        reconciliation_plan_id: context.reconciliation_plan_id || null,\n        scenario_spec_id: null\n      },\n      payload: {\n        ...(input.payload || {}),\n        plan,\n        message,\n        missing_fields: missing\n      },\n      errors: [message]\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...input,\n    status: 'READY_FOR_SCENARIO_GENERATION',\n    context,\n    payload: {\n      ...(input.payload || {}),\n      plan\n    },\n    scenario_request: {\n      release_id: context.release_id,\n      trt_id: context.trt_id,\n      trt_version: context.trt_version,\n      reconciliation_plan_id: context.reconciliation_plan_id,\n      candidate_strategy_id: 'primary',\n      scenario_template_id: 'surgical_sorting_v1',\n      include_waiting_scenarios: false,\n      affected_lines: context.affected_lines || []\n    },\n    errors: []\n  }\n}];"
+      },
+      "id": "4fa7a00d-2c21-4b36-9762-1779f55a47b8",
+      "name": "Normalize ScenarioSpec Generation Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        820,
+        -80
+      ],
+      "notes": "Builds the exact /scenario/generate request body from context and rejects locally if required fields are missing."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "59e64654-d987-480e-a091-0bedb84e547b",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "READY_FOR_SCENARIO_GENERATION",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "336890f8-fd79-4f4a-8918-1479184334a2",
+      "name": "ScenarioSpec Request Complete?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1080,
+        -80
+      ],
+      "notes": "Prevents FastAPI calls when required ScenarioSpec generation fields are missing."
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst message = (input.errors || [])[0] || 'Missing ScenarioSpec generation fields.';\nreturn [{\n  json: {\n    status: 'REJECTED',\n    context: input.context || {},\n    ids: input.ids || {\n      release_id: input.context?.release_id || null,\n      audit_id: input.context?.audit_id || null,\n      trt_id: input.context?.trt_id || null,\n      trt_version: input.context?.trt_version || null,\n      reconciliation_plan_id: input.context?.reconciliation_plan_id || null,\n      scenario_spec_id: null\n    },\n    payload: input.payload || { message },\n    errors: [message]\n  }\n}];"
+      },
+      "id": "f0f9d60a-9501-4c5a-bb6c-76271ac34989",
+      "name": "Return Missing ScenarioSpec Fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        240
+      ],
+      "notes": "Normalized rejection envelope for missing ScenarioSpec generation fields."
     }
   ],
   "connections": {
@@ -157,7 +402,36 @@
       "main": [
         [
           {
-            "node": "Generate ScenarioSpec",
+            "node": "Validate ScenarioSpec Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate ScenarioSpec Context": {
+      "main": [
+        [
+          {
+            "node": "Generate Baseline Scenario?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Baseline Scenario?": {
+      "main": [
+        [
+          {
+            "node": "Normalize ScenarioSpec Generation Input",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return No Effect",
             "type": "main",
             "index": 0
           }
@@ -205,6 +479,35 @@
         [
           {
             "node": "Return Rejected Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize ScenarioSpec Generation Input": {
+      "main": [
+        [
+          {
+            "node": "ScenarioSpec Request Complete?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ScenarioSpec Request Complete?": {
+      "main": [
+        [
+          {
+            "node": "Generate ScenarioSpec",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Missing ScenarioSpec Fields",
             "type": "main",
             "index": 0
           }

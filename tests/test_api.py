@@ -46,6 +46,15 @@ def test_get_current_trt_returns_current_trt(tmp_path, fixture_loader):
     assert response.json()["version"] == "v1"
 
 
+def test_health_endpoint_returns_ok(tmp_path, fixture_loader):
+    client = make_client(tmp_path, fixture_loader)
+
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
 def test_scenario_generate_route_is_registered_in_openapi():
     assert "/scenario/generate" in api.app.openapi()["paths"]
 
@@ -110,6 +119,79 @@ def test_scenario_generate_missing_trt_version_returns_available_versions(tmp_pa
         "available_for_requested_trt_id": ["v1", "v2"],
         "all_available_trts": [{"trt_id": "trt-demo", "versions": ["v1", "v2"]}],
     }
+
+
+def test_scenario_generate_missing_required_fields_returns_400(tmp_path, fixture_loader):
+    client = make_scenario_client(tmp_path, fixture_loader)
+
+    response = client.post(
+        "/scenario/generate",
+        json={
+            "release_id": "rel_api_scenario_001",
+            "trt_id": "trt-demo",
+            "trt_version": None,
+            "reconciliation_plan_id": "",
+            "scenario_template_id": "surgical_sorting_v1",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "detail": "Missing scenario generation fields: reconciliation_plan_id, trt_version"
+    }
+
+
+def test_scenario_generate_no_change_plan_without_affected_lines_returns_409(tmp_path, fixture_loader):
+    client = make_scenario_client(tmp_path, fixture_loader)
+    no_change_plan = deepcopy(fixture_loader("reconciliation_ready.json"))
+    no_change_plan["plan_id"] = "rec_no_change_001"
+    for decision in no_change_plan["line_decisions"]:
+        decision["decision"] = "NO_CHANGE"
+        decision["reason"] = "unchanged"
+        decision["next_action"] = "continue"
+    no_change_plan["overall_status"] = "READY"
+    api.repository.save_reconciliation_plan(no_change_plan)
+
+    response = client.post(
+        "/scenario/generate",
+        json={
+            "release_id": "rel_api_scenario_001",
+            "trt_id": "trt-demo",
+            "trt_version": "v1",
+            "reconciliation_plan_id": "rec_no_change_001",
+            "scenario_template_id": "surgical_sorting_v1",
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json() == {"detail": "Reconciliation plan contains no changed lines."}
+
+
+def test_scenario_generate_no_change_plan_with_affected_lines_can_generate(tmp_path, fixture_loader):
+    client = make_scenario_client(tmp_path, fixture_loader)
+    no_change_plan = deepcopy(fixture_loader("reconciliation_ready.json"))
+    no_change_plan["plan_id"] = "rec_no_change_impact_001"
+    for decision in no_change_plan["line_decisions"]:
+        decision["decision"] = "NO_CHANGE"
+        decision["reason"] = "unchanged"
+        decision["next_action"] = "continue"
+    no_change_plan["overall_status"] = "READY"
+    api.repository.save_reconciliation_plan(no_change_plan)
+
+    response = client.post(
+        "/scenario/generate",
+        json={
+            "release_id": "rel_api_scenario_001",
+            "trt_id": "trt-demo",
+            "trt_version": "v1",
+            "reconciliation_plan_id": "rec_no_change_impact_001",
+            "scenario_template_id": "surgical_sorting_v1",
+            "affected_lines": ["line_1"],
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "GENERATED"
 
 
 def test_post_scenario_generate_creates_scenario_spec(tmp_path, fixture_loader):
