@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from copy import deepcopy
 from typing import Any
 
 from jsonschema import Draft202012Validator
@@ -12,8 +13,9 @@ from trt_core.models import IntentPatch, TRT, ValidationResults
 
 
 SUPPORTED_OPERATIONS = {"test", "add", "replace", "remove"}
-WRITABLE_LINE_FIELDS = {"goal", "allowed_instruments", "excluded_instruments", "priority", "kpi", "abnormal_strategy"}
+WRITABLE_LINE_FIELDS = {"goal", "allowed_instruments", "excluded_instruments", "priority", "kpi", "abnormal_strategy", "tooling_policy"}
 WRITABLE_KPI_FIELDS = {"deadline_minutes", "max_downtime_seconds", "min_throughput_per_hour"}
+WRITABLE_TOOLING_POLICY_FIELDS = {"required_scope"}
 
 
 def default_validation_results() -> ValidationResults:
@@ -33,11 +35,26 @@ def load_schema(name: str) -> dict[str, Any]:
 
 def schema_errors(document: dict[str, Any], schema_name: str) -> list[str]:
     validator = Draft202012Validator(load_schema(schema_name))
-    return [error.message for error in sorted(validator.iter_errors(document), key=lambda item: item.path)]
+    return _dedupe_messages(error.message for error in sorted(validator.iter_errors(document), key=lambda item: item.path))
 
 
 def validate_trt_schema(trt: TRT | dict[str, Any]) -> list[str]:
     return schema_errors(dict(trt), "trt.schema.json")
+
+
+def migrate_legacy_tooling_policy(trt: TRT | dict[str, Any]) -> dict[str, Any]:
+    migrated = deepcopy(dict(trt))
+    for line in migrated.get("lines", {}).values():
+        tooling_policy = line.get("tooling_policy")
+        if not isinstance(tooling_policy, dict):
+            continue
+        if "required_scope" in tooling_policy:
+            line["tooling_policy"] = {"required_scope": tooling_policy["required_scope"]}
+        elif tooling_policy.get("all_required") is True:
+            line["tooling_policy"] = {"required_scope": "ALL_SUPPORTED_INSTRUMENTS"}
+        elif tooling_policy.get("all_required") is False:
+            line["tooling_policy"] = {"required_scope": "NONE"}
+    return migrated
 
 
 def validate_intent_patch_schema(intent_patch: IntentPatch | dict[str, Any]) -> list[str]:
@@ -78,12 +95,15 @@ def is_whitelisted_path(path: str) -> bool:
         return len(parts) in {3, 4}
     if field == "kpi":
         return len(parts) == 4 and parts[3] in WRITABLE_KPI_FIELDS
+    if field == "tooling_policy":
+        return len(parts) == 3 or (len(parts) == 4 and parts[3] in WRITABLE_TOOLING_POLICY_FIELDS)
     return False
 
 
 def validate_firewall(intent_patch: IntentPatch | dict[str, Any], current_trt: TRT | dict[str, Any]) -> tuple[ValidationResults, list[str]]:
     results = default_validation_results()
     reasons: list[str] = []
+    current_trt = migrate_legacy_tooling_policy(current_trt)
 
     patch_schema_errors = validate_intent_patch_schema(intent_patch)
     current_schema_errors = validate_trt_schema(current_trt)
@@ -111,4 +131,14 @@ def validate_firewall(intent_patch: IntentPatch | dict[str, Any], current_trt: T
             results["readonly"] = False
             reasons.append(f"operation {index} attempts to patch read-only state path: {path}")
 
-    return results, reasons
+    return results, _dedupe_messages(reasons)
+
+
+def _dedupe_messages(messages: Any) -> list[str]:
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for message in messages:
+        if message not in seen:
+            deduped.append(message)
+            seen.add(message)
+    return deduped

@@ -17,4 +17,4 @@ RUN mkdir -p /app/data/trt_versions /app/data/audit_bundles /app/data/releases /
 
 EXPOSE 8000
 
-CMD ["uvicorn", "trt_core.api:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "trt_core.api:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

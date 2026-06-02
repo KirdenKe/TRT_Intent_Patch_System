@@ -1,0 +1,96 @@
+{
+  "audit_id": "audit-9a5af518-114f-4b82-b12e-c799e5dea401",
+  "intent_text": "mark all tooling required for each production line as mandatory, set no deadlines, impose no limits on maximum downtime for each production line, and set the priority to the highest level.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/tooling_policy/required_scope",
+      "value": "ALL_SUPPORTED_INSTRUMENTS"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/priority",
+      "value": 5
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/allowed_instruments",
+      "value": [
+        "SCISSORS",
+        "FORCEPS",
+        "CLAMPS",
+        "RETRACTOR"
+      ]
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/excluded_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/deadline_minutes",
+      "value": null
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/max_downtime_seconds",
+      "value": null
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/tooling_policy/required_scope",
+      "value": "ALL_SUPPORTED_INSTRUMENTS"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/priority",
+      "value": 5
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/allowed_instruments",
+      "value": [
+        "SCISSORS",
+        "FORCEPS",
+        "CLAMPS",
+        "RETRACTOR"
+      ]
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/excluded_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/kpi/deadline_minutes",
+      "value": null
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/kpi/max_downtime_seconds",
+      "value": null
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1780403532576",
+  "reason": "to conduct testing for milestone 6.5d",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-02T12:32:21.045123Z",
+  "trt_after_hash": "47f668b6179d196b1df37a285b5a09685dd732be0f0e38837388b190161d4529",
+  "trt_after_version": "v28",
+  "trt_before_hash": "fa0d95b45bc9aaa4e6e591d5eec8125e3ec0837a9c4d1da4b5c4a3fcbadaeb2d",
+  "trt_before_version": "v27",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

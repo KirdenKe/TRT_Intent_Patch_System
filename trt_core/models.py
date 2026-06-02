@@ -11,11 +11,12 @@ AbnormalStrategy = Literal["STOP_LINE", "CONTINUE_FEASIBLE_TASKS", "ASK_OPERATOR
 LineMode = Literal["IDLE", "RUNNING", "INTERVENTION", "PAUSED", "ERROR"]
 PatchStatus = Literal["DRAFT", "REVIEWED", "VALIDATED", "RELEASED", "REJECTED"]
 AuditStatus = Literal["ACCEPTED", "REJECTED", "REJECTED_BY_OPERATOR", "NEEDS_REVISION"]
+ToolingRequiredScope = Literal["ALLOWED_INSTRUMENTS", "ALL_SUPPORTED_INSTRUMENTS", "SELECTED_TOOLING", "NONE"]
 
 
 class KPI(TypedDict):
     deadline_minutes: int | None
-    max_downtime_seconds: int
+    max_downtime_seconds: int | None
     min_throughput_per_hour: int
 
 
@@ -26,6 +27,10 @@ class LineState(TypedDict):
     last_exception: str | None
 
 
+class ToolingPolicy(TypedDict):
+    required_scope: ToolingRequiredScope
+
+
 class TRTLine(TypedDict):
     goal: Goal
     allowed_instruments: list[Instrument]
@@ -34,6 +39,7 @@ class TRTLine(TypedDict):
     kpi: KPI
     abnormal_strategy: AbnormalStrategy
     state: LineState
+    tooling_policy: ToolingPolicy
 
 
 class TRT(TypedDict):

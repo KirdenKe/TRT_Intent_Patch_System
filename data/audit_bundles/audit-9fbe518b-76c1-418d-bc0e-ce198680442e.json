@@ -1,0 +1,56 @@
+{
+  "audit_id": "audit-9fbe518b-76c1-418d-bc0e-ce198680442e",
+  "intent_text": "set all tooling required by each production line to required, with no deadline and no maximum downtime limit for each production line.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/tooling_policy/required_scope",
+      "value": "ALLOWED_INSTRUMENTS"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/deadline_minutes",
+      "value": null
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/max_downtime_seconds",
+      "value": null
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/tooling_policy/required_scope",
+      "value": "ALLOWED_INSTRUMENTS"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/kpi/deadline_minutes",
+      "value": null
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/kpi/max_downtime_seconds",
+      "value": null
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1780398432092",
+  "reason": "to conduct testing for milestone 6.5d",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-02T11:07:22.023584Z",
+  "trt_after_hash": "6e80a6831af20b11e7cf490f05b59d273914ed047f4cc0d2b7b4d9bcd60a015b",
+  "trt_after_version": "v25",
+  "trt_before_hash": "7b59bc4dbb6025a6c4be7f5ed9ffef6da49297b9c98c86440fe0b11c6c96bfbd",
+  "trt_before_version": "v24",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

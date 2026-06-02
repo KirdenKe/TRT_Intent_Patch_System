@@ -1,0 +1,96 @@
+{
+  "audit_id": "audit-905e66ec-22f1-4ac8-b829-3ca9010c6cc0",
+  "intent_text": "mark all tooli required for each production line as mandatory, set no deadlines, impose no limits on maximum downtime for each production line, and set the priority to the highest level.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/tooling_policy/required_scope",
+      "value": "ALL_SUPPORTED_INSTRUMENTS"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/goal",
+      "value": "ROUTINE_CLASSIFICATION"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/allowed_instruments",
+      "value": [
+        "SCISSORS",
+        "FORCEPS",
+        "CLAMPS",
+        "RETRACTOR"
+      ]
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/excluded_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/deadline_minutes",
+      "value": null
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/max_downtime_seconds",
+      "value": null
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/tooling_policy/required_scope",
+      "value": "ALL_SUPPORTED_INSTRUMENTS"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/goal",
+      "value": "ROUTINE_CLASSIFICATION"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/allowed_instruments",
+      "value": [
+        "SCISSORS",
+        "FORCEPS",
+        "CLAMPS",
+        "RETRACTOR"
+      ]
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/excluded_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/kpi/deadline_minutes",
+      "value": null
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/kpi/max_downtime_seconds",
+      "value": null
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1780402162390",
+  "reason": "to conduct testing for milestone 6.5d",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-02T12:09:32.554219Z",
+  "trt_after_hash": "f3c8607201129b3f28025d4fe63f68e51267e4f71ea88d73f61cec2a58acb240",
+  "trt_after_version": "v26",
+  "trt_before_hash": "6e80a6831af20b11e7cf490f05b59d273914ed047f4cc0d2b7b4d9bcd60a015b",
+  "trt_before_version": "v25",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

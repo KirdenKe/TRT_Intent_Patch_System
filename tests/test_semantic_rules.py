@@ -11,10 +11,10 @@ def test_semantic_conflict_is_rejected(repo, fixture_loader):
     assert result["validation_results"]["semantic"] is False
 
 
-def test_allowed_instruments_empty_is_semantic_error(fixture_loader):
+def test_allowed_instruments_empty_is_valid_no_tooling_selected(fixture_loader):
     trt = fixture_loader("trt_v1.json")
     trt["lines"]["line_1"]["allowed_instruments"] = []
 
     reasons = validate_semantics(trt)
 
-    assert any("allowed_instruments must not be empty" in reason for reason in reasons)
+    assert not any("allowed_instruments must not be empty" in reason for reason in reasons)

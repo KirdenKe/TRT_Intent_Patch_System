@@ -182,7 +182,7 @@ def test_export_writes_json_to_outputs_scenario_specs_and_creates_directories(fi
         template_registry=fixture_loader("scenario_templates.json"),
     )
 
-    output_file = output_root / "scenario_specs" / f"{spec['scenario_spec_id']}.json"
+    output_file = output_root / "scenario_specs" / f"scenario_spec_{spec['scenario_spec_id']}.json"
     assert output_file.exists()
     assert (output_root / "scenario_specs").is_dir()
     assert not (tmp_path / "exchange" / "scenario_specs").exists()
@@ -202,9 +202,44 @@ def test_exported_json_validates_against_scenario_spec_schema(fixture_loader, tm
         output_path=output_root,
         template_registry=fixture_loader("scenario_templates.json"),
     )
-    exported = json.loads((output_root / "scenario_specs" / f"{spec['scenario_spec_id']}.json").read_text(encoding="utf-8"))
+    exported = json.loads(
+        (output_root / "scenario_specs" / f"scenario_spec_{spec['scenario_spec_id']}.json").read_text(encoding="utf-8")
+    )
 
     validate_against_schema(exported)
+
+
+def test_export_writes_to_scenario_specs_directory_path(fixture_loader, tmp_path):
+    output_dir = tmp_path / "outputs" / "scenario_specs"
+    spec = generate_scenario_spec(
+        released_trt=fixture_loader("released_trt_v1.json"),
+        state_records=fixture_loader("state_records_v1.json"),
+        reconciliation_plan=fixture_loader("reconciliation_ready.json"),
+        scenario_template_id="ur5_pick_place_minimal",
+        candidate_strategy_id="strategy_explicit_001",
+        output_path=output_dir,
+        template_registry=fixture_loader("scenario_templates.json"),
+    )
+
+    output_file = output_dir / f"scenario_spec_{spec['scenario_spec_id']}.json"
+    assert output_file.exists()
+    assert json.loads(output_file.read_text(encoding="utf-8")) == spec
+
+
+def test_export_raises_clear_error_if_parent_path_exists_as_file(fixture_loader, tmp_path):
+    blocked_parent = tmp_path / "blocked"
+    blocked_parent.write_text("not a directory", encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="ScenarioSpec output parent exists but is not a directory"):
+        generate_scenario_spec(
+            released_trt=fixture_loader("released_trt_v1.json"),
+            state_records=fixture_loader("state_records_v1.json"),
+            reconciliation_plan=fixture_loader("reconciliation_ready.json"),
+            scenario_template_id="ur5_pick_place_minimal",
+            candidate_strategy_id="strategy_explicit_001",
+            output_path=blocked_parent / "scenario.json",
+            template_registry=fixture_loader("scenario_templates.json"),
+        )
 
 
 def test_ask_operator_strategy_is_rejected_before_isaac_export(fixture_loader):

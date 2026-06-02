@@ -1,0 +1,117 @@
+{
+  "audit_id": "audit-75e64215-dc64-44ef-b96a-fbf8d62d5212",
+  "base_version": "v30",
+  "candidate_patch": {
+    "base_version": "v30",
+    "intent_text": "do not want all tooling on each production line to be selected; do not set a deadline; do not limit the maximum downtime for each production line; and set the priority to the highest level.",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_1/tooling_policy/required_scope",
+        "value": "NONE"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/priority",
+        "value": 5
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/allowed_instruments",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/excluded_instruments",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/kpi/deadline_minutes",
+        "value": null
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/kpi/max_downtime_seconds",
+        "value": null
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/tooling_policy/required_scope",
+        "value": "NONE"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/priority",
+        "value": 5
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/allowed_instruments",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/excluded_instruments",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/kpi/deadline_minutes",
+        "value": null
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/kpi/max_downtime_seconds",
+        "value": null
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "patch-1780406172363",
+    "reason": "to conduct testing for milestone 6.5d",
+    "status": "REVIEWED",
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [
+      "/lines/line_1/tooling_policy/required_scope",
+      "/lines/line_1/priority",
+      "/lines/line_1/allowed_instruments",
+      "/lines/line_1/excluded_instruments",
+      "/lines/line_1/kpi/deadline_minutes",
+      "/lines/line_1/kpi/max_downtime_seconds",
+      "/lines/line_2/tooling_policy/required_scope",
+      "/lines/line_2/priority",
+      "/lines/line_2/allowed_instruments",
+      "/lines/line_2/excluded_instruments",
+      "/lines/line_2/kpi/deadline_minutes",
+      "/lines/line_2/kpi/max_downtime_seconds"
+    ],
+    "affected_lines": [
+      "line_1",
+      "line_2"
+    ],
+    "intent_text": "do not want all tooling on each production line to be selected; do not set a deadline; do not limit the maximum downtime for each production line; and set the priority to the highest level.",
+    "reason": "to conduct testing for milestone 6.5d"
+  },
+  "created_at_utc": "2026-06-02T13:16:23.968894Z",
+  "operator_decision": {
+    "comment": "for the milestone 6.5d",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-06-02T13:16:24.029534Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1780406172363",
+  "release_id": "rel_3e73964b-696b-46a8-84ad-a2d10bdcec9c",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "updated_at_utc": "2026-06-02T13:16:24.029534Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

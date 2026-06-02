@@ -4,11 +4,16 @@ services:
       context: .
       dockerfile: Dockerfile.api
     container_name: trt-api
+    environment:
+      - APP_ENV=dev
     ports:
       - "8000:8000"
     volumes:
+      - ./trt_core:/app/trt_core
+      - ./scenario_generation:/app/scenario_generation
+      - ./schemas:/app/schemas
       - ./data:/app/data
-      - ./outputs:/app/outputs
+      - ../dt_exchange:/app/outputs
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).read()"]
       interval: 10s

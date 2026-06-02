@@ -1,0 +1,53 @@
+{
+  "lines": {
+    "line_1": {
+      "abnormal_strategy": "CONTINUE_FEASIBLE_TASKS",
+      "allowed_instruments": [
+        "SCISSORS"
+      ],
+      "excluded_instruments": [
+        "FORCEPS"
+      ],
+      "goal": "TRAUMA_SET_PRIORITY",
+      "kpi": {
+        "deadline_minutes": null,
+        "max_downtime_seconds": null,
+        "min_throughput_per_hour": 120
+      },
+      "priority": 5,
+      "state": {
+        "current_task": "sort_set",
+        "last_exception": null,
+        "mode": "RUNNING",
+        "wip_count": 4
+      },
+      "tooling_policy": {
+        "required_scope": "NONE"
+      }
+    },
+    "line_2": {
+      "abnormal_strategy": "STOP_LINE",
+      "allowed_instruments": [
+        "RETRACTOR"
+      ],
+      "excluded_instruments": [
+        "SCISSORS"
+      ],
+      "goal": "BACKLOG_CLEARING",
+      "kpi": {
+        "deadline_minutes": 45,
+        "max_downtime_seconds": 60,
+        "min_throughput_per_hour": 80
+      },
+      "priority": 2,
+      "state": {
+        "current_task": null,
+        "last_exception": "jam_detected",
+        "mode": "ERROR",
+        "wip_count": 0
+      }
+    }
+  },
+  "trt_id": "trt-demo",
+  "version": "v17"
+}

@@ -1,0 +1,58 @@
+{
+  "audit_id": "audit-49b87b9d-f94d-496b-be05-5f295776404a",
+  "intent_text": "Line 1 should prioritize Trauma Set. Exclude forceps if possible. If entanglement occurs, continue feasible tasks when safe.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/tooling_policy/all_required",
+      "value": false
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/goal",
+      "value": "TRAUMA_SET_PRIORITY"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/excluded_instruments",
+      "value": [
+        "FORCEPS"
+      ]
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/deadline_minutes",
+      "value": null
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/max_downtime_seconds",
+      "value": null
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/abnormal_strategy",
+      "value": "CONTINUE_FEASIBLE_TASKS"
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1780384098234",
+  "reason": "urgent trauma set deadline",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-02T07:08:29.814637Z",
+  "trt_after_hash": "900b26707207dd4885fcec700fac8d1ef481a10394a21fdef0d518d2b830539c",
+  "trt_after_version": "v12",
+  "trt_before_hash": "38858a307d7e2a3e450a64a268504de61ebaf6e1b7ca254f447b40f9faf6683a",
+  "trt_before_version": "v11",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

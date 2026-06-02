@@ -1,0 +1,86 @@
+{
+  "audit_id": "audit-75e64215-dc64-44ef-b96a-fbf8d62d5212",
+  "intent_text": "do not want all tooling on each production line to be selected; do not set a deadline; do not limit the maximum downtime for each production line; and set the priority to the highest level.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/tooling_policy/required_scope",
+      "value": "NONE"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/priority",
+      "value": 5
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/allowed_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/excluded_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/deadline_minutes",
+      "value": null
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/max_downtime_seconds",
+      "value": null
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/tooling_policy/required_scope",
+      "value": "NONE"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/priority",
+      "value": 5
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/allowed_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/excluded_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/kpi/deadline_minutes",
+      "value": null
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/kpi/max_downtime_seconds",
+      "value": null
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1780406172363",
+  "reason": "to conduct testing for milestone 6.5d",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-02T13:16:24.082950Z",
+  "trt_after_hash": "c732f06dc193d8d95a23d85bf58e59129f7aa10b40cd8b8e58c60109f4c724b5",
+  "trt_after_version": "v31",
+  "trt_before_hash": "4e72f1123851abb7538b7e0cdceb90e5a24d9e735d049416c817cccc163fe274",
+  "trt_before_version": "v30",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

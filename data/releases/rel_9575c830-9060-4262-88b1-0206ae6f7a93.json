@@ -1,0 +1,82 @@
+{
+  "audit_id": "audit-e377a547-7db5-440e-ac3f-fcd88c8406d6",
+  "base_version": "v13",
+  "candidate_patch": {
+    "base_version": "v13",
+    "intent_text": "Line 1 should prioritize Trauma Set. Exclude forceps if possible. If entanglement occurs, continue feasible tasks when safe.",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_1/tooling_policy/all_required",
+        "value": false
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/goal",
+        "value": "TRAUMA_SET_PRIORITY"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/excluded_instruments",
+        "value": [
+          "FORCEPS"
+        ]
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/kpi/deadline_minutes",
+        "value": null
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/kpi/max_downtime_seconds",
+        "value": null
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/abnormal_strategy",
+        "value": "CONTINUE_FEASIBLE_TASKS"
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "patch-1780384932398",
+    "reason": "urgent trauma set deadline",
+    "status": "REVIEWED",
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [
+      "/lines/line_1/tooling_policy/all_required",
+      "/lines/line_1/goal",
+      "/lines/line_1/excluded_instruments",
+      "/lines/line_1/kpi/deadline_minutes",
+      "/lines/line_1/kpi/max_downtime_seconds",
+      "/lines/line_1/abnormal_strategy"
+    ],
+    "affected_lines": [
+      "line_1"
+    ],
+    "intent_text": "Line 1 should prioritize Trauma Set. Exclude forceps if possible. If entanglement occurs, continue feasible tasks when safe.",
+    "reason": "urgent trauma set deadline"
+  },
+  "created_at_utc": "2026-06-02T07:22:19.048090Z",
+  "operator_decision": {
+    "comment": "Test for the Milestone 6.5D",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-06-02T07:22:19.085840Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1780384932398",
+  "release_id": "rel_9575c830-9060-4262-88b1-0206ae6f7a93",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "updated_at_utc": "2026-06-02T07:22:19.085840Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

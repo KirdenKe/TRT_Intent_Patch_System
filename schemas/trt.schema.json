@@ -44,7 +44,7 @@
                 "minimum": 0
               },
               "max_downtime_seconds": {
-                "type": "integer",
+                "type": ["integer", "null"],
                 "minimum": 0
               },
               "min_throughput_per_hour": {
@@ -55,6 +55,16 @@
           },
           "abnormal_strategy": {
             "enum": ["STOP_LINE", "CONTINUE_FEASIBLE_TASKS", "ASK_OPERATOR"]
+          },
+          "tooling_policy": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["required_scope"],
+            "properties": {
+              "required_scope": {
+                "enum": ["ALLOWED_INSTRUMENTS", "ALL_SUPPORTED_INSTRUMENTS", "SELECTED_TOOLING", "NONE"]
+              }
+            }
           },
           "state": {
             "type": "object",
@@ -86,4 +96,3 @@
     }
   }
 }
-

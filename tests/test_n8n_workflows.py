@@ -34,6 +34,18 @@ def test_child_workflows_do_not_use_respond_to_webhook():
         assert "n8n-nodes-base.respondToWebhook" not in node_types, workflow_name
 
 
+def test_workflow_connection_main_entries_are_nested_arrays():
+    for workflow_name in [
+        *CHILD_WORKFLOWS,
+        "chat_operator_task_allocation.workflow.json",
+        "integrated_operator_task_allocation.workflow.json",
+    ]:
+        workflow = load_workflow(workflow_name)
+        for source, connection in workflow["connections"].items():
+            for output_index, output in enumerate(connection.get("main", [])):
+                assert isinstance(output, list), f"{workflow_name}: {source}.main[{output_index}]"
+
+
 def test_no_n8n_wait_nodes_for_chat_or_release_human_input():
     for workflow_name in ["chat_operator_task_allocation.workflow.json", "patch_release_approval.workflow.json"]:
         workflow = load_workflow(workflow_name)
@@ -102,6 +114,10 @@ def test_chat_operator_workflow_classifies_every_chat_turn_with_vllm():
     assert "TASK_REQUEST" in builder["parameters"]["jsCode"]
     assert "CLARIFICATION_VALUES" in builder["parameters"]["jsCode"]
     assert "APPROVAL_DECISION" in builder["parameters"]["jsCode"]
+    assert "including no, cancel, stop, never mind, or abort" in builder["parameters"]["jsCode"]
+    assert "explicitly says APPROVE, REJECT, or REQUEST_REVISION" in builder["parameters"]["jsCode"]
+    assert 'input: "no"' in builder["parameters"]["jsCode"]
+    assert 'turn_type: "CANCEL"' in builder["parameters"]["jsCode"]
     assert "Do not generate patches" in builder["parameters"]["jsCode"]
     assert "operator_id: op_001 reason: urgent trauma set deadline" in builder["parameters"]["jsCode"]
     assert "Extract reason only from explicit markers" in builder["parameters"]["jsCode"]
@@ -127,6 +143,110 @@ def test_chat_operator_workflow_calls_existing_subworkflows():
         "Execute Supervisor Reconciliation Sub-workflow": "ReleasedTRTToReconciliationDemo",
         "Execute ScenarioSpec Generation Sub-workflow": "GenerateScenarioSpecDemo",
     }
+
+
+def test_intent_candidate_vllm_budget_and_length_guard():
+    workflow = load_workflow("intent_to_patch_review.workflow.json")
+    generator = node_by_name(workflow, "LLM Generate Intent Patch")
+    retry_generator = node_by_name(workflow, "Retry LLM Generate Intent Patch")
+    normalizer = node_by_name(workflow, "Normalize Candidate Patch")
+    retry_normalizer = node_by_name(workflow, "Normalize Retried Candidate Patch")
+    body = generator["parameters"]["jsonBody"]
+    retry_body = retry_generator["parameters"]["jsonBody"]
+    code = normalizer["parameters"]["jsCode"]
+    retry_code = retry_normalizer["parameters"]["jsCode"]
+
+    assert "max_tokens: 768" in body
+    assert "max_tokens: 1024" in retry_body
+    assert "temperature: 0.0" in body
+    assert "structured_outputs" in body
+    assert "Extract compact domain intent JSON only." in body
+    assert "Allowed lines: line_1,line_2,line_3,line_4." in body
+    assert "Allowed goals: ROUTINE_CLASSIFICATION,TRAUMA_SET_PRIORITY,BACKLOG_CLEARING." in body
+    assert "Allowed instruments: SCISSORS,FORCEPS,CLAMPS,RETRACTOR." in body
+    assert "Allowed abnormal strategies: STOP_LINE,CONTINUE_FEASIBLE_TASKS,ASK_OPERATOR." in body
+    assert "target_scope: single line=SINGLE_LINE" in body
+    assert "no deadline" in body
+    assert "no maximum downtime limit" in body
+    assert "all tooling required" in body
+    assert "Action rules:" in body
+    assert "clarification_questions must be short" not in body
+    assert "Do not write long explanatory sentences." not in body
+    assert "finishReason === 'length'" in code
+    assert "RETRY_INTENT_GENERATION" in code
+    assert "retry_needed: true" in code
+    assert "Please retry with a shorter request" not in code
+    assert "JSON.parse(content)" in code
+    assert "Intent candidate generation failed after retry." in retry_code
+    assert "llm_action: 'NEEDS_REVISION'" in retry_code
+
+
+def test_intent_candidate_retry_branch_reaches_python_normalization_on_success():
+    workflow = load_workflow("intent_to_patch_review.workflow.json")
+
+    assert workflow["connections"]["Normalize Candidate Patch"]["main"][0][0]["node"] == "Intent Candidate Needs Retry?"
+    assert workflow["connections"]["Intent Candidate Needs Retry?"]["main"][0][0]["node"] == "Retry LLM Generate Intent Patch"
+    assert workflow["connections"]["Intent Candidate Needs Retry?"]["main"][1][0]["node"] == "LLM Proposes Patch?"
+    assert workflow["connections"]["Retry LLM Generate Intent Patch"]["main"][0][0]["node"] == "Normalize Retried Candidate Patch"
+    assert workflow["connections"]["Normalize Retried Candidate Patch"]["main"][0][0]["node"] == "LLM Proposes Patch?"
+    assert workflow["connections"]["LLM Proposes Patch?"]["main"][0][0]["node"] == "Normalize Domain Candidate with Python"
+
+
+def test_intent_python_business_rule_rejections_are_normalized_not_failed():
+    workflow = load_workflow("intent_to_patch_review.workflow.json")
+    http_node = node_by_name(workflow, "Normalize Domain Candidate with Python")
+    normalizer = node_by_name(workflow, "Normalize Python Candidate Result")
+    router = node_by_name(workflow, "Python Candidate Accepted?")
+    normalizer_code = normalizer["parameters"]["jsCode"]
+
+    assert http_node["continueOnFail"] is True
+    assert normalizer["type"] == "n8n-nodes-base.code"
+    assert router["type"] == "n8n-nodes-base.if"
+    assert "status: 'REJECTED'" in normalizer_code
+    assert "Normalize Domain Candidate with Python" in normalizer_code
+    assert "line_2 is currently in ERROR mode" in normalizer_code
+    assert workflow["connections"]["Normalize Domain Candidate with Python"]["main"][0][0]["node"] == "Normalize Python Candidate Result"
+    assert workflow["connections"]["Normalize Python Candidate Result"]["main"][0][0]["node"] == "Python Candidate Accepted?"
+    assert workflow["connections"]["Python Candidate Accepted?"]["main"][0][0]["node"] == "Validate Candidate Patch"
+    assert workflow["connections"]["Python Candidate Accepted?"]["main"][1][0]["node"] == "Return Python Candidate Rejection"
+
+
+def test_intent_candidate_retry_supports_old_and_all_lines_requests_without_user_retry_message():
+    workflow = load_workflow("intent_to_patch_review.workflow.json")
+    body = node_by_name(workflow, "LLM Generate Intent Patch")["parameters"]["jsonBody"]
+    retry_body = node_by_name(workflow, "Retry LLM Generate Intent Patch")["parameters"]["jsonBody"]
+    normalizer_code = node_by_name(workflow, "Normalize Candidate Patch")["parameters"]["jsCode"]
+
+    assert "Line 1" not in body or "line_1" in body
+    assert "all/every/each production line=ALL_LINES" in body
+    assert "TRAUMA_SET_PRIORITY" in body
+    assert "FORCEPS" in body
+    assert "kpi_updates.deadline_minutes=null" in body
+    assert "kpi_updates.max_downtime_seconds=null" in body
+    assert "PRIORITY_UPDATE" in body
+    assert "priority to the highest level => priority=5" in body
+    assert "lowest priority => priority=1" in body
+    assert "Do not map priority language to goal." in body
+    assert "Do not set goal=TRAUMA_SET_PRIORITY unless the user explicitly asks for Trauma Set priority." in body
+    assert "allowed_instruments is selected tooling for the strategy, not robot capability." in body
+    assert "allowed_instruments=[] means no tooling selected." in body
+    assert "excluded_instruments=[] means no explicit exclusions." in body
+    assert "select no tooling or do not want all tooling selected => tooling_policy.required_scope=NONE" in body
+    assert "select all tooling => allowed_instruments" in body
+    assert (
+        'all tooling required by each production line or mark all tooling required for each production line as mandatory '
+        '=> tooling_policy.required_scope=ALL_SUPPORTED_INSTRUMENTS, '
+        'allowed_instruments=["SCISSORS","FORCEPS","CLAMPS","RETRACTOR"], excluded_instruments=[]'
+    ) in body
+    assert "Never use allowed_instruments=[] with tooling_policy.required_scope=ALL_SUPPORTED_INSTRUMENTS" in body
+    assert "tooling_policy.required_scope=ALL_SUPPORTED_INSTRUMENTS" in body
+    assert "Entanglement is not an instrument exclusion" in body
+    assert "Return action,line_id,target_scope,target_lines,goal,priority,allowed_instruments,excluded_instruments" in body
+    assert "priority: extracted.priority ?? null" in normalizer_code
+    assert "tooling_policy.all_required" not in body
+    assert "tooling_policy.all_required" not in retry_body
+    assert retry_body.count("max_tokens: 1024") == 1
+    assert "Please retry with a shorter request" not in normalizer_code
 
 
 def test_chat_operator_workflow_displays_required_summaries():
@@ -317,6 +437,7 @@ def test_user_response_formatter_prompt_has_status_specific_instructions():
         "REVIEWED:",
         "RELEASED:",
         "READY / DEGRADED:",
+        "WAITING:",
         "GENERATED:",
         "REJECTED / NEEDS_REVISION:",
     ]:
@@ -324,6 +445,8 @@ def test_user_response_formatter_prompt_has_status_specific_instructions():
     assert "Do not decide workflow state." in code
     assert "Examples with valid JSON outputs matching the formatter schema:" in code
     assert "JSON.stringify(formatterExamples[0])" in code
+    assert "The patch was released successfully, but the strategy cannot be switched immediately." in code
+    assert "TRAY_COMPLETE checkpoint" in code
 
 
 def test_stale_direct_formatter_nodes_are_removed():
@@ -470,8 +593,13 @@ def test_generate_scenario_spec_request_body_uses_normalized_request():
     assert "candidate_strategy_id: 'primary'" in code
     assert "scenario_template_id: 'surgical_sorting_v1'" in code
     assert "include_waiting_scenarios: false" in code
-    assert "affected_lines: context.affected_lines || []" in code
-    assert "const plan = input.payload?.plan || {};" in code
+    assert "context.affected_lines" in code
+    assert "payload.affected_lines" in code
+    assert "input.affected_lines" in code
+    assert "const lineDecisions = payload.line_decisions || payload.plan?.line_decisions || []" in code
+    assert "affected_lines: affectedLines" in code
+    assert "line_decisions: lineDecisions" in code
+    assert "const plan = payload.plan || {};" in code
     assert "ids.release_id" not in body
 
 
@@ -501,7 +629,7 @@ def test_generate_scenario_spec_detects_no_change_line_decisions_from_all_paths(
     assert "lineDecisions.every(item => item.decision === 'NO_CHANGE')" in code
     assert "evaluatesReleasedPatchImpact" in code
     assert "status: 'NO_EFFECT'" in code
-    assert "payload: { ...payload, plan: normalizedPlan }" in code
+    assert "payload: { ...payload, plan: normalizedPlan, affected_lines: affectedLines }" in code
 
 
 def test_generate_scenario_spec_derives_affected_lines_from_candidate_patch_operations():
@@ -512,6 +640,64 @@ def test_generate_scenario_spec_derives_affected_lines_from_candidate_patch_oper
     assert "const path = operation.path || '';" in code
     assert "const lineIndex = parts.indexOf('lines');" in code
     assert "affected_lines: affectedLines" in code
+
+
+def test_intent_review_derives_affected_lines_from_candidate_patch_operations():
+    workflow = load_workflow("intent_to_patch_review.workflow.json")
+    code = node_by_name(workflow, "Return Reviewed Candidate")["parameters"]["jsCode"]
+
+    assert "function affectedLinesFromOperations" in code
+    assert "const candidatePatch = $('Normalize Domain Candidate with Python').item.json.intent_patch" in code
+    assert "affected_lines: affectedLines" in code
+    for path_part in ["goal", "excluded_instruments", "abnormal_strategy"]:
+        assert path_part not in code or "operation.path" in code
+
+
+def test_chat_workflow_preserves_affected_lines_through_release_and_reconciliation():
+    workflow = load_workflow("chat_operator_task_allocation.workflow.json")
+
+    assert "affected_lines: $json.context.affected_lines || $json.payload.affected_lines || []" in assignment_value(
+        node_by_name(workflow, "Chat Candidate Patch Summary"), "payload"
+    )
+    assert "affected_lines: affectedLines" in node_by_name(workflow, "Normalize Classified Approval Decision")[
+        "parameters"
+    ]["jsCode"]
+    assert "firstArray(current.context?.affected_lines" in node_by_name(
+        workflow, "Normalize Context After Release Approval"
+    )["parameters"]["jsCode"]
+    assert "firstArray(current.context?.affected_lines" in node_by_name(
+        workflow, "Normalize Context After Reconciliation"
+    )["parameters"]["jsCode"]
+
+
+def test_release_approval_outputs_preserve_affected_lines():
+    workflow = load_workflow("patch_release_approval.workflow.json")
+
+    assert "function affectedLinesFromOperations" in node_by_name(workflow, "Normalize Release Approval Input")[
+        "parameters"
+    ]["jsCode"]
+    assert "affected_lines: $('Normalize Release Approval Input').first().json.affected_lines || []" in assignment_value(
+        node_by_name(workflow, "Return Pending Release"), "context"
+    )
+    assert "affected_lines: $('Normalize Release Approval Input').first().json.affected_lines || []" in assignment_value(
+        node_by_name(workflow, "Released Notification Output"), "context"
+    )
+    for name in ["Rejected Notification Output", "Revision Notification Output"]:
+        code = node_by_name(workflow, name)["parameters"]["jsCode"]
+        assert "const affectedLines =" in code
+        assert "affected_lines: affectedLines" in code
+
+
+def test_reconciliation_outputs_preserve_affected_lines():
+    workflow = load_workflow("released_trt_to_reconciliation.workflow.json")
+
+    for name in ["Return Ready Plan", "Return Waiting Plan", "Return Degraded Plan", "Return Rejected Plan"]:
+        assert "affected_lines: $('Receive Released TRT').first().json.context?.affected_lines" in assignment_value(
+            node_by_name(workflow, name), "context"
+        )
+        assert "affected_lines: $('Receive Released TRT').first().json.context?.affected_lines" in assignment_value(
+            node_by_name(workflow, name), "payload"
+        )
 
 
 def test_no_change_only_reconciliation_returns_no_effect_by_default():

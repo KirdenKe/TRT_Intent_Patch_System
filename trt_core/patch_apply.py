@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import logging
 from typing import Any
 
 import jsonpatch
@@ -11,16 +12,31 @@ from trt_core.audit import build_audit_bundle
 from trt_core.models import IntentPatch
 from trt_core.repository import TRTRepository
 from trt_core.semantic_rules import validate_semantics
-from trt_core.validator import default_validation_results, validate_firewall, validate_trt_schema
+from trt_core.validator import default_validation_results, migrate_legacy_tooling_policy, validate_firewall, validate_trt_schema
+
+
+logger = logging.getLogger(__name__)
+
+
+def _line_tooling_policies(trt: dict[str, Any]) -> dict[str, Any]:
+    return {
+        line_id: line.get("tooling_policy")
+        for line_id, line in trt.get("lines", {}).items()
+        if "tooling_policy" in line
+    }
 
 
 def validate_intent_patch(intent_patch: IntentPatch | dict[str, Any], repository: TRTRepository | None = None) -> dict[str, Any]:
     repo = repository or TRTRepository()
-    current_trt = repo.get_current_trt(intent_patch.get("trt_id"))
+    raw_current_trt = repo.get_current_trt(intent_patch.get("trt_id"))
+    logger.info("patch_validate.current_trt.tooling_policy.raw=%r", _line_tooling_policies(raw_current_trt))
+    current_trt = migrate_legacy_tooling_policy(raw_current_trt)
+    logger.info("patch_validate.current_trt.tooling_policy.migrated=%r", _line_tooling_policies(current_trt))
     validation_results, rejection_reasons = validate_firewall(intent_patch, current_trt)
     if all(validation_results.values()):
         try:
             patched = jsonpatch.apply_patch(deepcopy(current_trt), intent_patch.get("operations", []), in_place=False)
+            patched = migrate_legacy_tooling_policy(patched)
             patched["version"] = repo.next_version(current_trt["version"])
             schema_reasons = validate_trt_schema(patched)
             semantic_reasons = validate_semantics(patched) if not schema_reasons else []
@@ -44,13 +60,14 @@ def validate_intent_patch(intent_patch: IntentPatch | dict[str, Any], repository
 
 def apply_intent_patch(intent_patch: IntentPatch | dict[str, Any], repository: TRTRepository | None = None) -> dict[str, Any]:
     repo = repository or TRTRepository()
-    current_trt = repo.get_current_trt(intent_patch.get("trt_id"))
+    current_trt = migrate_legacy_tooling_policy(repo.get_current_trt(intent_patch.get("trt_id")))
     validation_results, rejection_reasons = validate_firewall(intent_patch, current_trt)
     patched_trt: dict[str, Any] | None = None
 
     if all(validation_results.values()):
         try:
             patched_trt = jsonpatch.apply_patch(deepcopy(current_trt), intent_patch.get("operations", []), in_place=False)
+            patched_trt = migrate_legacy_tooling_policy(patched_trt)
             patched_trt["version"] = repo.next_version(current_trt["version"])
             schema_reasons = validate_trt_schema(patched_trt)
             semantic_reasons = validate_semantics(patched_trt) if not schema_reasons else []
@@ -89,4 +106,3 @@ def apply_intent_patch(intent_patch: IntentPatch | dict[str, Any], repository: T
         "rejection_reasons": rejection_reasons,
         "audit_bundle": audit_bundle,
     }
-

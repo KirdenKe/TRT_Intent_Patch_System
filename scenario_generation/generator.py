@@ -223,22 +223,37 @@ def _build_workspace_contract(
     contract["exchange_mode"] = "file"
     scenario_specs_dir = Path(contract.get("scenario_specs_dir", "outputs/scenario_specs"))
     run_artifacts_dir = Path(contract.get("run_artifacts_dir", "outputs/run_artifacts"))
+    if output_path is not None:
+        scenario_spec_path = _scenario_spec_target_path(scenario_spec_id, output_path)
+        scenario_specs_dir = scenario_spec_path.parent
+        expected_scenario_spec_path = _portable_export_path(scenario_spec_path, output_path)
+    else:
+        expected_scenario_spec_path = _portable_path(scenario_specs_dir / f"{scenario_spec_id}.json")
     contract["scenario_specs_dir"] = _portable_path(scenario_specs_dir)
     contract["run_artifacts_dir"] = _portable_path(run_artifacts_dir)
-    contract["expected_scenario_spec_path"] = _portable_path(scenario_specs_dir / f"{scenario_spec_id}.json")
+    contract["expected_scenario_spec_path"] = expected_scenario_spec_path
     contract["expected_run_artifact_path"] = _portable_path(run_artifacts_dir / f"{scenario_spec_id}_run_artifact.json")
     return contract
 
 
-def _scenario_specs_dir(output_path: str | Path) -> Path:
+def _scenario_spec_target_path(scenario_spec_id: str, output_path: str | Path) -> Path:
     path = Path(output_path)
-    if path.suffix == ".json":
-        return path.parent
-    if path.name == "scenario_specs":
+    if path.suffix == ".json" and not (path.exists() and path.is_dir()):
         return path
-    if path.name == "outputs":
-        return path / "scenario_specs"
-    return path
+    target_dir = path / "scenario_specs" if path.name == "outputs" else path
+    return target_dir / f"{scenario_spec_id}.json"
+
+
+def _portable_export_path(path: Path, output_path: str | Path) -> str:
+    output = Path(output_path)
+    try:
+        if output.name == "outputs":
+            return _portable_path(path.relative_to(output.parent))
+        if output.name == "scenario_specs" and output.parent.name == "outputs":
+            return _portable_path(path.relative_to(output.parent.parent))
+    except ValueError:
+        pass
+    return _portable_path(path)
 
 
 def _portable_path(path: Path) -> str:
@@ -302,8 +317,16 @@ def _build_assertions(template: dict[str, Any], assertions_override: dict[str, A
 
 
 def _export_generated_spec(spec: dict[str, Any], output_path: str | Path) -> Path:
-    target_dir = _scenario_specs_dir(output_path)
+    target_path = _scenario_spec_target_path(spec["scenario_spec_id"], output_path)
+    target_dir = target_path.parent
+    if target_dir.exists() and not target_dir.is_dir():
+        raise RuntimeError(
+            f"ScenarioSpec output parent exists but is not a directory: {target_dir}"
+        )
     target_dir.mkdir(parents=True, exist_ok=True)
-    target_path = target_dir / f"{spec['scenario_spec_id']}.json"
+    if target_path.exists() and target_path.is_dir():
+        raise RuntimeError(
+            f"ScenarioSpec output path is a directory, expected file path: {target_path}"
+        )
     target_path.write_text(json.dumps(spec, indent=2, sort_keys=True, ensure_ascii=False), encoding="utf-8")
     return target_path

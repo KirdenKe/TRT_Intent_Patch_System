@@ -44,7 +44,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { model: 'cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit', messages: [ { role: 'system', content: 'You extract only task intent fields. Return only JSON. Do not generate patch_id, trt_id, base_version, operator_id, intent_text, reason, status, or operations. Use action=PROPOSE_PATCH only when the request names exactly one valid line, one clear goal, and only supported instruments. Use NEEDS_CLARIFICATION for ambiguous, missing, conflicting, or multi-line requests. Use UNSUPPORTED_REQUEST for invalid lines, unsupported instruments, or read-only state changes.' }, { role: 'user', content: `Operator intent: ${$('Receive Operator Intent').first().json.body.intent_text}. Extract action, line_id, goal, excluded_instruments, clarification_questions, unsupported_terms, and detected_request_types. Valid lines are line_1, line_2, line_3, line_4. Valid goals are ROUTINE_CLASSIFICATION, TRAUMA_SET_PRIORITY, BACKLOG_CLEARING. Valid excluded instruments are SCISSORS, FORCEPS, CLAMPS, RETRACTOR.` } ], temperature: 0.0, max_tokens: 160, structured_outputs: { json: $('Get Intent Context').first().json.llm_candidate_generation_schema } } }}",
+        "jsonBody": "={{ { model: 'cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit', messages: [ { role: 'system', content: 'Extract compact domain intent JSON only. Do not generate patch IDs, TRT IDs, status, operations, or JSON Patch. Allowed lines: line_1,line_2,line_3,line_4. Allowed goals: ROUTINE_CLASSIFICATION,TRAUMA_SET_PRIORITY,BACKLOG_CLEARING. Allowed instruments: SCISSORS,FORCEPS,CLAMPS,RETRACTOR. Allowed abnormal strategies: STOP_LINE,CONTINUE_FEASIBLE_TASKS,ASK_OPERATOR. Tooling required_scope values: ALLOWED_INSTRUMENTS,ALL_SUPPORTED_INSTRUMENTS,SELECTED_TOOLING,NONE. target_scope: single line=SINGLE_LINE, several lines=MULTIPLE_LINES, all/every/each production line=ALL_LINES with target_lines=[]. Action rules: PROPOSE_PATCH only for supported goal, instrument scope, KPI limit, tooling policy, abnormal strategy, or multi-line policy updates; otherwise NEEDS_CLARIFICATION or UNSUPPORTED_REQUEST. TASK_GOAL_UPDATE requires goal. KPI_LIMIT_UPDATE, TOOLING_POLICY_UPDATE, INSTRUMENT_SCOPE_UPDATE, and PRIORITY_UPDATE do not require goal. highest priority/highest level priority/priority to the highest level => priority=5. lowest priority => priority=1. Do not map priority language to goal. Do not set goal=TRAUMA_SET_PRIORITY unless the user explicitly asks for Trauma Set priority. no deadline => kpi_updates.deadline_minutes=null. no maximum downtime limit => kpi_updates.max_downtime_seconds=null. allowed_instruments is selected tooling for the strategy, not robot capability. allowed_instruments=[] means no tooling selected. allowed_instruments=[\"SCISSORS\",\"FORCEPS\",\"CLAMPS\",\"RETRACTOR\"] means all supported tooling selected. excluded_instruments=[] means no explicit exclusions. select no tooling or do not want all tooling selected => tooling_policy.required_scope=NONE, allowed_instruments=[], excluded_instruments=[]. select all tooling => allowed_instruments=[\"SCISSORS\",\"FORCEPS\",\"CLAMPS\",\"RETRACTOR\"], excluded_instruments=[]. all tooling required by each production line or mark all tooling required for each production line as mandatory => tooling_policy.required_scope=ALL_SUPPORTED_INSTRUMENTS, allowed_instruments=[\"SCISSORS\",\"FORCEPS\",\"CLAMPS\",\"RETRACTOR\"], excluded_instruments=[]. all supported instruments required on every line => tooling_policy.required_scope=ALL_SUPPORTED_INSTRUMENTS, allowed_instruments=[\"SCISSORS\",\"FORCEPS\",\"CLAMPS\",\"RETRACTOR\"], excluded_instruments=[]. Never use allowed_instruments=[] with tooling_policy.required_scope=ALL_SUPPORTED_INSTRUMENTS. Entanglement is not an instrument exclusion; use abnormal_strategy for tangled tooling events.' }, { role: 'user', content: `Operator intent: ${$('Receive Operator Intent').first().json.body.intent_text}. Return action,line_id,target_scope,target_lines,goal,priority,allowed_instruments,excluded_instruments,kpi_updates,tooling_policy,abnormal_strategy,clarification_questions,unsupported_terms,detected_request_types,request_types.` } ], temperature: 0.0, max_tokens: 768, structured_outputs: { json: $('Get Intent Context').first().json.llm_candidate_generation_schema } } }}",
         "options": {}
       },
       "id": "e8f2a2d8-5023-43a5-93f1-b998f0da2168",
@@ -59,7 +59,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const choice = $json.choices?.[0];\nconst content = choice?.message?.content;\nconst finishReason = choice?.finish_reason;\n\nif (finishReason === 'length') {\n  throw new Error('vLLM stopped because max_tokens was reached; candidate JSON may be incomplete.');\n}\nif (!content) {\n  throw new Error('vLLM response did not include choices[0].message.content');\n}\n\nlet extracted;\ntry {\n  extracted = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (error) {\n  throw new Error(`Could not parse vLLM candidate JSON: ${error.message}`);\n}\n\nconst webhookBody = $('Receive Operator Intent').first().json.body || {};\nconst context = $('Get Intent Context').first().json;\nconst candidate = {\n  patch_id: `patch-${Date.now()}`,\n  trt_id: context.current_trt.trt_id,\n  base_version: context.current_trt.version,\n  operator_id: webhookBody.operator_id,\n  intent_text: webhookBody.intent_text,\n  reason: webhookBody.reason,\n  line_id: extracted.line_id,\n  goal: extracted.goal,\n  excluded_instruments: extracted.excluded_instruments || [],\n  status: 'REVIEWED'\n};\nconst rejection_reasons = extracted.action === 'PROPOSE_PATCH' ? [] : [extracted.action, ...(extracted.clarification_questions || []), ...(extracted.unsupported_terms || [])];\n\nreturn [{ json: { candidate, llm_extracted: extracted, llm_action: extracted.action, rejection_reasons, llm_raw_content: content, llm_finish_reason: finishReason, llm_usage: $json.usage } }];"
+        "jsCode": "const choice = $json.choices?.[0];\nconst content = choice?.message?.content;\nconst finishReason = choice?.finish_reason;\nconst webhookBody = $('Receive Operator Intent').first().json.body || {};\nconst context = $('Get Intent Context').first().json;\n\nfunction retryOutput(reason) {\n  return [{\n    json: {\n      retry_needed: true,\n      llm_action: 'RETRY_INTENT_GENERATION',\n      retry_reason: reason,\n      llm_raw_content: content || null,\n      llm_finish_reason: finishReason,\n      llm_usage: $json.usage,\n      errors: [reason]\n    }\n  }];\n}\n\nfunction buildCandidate(extracted) {\n  return {\n    patch_id: `patch-${Date.now()}`,\n    trt_id: context.current_trt.trt_id,\n    base_version: context.current_trt.version,\n    operator_id: webhookBody.operator_id,\n    intent_text: webhookBody.intent_text,\n    reason: webhookBody.reason,\n    line_id: extracted.line_id,\n    target_scope: extracted.target_scope || (extracted.line_id ? 'SINGLE_LINE' : 'SINGLE_LINE'),\n    target_lines: extracted.target_lines || [],\n    request_types: extracted.request_types || extracted.detected_request_types || [],\n    goal: extracted.goal,\n    priority: extracted.priority ?? null,\n    allowed_instruments: extracted.allowed_instruments ?? null,\n    excluded_instruments: extracted.excluded_instruments ?? null,\n    kpi_updates: extracted.kpi_updates || {},\n    tooling_policy: extracted.tooling_policy || null,\n    abnormal_strategy: extracted.abnormal_strategy || null,\n    status: 'REVIEWED'\n  };\n}\n\nif (finishReason === 'length') {\n  return retryOutput('Intent candidate generation reached max_tokens before producing complete JSON.');\n}\nif (!content) {\n  return retryOutput('vLLM response did not include choices[0].message.content.');\n}\n\nlet extracted;\ntry {\n  extracted = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (error) {\n  return retryOutput(`Could not parse vLLM candidate JSON: ${error.message}`);\n}\n\nconst candidate = buildCandidate(extracted);\nconst rejection_reasons = extracted.action === 'PROPOSE_PATCH' ? [] : [extracted.action, ...(extracted.clarification_questions || []), ...(extracted.unsupported_terms || [])];\nreturn [{ json: { retry_needed: false, candidate, llm_extracted: extracted, llm_action: extracted.action, rejection_reasons, llm_raw_content: content, llm_finish_reason: finishReason, llm_usage: $json.usage, errors: [] } }];"
       },
       "id": "1558ffdf-9b06-4618-bdc0-0ec68275c1fd",
       "name": "Normalize Candidate Patch",
@@ -69,7 +69,84 @@
         780,
         0
       ],
-      "notes": "Parses the structured vLLM response into a domain-level candidate object only. Deterministic normalization happens in Python."
+      "notes": "Parses the first structured vLLM response. Truncated or incomplete JSON is retried automatically once."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8ad8aa45-d15c-4a64-a3d0-82f7a8e8b181",
+              "leftValue": "={{ $json.retry_needed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f98d69d9-013e-451a-8e27-7d07348bb70a",
+      "name": "Intent Candidate Needs Retry?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        0
+      ],
+      "notes": "Retries once when the first intent candidate response is truncated or not complete JSON."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.50.168:29987/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: 'cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit', messages: [ { role: 'system', content: 'Extract compact domain intent JSON only. Do not generate patch IDs, TRT IDs, status, operations, or JSON Patch. Allowed lines: line_1,line_2,line_3,line_4. Allowed goals: ROUTINE_CLASSIFICATION,TRAUMA_SET_PRIORITY,BACKLOG_CLEARING. Allowed instruments: SCISSORS,FORCEPS,CLAMPS,RETRACTOR. Allowed abnormal strategies: STOP_LINE,CONTINUE_FEASIBLE_TASKS,ASK_OPERATOR. Tooling required_scope values: ALLOWED_INSTRUMENTS,ALL_SUPPORTED_INSTRUMENTS,SELECTED_TOOLING,NONE. target_scope: single line=SINGLE_LINE, several lines=MULTIPLE_LINES, all/every/each production line=ALL_LINES with target_lines=[]. Action rules: PROPOSE_PATCH only for supported goal, instrument scope, KPI limit, tooling policy, abnormal strategy, or multi-line policy updates; otherwise NEEDS_CLARIFICATION or UNSUPPORTED_REQUEST. TASK_GOAL_UPDATE requires goal. KPI_LIMIT_UPDATE, TOOLING_POLICY_UPDATE, INSTRUMENT_SCOPE_UPDATE, and PRIORITY_UPDATE do not require goal. highest priority/highest level priority/priority to the highest level => priority=5. lowest priority => priority=1. Do not map priority language to goal. Do not set goal=TRAUMA_SET_PRIORITY unless the user explicitly asks for Trauma Set priority. no deadline => kpi_updates.deadline_minutes=null. no maximum downtime limit => kpi_updates.max_downtime_seconds=null. allowed_instruments is selected tooling for the strategy, not robot capability. allowed_instruments=[] means no tooling selected. allowed_instruments=[\"SCISSORS\",\"FORCEPS\",\"CLAMPS\",\"RETRACTOR\"] means all supported tooling selected. excluded_instruments=[] means no explicit exclusions. select no tooling or do not want all tooling selected => tooling_policy.required_scope=NONE, allowed_instruments=[], excluded_instruments=[]. select all tooling => allowed_instruments=[\"SCISSORS\",\"FORCEPS\",\"CLAMPS\",\"RETRACTOR\"], excluded_instruments=[]. all tooling required by each production line or mark all tooling required for each production line as mandatory => tooling_policy.required_scope=ALL_SUPPORTED_INSTRUMENTS, allowed_instruments=[\"SCISSORS\",\"FORCEPS\",\"CLAMPS\",\"RETRACTOR\"], excluded_instruments=[]. all supported instruments required on every line => tooling_policy.required_scope=ALL_SUPPORTED_INSTRUMENTS, allowed_instruments=[\"SCISSORS\",\"FORCEPS\",\"CLAMPS\",\"RETRACTOR\"], excluded_instruments=[]. Never use allowed_instruments=[] with tooling_policy.required_scope=ALL_SUPPORTED_INSTRUMENTS. Entanglement is not an instrument exclusion; use abnormal_strategy for tangled tooling events.' }, { role: 'user', content: `Operator intent: ${$('Receive Operator Intent').first().json.body.intent_text}. Return action,line_id,target_scope,target_lines,goal,priority,allowed_instruments,excluded_instruments,kpi_updates,tooling_policy,abnormal_strategy,clarification_questions,unsupported_terms,detected_request_types,request_types.` } ], temperature: 0.0, max_tokens: 1024, structured_outputs: { json: $('Get Intent Context').first().json.llm_candidate_generation_schema } } }}",
+        "options": {}
+      },
+      "id": "8e2cb239-c221-483a-a9a2-06bbf03aa57b",
+      "name": "Retry LLM Generate Intent Patch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        120
+      ],
+      "notes": "One automatic retry for truncated or incomplete domain candidate JSON. Does not affect other vLLM nodes."
+    },
+    {
+      "parameters": {
+        "jsCode": "const choice = $json.choices?.[0];\nconst content = choice?.message?.content;\nconst finishReason = choice?.finish_reason;\nconst webhookBody = $('Receive Operator Intent').first().json.body || {};\nconst context = $('Get Intent Context').first().json;\n\nfunction failed(reason) {\n  return [{\n    json: {\n      retry_needed: false,\n      candidate: null,\n      llm_extracted: null,\n      llm_action: 'NEEDS_REVISION',\n      rejection_reasons: ['Intent candidate generation failed after retry.'],\n      llm_raw_content: content || null,\n      llm_finish_reason: finishReason,\n      llm_usage: $json.usage,\n      retry_failed_reason: reason,\n      errors: ['Intent candidate generation failed after retry.']\n    }\n  }];\n}\n\nif (finishReason === 'length') {\n  return failed('retry_finish_reason_length');\n}\nif (!content) {\n  return failed('retry_empty_content');\n}\n\nlet extracted;\ntry {\n  extracted = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (error) {\n  return failed(`retry_invalid_json: ${error.message}`);\n}\n\nconst candidate = {\n  patch_id: `patch-${Date.now()}`,\n  trt_id: context.current_trt.trt_id,\n  base_version: context.current_trt.version,\n  operator_id: webhookBody.operator_id,\n  intent_text: webhookBody.intent_text,\n  reason: webhookBody.reason,\n  line_id: extracted.line_id,\n  target_scope: extracted.target_scope || (extracted.line_id ? 'SINGLE_LINE' : 'SINGLE_LINE'),\n  target_lines: extracted.target_lines || [],\n  request_types: extracted.request_types || extracted.detected_request_types || [],\n  goal: extracted.goal,\n  priority: extracted.priority ?? null,\n  allowed_instruments: extracted.allowed_instruments ?? null,\n  excluded_instruments: extracted.excluded_instruments ?? null,\n  kpi_updates: extracted.kpi_updates || {},\n  tooling_policy: extracted.tooling_policy || null,\n  abnormal_strategy: extracted.abnormal_strategy || null,\n  status: 'REVIEWED'\n};\nconst rejection_reasons = extracted.action === 'PROPOSE_PATCH' ? [] : [extracted.action, ...(extracted.clarification_questions || []), ...(extracted.unsupported_terms || [])];\nreturn [{ json: { retry_needed: false, candidate, llm_extracted: extracted, llm_action: extracted.action, rejection_reasons, llm_raw_content: content, llm_finish_reason: finishReason, llm_usage: $json.usage, errors: [] } }];"
+      },
+      "id": "bbda37b6-3466-412c-b844-4c421df389c2",
+      "name": "Normalize Retried Candidate Patch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        120
+      ],
+      "notes": "Normalizes retry output. If retry fails, returns NEEDS_REVISION with a controlled error."
     },
     {
       "parameters": {
@@ -100,7 +177,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1040,
+        1820,
         0
       ]
     },
@@ -118,9 +195,72 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1300,
+        2080,
         -120
-      ]
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.first().json;\n\nif (result.intent_patch) {\n  return [{ json: result }];\n}\n\nconst source = $('Receive Operator Intent').first().json;\nconst sourceContext = source.context || {};\n\nfunction collectStrings(value, output = []) {\n  if (value === null || value === undefined) return output;\n  if (typeof value === 'string') {\n    output.push(value);\n    try {\n      const parsed = JSON.parse(value);\n      collectStrings(parsed, output);\n    } catch (error) {\n      const start = value.indexOf('{');\n      const end = value.lastIndexOf('}');\n      if (start >= 0 && end > start) {\n        try {\n          collectStrings(JSON.parse(value.slice(start, end + 1)), output);\n        } catch (nestedError) {}\n      }\n    }\n    return output;\n  }\n  if (typeof value === 'number' || typeof value === 'boolean') {\n    output.push(String(value));\n    return output;\n  }\n  if (Array.isArray(value)) {\n    for (const item of value) collectStrings(item, output);\n    return output;\n  }\n  if (typeof value === 'object') {\n    if (value.detail) collectStrings(value.detail, output);\n    if (value.errorDescription) collectStrings(value.errorDescription, output);\n    if (value.errorMessage) collectStrings(value.errorMessage, output);\n    if (value.message) collectStrings(value.message, output);\n    if (value.description) collectStrings(value.description, output);\n    if (value.error) collectStrings(value.error, output);\n    if (value.response) collectStrings(value.response, output);\n    if (value.body) collectStrings(value.body, output);\n  }\n  return output;\n}\n\nfunction bestErrorMessage(value) {\n  const candidates = collectStrings(value).map(item => item.trim()).filter(Boolean);\n  const businessReasons = candidates.filter(item => item.includes('line_2 is currently in ERROR mode'));\n  if (businessReasons.length) return businessReasons.sort((a, b) => a.length - b.length)[0];\n  const details = candidates.filter(item => item.includes('Resolve the line error') || item.includes('currently in ERROR mode'));\n  if (details.length) return details.sort((a, b) => a.length - b.length)[0];\n  const first = candidates.find(item => item !== '[object Object]');\n  return first || 'Normalize Domain Candidate with Python failed.';\n}\n\nconst message = bestErrorMessage(result);\n\nreturn [{\n  json: {\n    status: 'REJECTED',\n    context: {\n      ...sourceContext,\n      operator_id: sourceContext.operator_id || source.body?.operator_id || source.operator_id || null,\n      scenario_spec_ids: sourceContext.scenario_spec_ids || []\n    },\n    ids: {\n      patch_id: null,\n      release_id: null,\n      audit_id: null,\n      trt_id: sourceContext.trt_id || null,\n      trt_version: sourceContext.trt_version || null,\n      reconciliation_plan_id: null,\n      scenario_spec_id: null\n    },\n    payload: {\n      message,\n      source_node: 'Normalize Domain Candidate with Python'\n    },\n    errors: [message]\n  }\n}];"
+      },
+      "id": "6a50f3e4-5999-4c86-8aa9-fda840ed17cc",
+      "name": "Normalize Python Candidate Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2340,
+        -120
+      ],
+      "notes": "Converts successful Python normalization and expected HTTP business-rule errors into normal workflow envelopes."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "db5afdad-c999-4ff9-b85c-0640e8beabff",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "REJECTED",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cb070a87-bc1d-4de2-8f85-934de17af5d4",
+      "name": "Python Candidate Accepted?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2600,
+        -120
+      ],
+      "notes": "Routes normal Python candidate results to patch validation and leaves REJECTED envelopes as terminal output for chat formatting."
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nreturn [{\n  json: {\n    status: input.status,\n    context: input.context || {},\n    ids: input.ids || {},\n    payload: input.payload || {},\n    errors: input.errors || []\n  }\n}];"
+      },
+      "id": "9da13377-d0fc-4539-932f-3213cd7a6400",
+      "name": "Return Python Candidate Rejection",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        80
+      ],
+      "notes": "Terminal pass-through for expected Python business-rule rejections so the parent chat workflow can format them."
     },
     {
       "parameters": {
@@ -136,7 +276,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1560,
+        2860,
         -120
       ]
     },
@@ -169,56 +309,23 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1820,
+        3120,
         -120
       ]
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "bd23bc5a-ae9c-43c7-9267-3930bb7e1958",
-              "name": "status",
-              "value": "REVIEWED",
-              "type": "string"
-            },
-            {
-              "id": "17c216b4-b3a4-45eb-99d8-e1ef174b96a9",
-              "name": "context",
-              "value": "={{ { ...($('Receive Operator Intent').first().json.context || {}), operator_id: $('Receive Operator Intent').first().json.context?.operator_id || $('Receive Operator Intent').first().json.body?.operator_id || $('Receive Operator Intent').first().json.operator_id || null, patch_id: $('Normalize Domain Candidate with Python').item.json.intent_patch.patch_id, release_id: $('Receive Operator Intent').first().json.context?.release_id || null, audit_id: $('Receive Operator Intent').first().json.context?.audit_id || null, trt_id: $('Normalize Domain Candidate with Python').item.json.intent_patch.trt_id, trt_version: $('Normalize Domain Candidate with Python').item.json.intent_patch.base_version, reconciliation_plan_id: $('Receive Operator Intent').first().json.context?.reconciliation_plan_id || null, scenario_batch_id: $('Receive Operator Intent').first().json.context?.scenario_batch_id || null, scenario_spec_ids: $('Receive Operator Intent').first().json.context?.scenario_spec_ids || [] } }}",
-              "type": "object"
-            },
-            {
-              "id": "8fbb1660-a2af-4ed6-8f95-8804f585d77e",
-              "name": "ids",
-              "value": "={{ { patch_id: $('Normalize Domain Candidate with Python').item.json.intent_patch.patch_id, release_id: null, audit_id: null, trt_id: $('Normalize Domain Candidate with Python').item.json.intent_patch.trt_id, trt_version: $('Normalize Domain Candidate with Python').item.json.intent_patch.base_version, reconciliation_plan_id: null, scenario_spec_id: null } }}",
-              "type": "object"
-            },
-            {
-              "id": "7b52a3fd-da1c-42c8-b5d3-a5e423eea6b8",
-              "name": "payload",
-              "value": "={{ { candidate_patch: $('Normalize Domain Candidate with Python').item.json.intent_patch, validation_results: $json.validation_results, message: 'Candidate patch is valid. Operator confirmation is required before release.' } }}",
-              "type": "object"
-            },
-            {
-              "id": "98d05440-14e3-4e75-a626-89b29fdd0c7e",
-              "name": "errors",
-              "value": "={{ [] }}",
-              "type": "array"
-            }
-          ]
-        },
-        "options": {}
+        "jsCode": "const validation = $input.first().json;\nconst source = $('Receive Operator Intent').first().json;\nconst candidatePatch = $('Normalize Domain Candidate with Python').item.json.intent_patch;\n\nfunction affectedLinesFromOperations(operations) {\n  const seen = new Set();\n  for (const operation of operations || []) {\n    const parts = String(operation.path || '').split('/').filter(Boolean);\n    const lineIndex = parts.indexOf('lines');\n    if (lineIndex >= 0 && parts[lineIndex + 1]) seen.add(parts[lineIndex + 1]);\n  }\n  return Array.from(seen).sort();\n}\n\nconst affectedLines = affectedLinesFromOperations(candidatePatch.operations);\nconst sourceContext = source.context || {};\nreturn [{\n  json: {\n    status: 'REVIEWED',\n    context: {\n      ...sourceContext,\n      operator_id: sourceContext.operator_id || source.body?.operator_id || source.operator_id || null,\n      patch_id: candidatePatch.patch_id,\n      release_id: sourceContext.release_id || null,\n      audit_id: sourceContext.audit_id || null,\n      trt_id: candidatePatch.trt_id,\n      trt_version: candidatePatch.base_version,\n      reconciliation_plan_id: sourceContext.reconciliation_plan_id || null,\n      scenario_batch_id: sourceContext.scenario_batch_id || null,\n      scenario_spec_ids: sourceContext.scenario_spec_ids || [],\n      affected_lines: affectedLines\n    },\n    ids: {\n      patch_id: candidatePatch.patch_id,\n      release_id: null,\n      audit_id: null,\n      trt_id: candidatePatch.trt_id,\n      trt_version: candidatePatch.base_version,\n      reconciliation_plan_id: null,\n      scenario_spec_id: null,\n      affected_lines: affectedLines\n    },\n    payload: {\n      candidate_patch: candidatePatch,\n      affected_lines: affectedLines,\n      validation_results: validation.validation_results,\n      message: 'Candidate patch is valid. Operator confirmation is required before release.'\n    },\n    errors: []\n  }\n}];"
       },
       "id": "5749854e-755a-4c89-b7d1-34ec0c96fbf3",
       "name": "Return Reviewed Candidate",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        2080,
+        3380,
         -120
-      ]
+      ],
+      "notes": "Derives affected_lines from candidate_patch.operations after Python normalization and validation."
     },
     {
       "parameters": {
@@ -263,7 +370,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2080,
+        3380,
         120
       ]
     }
@@ -306,7 +413,7 @@
       "main": [
         [
           {
-            "node": "LLM Proposes Patch?",
+            "node": "Intent Candidate Needs Retry?",
             "type": "main",
             "index": 0
           }
@@ -335,7 +442,36 @@
       "main": [
         [
           {
+            "node": "Normalize Python Candidate Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Python Candidate Result": {
+      "main": [
+        [
+          {
+            "node": "Python Candidate Accepted?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Python Candidate Accepted?": {
+      "main": [
+        [
+          {
             "node": "Validate Candidate Patch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Python Candidate Rejection",
             "type": "main",
             "index": 0
           }
@@ -365,6 +501,46 @@
         [
           {
             "node": "Return Revision Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intent Candidate Needs Retry?": {
+      "main": [
+        [
+          {
+            "node": "Retry LLM Generate Intent Patch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "LLM Proposes Patch?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry LLM Generate Intent Patch": {
+      "main": [
+        [
+          {
+            "node": "Normalize Retried Candidate Patch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Retried Candidate Patch": {
+      "main": [
+        [
+          {
+            "node": "LLM Proposes Patch?",
             "type": "main",
             "index": 0
           }

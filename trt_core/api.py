@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import logging
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -19,10 +21,12 @@ from trt_core.repository import TRTRepository
 from trt_core.state_records import load_current_state, save_current_state
 from trt_core.supervisor import reconcile_current_trt
 from trt_core.validator import SUPPORTED_OPERATIONS
+from trt_core.validator import migrate_legacy_tooling_policy
 
 
 app = FastAPI(title="TRT Intent Patch Core", version="0.1.0")
 repository = TRTRepository()
+logger = logging.getLogger(__name__)
 
 
 def _scenario_template_registry_path() -> Any:
@@ -60,6 +64,8 @@ def build_intent_context(current_trt: dict[str, Any]) -> dict[str, Any]:
             "/lines/{line_id}/kpi/max_downtime_seconds",
             "/lines/{line_id}/kpi/min_throughput_per_hour",
             "/lines/{line_id}/abnormal_strategy",
+            "/lines/{line_id}/tooling_policy",
+            "/lines/{line_id}/tooling_policy/required_scope",
         ],
         "read_only_paths": [
             "/trt_id",
@@ -203,20 +209,160 @@ def get_audit(audit_id: str) -> dict[str, Any]:
 @app.get("/intent/context")
 def get_intent_context(trt_id: str | None = None) -> dict[str, Any]:
     try:
-        return build_intent_context(repository.get_current_trt(trt_id))
+        context = build_intent_context(repository.get_current_trt(trt_id))
+        logger.info(
+            "intent_context.llm_candidate_generation_schema.properties.tooling_policy=%r",
+            context["llm_candidate_generation_schema"]["properties"]["tooling_policy"],
+        )
+        return context
     except RepositoryError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/debug/intent-schema")
+def get_debug_intent_schema() -> dict[str, Any]:
+    return {
+        "llm_candidate_generation_fields": sorted(LLM_EXTRACTED_FIELDS_SCHEMA["properties"]),
+        "llm_candidate_generation_required": LLM_EXTRACTED_FIELDS_SCHEMA.get("required", []),
+        "domain_candidate_fields": sorted(DOMAIN_CANDIDATE_SCHEMA["properties"]),
+        "domain_candidate_required": DOMAIN_CANDIDATE_SCHEMA.get("required", []),
+    }
+
+
+@app.get("/debug/intent-normalizer-runtime")
+def get_debug_intent_normalizer_runtime() -> dict[str, Any]:
+    return {
+        "domain_candidate_fields": sorted(DOMAIN_CANDIDATE_SCHEMA["properties"].keys()),
+        "llm_extracted_fields": sorted(LLM_EXTRACTED_FIELDS_SCHEMA["properties"].keys()),
+        "route_model_or_schema_used_by_normalize_endpoint": (
+            "FastAPI receives candidate as dict[str, Any]; "
+            "trt_core.intent_normalizer.DOMAIN_CANDIDATE_SCHEMA validates /intent/normalize "
+            "and /intent/normalize-domain-candidate after DomainCandidateV2 coercion."
+        ),
+    }
+
+
+@app.post("/debug/reset-demo-trt-state")
+def post_debug_reset_demo_trt_state() -> dict[str, Any]:
+    if os.environ.get("APP_ENV") not in {"dev", "test"}:
+        raise HTTPException(status_code=403, detail="Debug reset is only available when APP_ENV is dev or test.")
+
+    try:
+        trt = repository.get_current_trt("trt-demo")
+    except RepositoryError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    line = trt.get("lines", {}).get("line_2")
+    if line is None:
+        raise HTTPException(status_code=404, detail="TRT line not found: line_2")
+
+    line["state"] = {
+        "mode": "RUNNING",
+        "last_exception": None,
+        "current_task": None,
+        "wip_count": 0,
+    }
+    repository.save_trt(trt)
+    return {
+        "trt_id": trt["trt_id"],
+        "version": trt["version"],
+        "line_id": "line_2",
+        "state": line["state"],
+    }
+
+
+def _require_debug_environment(action: str) -> None:
+    if os.environ.get("APP_ENV") not in {"dev", "test"}:
+        raise HTTPException(status_code=403, detail=f"Debug {action} is only available when APP_ENV is dev or test.")
+
+
+def _reset_demo_runtime_records() -> list[dict[str, Any]]:
+    existing_by_line: dict[str, dict[str, Any]] = {}
+    try:
+        existing_by_line = {record.get("line_id"): record for record in load_current_state(repository)}
+    except RepositoryError:
+        existing_by_line = {}
+
+    records: list[dict[str, Any]] = []
+    for line_id in ("line_1", "line_2"):
+        existing = existing_by_line.get(line_id, {})
+        records.append(
+            {
+                "line_id": line_id,
+                "mode": "RUNNING",
+                "last_exception": None,
+                "current_task": None,
+                "wip_count": 0,
+                "current_instruments": [],
+                "checkpoint": "NONE",
+                "locked_resources": existing.get("locked_resources", []),
+            }
+        )
+    return save_current_state(records, repository)
+
+
+@app.post("/debug/reset-demo-runtime-state")
+def post_debug_reset_demo_runtime_state() -> dict[str, Any]:
+    _require_debug_environment("runtime reset")
+    try:
+        return {
+            "trt_id": "trt-demo",
+            "state_source": "data/state_records/current_state.json",
+            "state_records": _reset_demo_runtime_records(),
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/debug/supervisor-state")
+def get_debug_supervisor_state() -> dict[str, Any]:
+    try:
+        return {
+            "state_source": "data/state_records/current_state.json",
+            "state_records": load_current_state(repository),
+        }
+    except RepositoryError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/debug/migrate-demo-trt-tooling-policy")
+def post_debug_migrate_demo_trt_tooling_policy() -> dict[str, Any]:
+    if os.environ.get("APP_ENV") not in {"dev", "test"}:
+        raise HTTPException(status_code=403, detail="Debug migration is only available when APP_ENV is dev or test.")
+
+    migrated_versions: list[dict[str, Any]] = []
+    for record in repository.list_trt_version_records("trt-demo"):
+        trt = repository.load_trt(record["trt_id"], record["version"])
+        migrated = migrate_legacy_tooling_policy(trt)
+        if migrated != trt:
+            repository.save_trt(migrated)
+            migrated_versions.append({"trt_id": migrated["trt_id"], "version": migrated["version"]})
+
+    return {
+        "status": "MIGRATED",
+        "migrated_versions": migrated_versions,
+        "current_trt": repository.get_current_trt("trt-demo"),
+    }
 
 
 @app.post("/intent/normalize")
 def post_intent_normalize(candidate: dict[str, Any]) -> dict[str, Any]:
     try:
+        logger.info("raw_llm_candidate.tooling_policy=%r", candidate.get("tooling_policy"))
+        logger.info("request_body_sent_to_python.tooling_policy=%r", candidate.get("tooling_policy"))
         current_trt = repository.get_current_trt(candidate.get("trt_id"))
-        return {"intent_patch": normalize_domain_candidate(candidate, current_trt)}
+        intent_patch = normalize_domain_candidate(candidate, current_trt)
+        logger.info("normalize_domain_candidate.intent_patch.operations=%r", intent_patch.get("operations"))
+        return {"intent_patch": intent_patch}
     except RepositoryError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/intent/normalize-domain-candidate")
+def post_intent_normalize_domain_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
+    return post_intent_normalize(candidate)
 
 
 @app.post("/release/prepare")
@@ -345,8 +491,16 @@ def post_scenario_generate(payload: dict[str, Any]) -> dict[str, Any]:
         state_records = load_current_state(repository)
         reconciliation_plan = load_plan(payload["reconciliation_plan_id"], repository)
         reconciliation_plan["release_id"] = payload["release_id"]
-        line_decisions = reconciliation_plan.get("line_decisions") or []
         affected_lines = payload.get("affected_lines") or []
+        request_line_decisions = payload.get("line_decisions") or []
+        if not isinstance(affected_lines, list):
+            raise HTTPException(status_code=400, detail="affected_lines must be an array.")
+        if not isinstance(request_line_decisions, list):
+            raise HTTPException(status_code=400, detail="line_decisions must be an array.")
+        if any(not isinstance(decision, dict) for decision in request_line_decisions):
+            raise HTTPException(status_code=400, detail="line_decisions must contain objects.")
+        line_decisions = request_line_decisions or reconciliation_plan.get("line_decisions") or []
+        reconciliation_plan["line_decisions"] = line_decisions
         allow_baseline = bool(payload.get("allow_baseline_on_no_change", False))
         only_no_change = bool(line_decisions) and all(
             decision.get("decision") == "NO_CHANGE" for decision in line_decisions
@@ -379,6 +533,8 @@ def post_scenario_generate(payload: dict[str, Any]) -> dict[str, Any]:
         }
     except ScenarioGenerationError as exc:
         return {"status": "REJECTED", "rejection_reason": str(exc)}
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     if result.get("status") == "WAITING_FOR_CHECKPOINT":
         return result

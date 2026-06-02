@@ -1,0 +1,29 @@
+{
+  "created_at_utc": "2026-06-02T07:42:41.160486Z",
+  "line_decisions": [
+    {
+      "decision": "NO_CHANGE",
+      "degraded_strategy": null,
+      "line_id": "line_1",
+      "next_action": "No supervisor action required.",
+      "reason": "Target TRT does not change this line.",
+      "required_checkpoint": null,
+      "risk_flags": []
+    },
+    {
+      "decision": "NO_CHANGE",
+      "degraded_strategy": null,
+      "line_id": "line_2",
+      "next_action": "No supervisor action required.",
+      "reason": "Target TRT does not change this line.",
+      "required_checkpoint": null,
+      "risk_flags": []
+    }
+  ],
+  "overall_status": "READY",
+  "plan_id": "rec_3805f96b-bad6-4e56-948b-9cd685633a24",
+  "source_state_hash": "sha256:94f794b282019497d502b7dc414e6e66a477302ec4bea4fd095af11f80478fe8",
+  "source_trt_hash": "sha256:8da26ec24f0103ce1ead6861225d46b397ae9e6105c93b021c419830d0447b49",
+  "trt_id": "trt-demo",
+  "trt_version": "v17"
+}

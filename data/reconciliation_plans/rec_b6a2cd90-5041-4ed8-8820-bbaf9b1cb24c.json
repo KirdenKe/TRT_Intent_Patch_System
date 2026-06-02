@@ -1,0 +1,31 @@
+{
+  "created_at_utc": "2026-06-02T12:36:32.756161Z",
+  "line_decisions": [
+    {
+      "decision": "IMMEDIATE_SWITCH",
+      "degraded_strategy": null,
+      "line_id": "line_1",
+      "next_action": "Apply priority update immediately.",
+      "reason": "Only priority changes; no instrument or goal transition is required.",
+      "required_checkpoint": null,
+      "risk_flags": []
+    },
+    {
+      "decision": "REJECT_INCOMPATIBLE",
+      "degraded_strategy": null,
+      "line_id": "line_2",
+      "next_action": "Resolve the line error before applying this TRT change.",
+      "reason": "Line is in ERROR mode and cannot accept a target switch.",
+      "required_checkpoint": null,
+      "risk_flags": [
+        "line_error"
+      ]
+    }
+  ],
+  "overall_status": "REJECTED",
+  "plan_id": "rec_b6a2cd90-5041-4ed8-8820-bbaf9b1cb24c",
+  "source_state_hash": "sha256:94f794b282019497d502b7dc414e6e66a477302ec4bea4fd095af11f80478fe8",
+  "source_trt_hash": "sha256:4e72f1123851abb7538b7e0cdceb90e5a24d9e735d049416c817cccc163fe274",
+  "trt_id": "trt-demo",
+  "trt_version": "v30"
+}
