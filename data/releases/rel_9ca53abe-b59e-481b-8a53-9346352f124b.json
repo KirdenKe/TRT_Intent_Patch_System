@@ -1,0 +1,147 @@
+{
+  "audit_id": "audit-0c9f7a17-2614-4d2b-9335-e5650dfac10d",
+  "base_version": "v17",
+  "candidate_patch": {
+    "base_version": "v17",
+    "intent_text": "adjust the targets for all production lines to the ent surgical tooling set",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_1/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/selected_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/excluded_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/required_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/selected_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/excluded_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/required_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/selected_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/excluded_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/required_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/selected_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/excluded_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/required_tool_ids",
+        "value": []
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "patch-1781696939972",
+    "reason": "test for milestone 9",
+    "status": "REVIEWED",
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [
+      "/lines/line_1/target_set_id",
+      "/lines/line_1/selected_tool_ids",
+      "/lines/line_1/excluded_tool_ids",
+      "/lines/line_1/required_tool_ids",
+      "/lines/line_2/target_set_id",
+      "/lines/line_2/selected_tool_ids",
+      "/lines/line_2/excluded_tool_ids",
+      "/lines/line_2/required_tool_ids",
+      "/lines/line_3/target_set_id",
+      "/lines/line_3/selected_tool_ids",
+      "/lines/line_3/excluded_tool_ids",
+      "/lines/line_3/required_tool_ids",
+      "/lines/line_4/target_set_id",
+      "/lines/line_4/selected_tool_ids",
+      "/lines/line_4/excluded_tool_ids",
+      "/lines/line_4/required_tool_ids"
+    ],
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "intent_text": "adjust the targets for all production lines to the ent surgical tooling set",
+    "reason": "test for milestone 9"
+  },
+  "created_at_utc": "2026-06-17T11:49:12.907199Z",
+  "current_trt_path": "/app/data/trt/current_trt.json",
+  "operator_decision": {
+    "comment": "Test for the Milestone 9",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-06-17T11:49:12.953739Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1781696939972",
+  "previous_trt_version": "v17",
+  "release_id": "rel_9ca53abe-b59e-481b-8a53-9346352f124b",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "trt_version": "v18",
+  "updated_at_utc": "2026-06-17T11:49:12.953739Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  },
+  "version_path": "/app/data/trt_versions/trt-demo_v18.json"
+}

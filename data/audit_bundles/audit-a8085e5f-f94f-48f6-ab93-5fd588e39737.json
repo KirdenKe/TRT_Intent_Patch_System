@@ -1,0 +1,25 @@
+{
+  "audit_id": "audit-a8085e5f-f94f-48f6-ab93-5fd588e39737",
+  "intent_text": "adjust the number of tooling on the production line so that only 5 remain",
+  "operations": [],
+  "operator_id": "op_001",
+  "patch_id": "patch-1781700523827",
+  "reason": "test for milestone 9",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-17T12:48:51.763136Z",
+  "trt_after_hash": "bce26c54ef15368708467b2fce008d258c87e8e75e2331e41c86c34880360ad7",
+  "trt_after_version": "v19",
+  "trt_before_hash": "b20cfe651e09730a3f3d38318711f52dca05b725afdba70ad6b8fb7f53bf4b61",
+  "trt_before_version": "v18",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

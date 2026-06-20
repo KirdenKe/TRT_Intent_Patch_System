@@ -1,0 +1,80 @@
+{
+  "audit_id": "audit-9f2f7717-1b35-4dca-b26b-9ebf8a5a6bc5",
+  "base_version": "v1",
+  "candidate_patch": {
+    "base_version": "v1",
+    "intent_text": "set the line 1's throughput/hr to 210",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_1/tooling_policy/required_scope",
+        "value": "NONE"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/selected_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/excluded_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/allowed_instruments",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/excluded_instruments",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/kpi/min_throughput_per_hour",
+        "value": 210
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "patch-1781292397163",
+    "reason": "deadline!!",
+    "status": "REVIEWED",
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [
+      "/lines/line_1/tooling_policy/required_scope",
+      "/lines/line_1/selected_tool_ids",
+      "/lines/line_1/excluded_tool_ids",
+      "/lines/line_1/allowed_instruments",
+      "/lines/line_1/excluded_instruments",
+      "/lines/line_1/kpi/min_throughput_per_hour"
+    ],
+    "affected_lines": [
+      "line_1"
+    ],
+    "intent_text": "set the line 1's throughput/hr to 210",
+    "reason": "deadline!!"
+  },
+  "created_at_utc": "2026-06-12T19:26:43.937879Z",
+  "operator_decision": {
+    "comment": "Test for the Milestone 7",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-06-12T19:26:43.953222Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1781292397163",
+  "release_id": "rel_c28b0504-83f5-46d3-ae38-55da934e1b07",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "updated_at_utc": "2026-06-12T19:26:43.953222Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

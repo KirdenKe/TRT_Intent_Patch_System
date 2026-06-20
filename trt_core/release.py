@@ -72,7 +72,7 @@ def record_release_decision(decision_request: dict[str, Any], repository: TRTRep
     release_record["updated_at_utc"] = decision_timestamp
 
     if decision == "APPROVE":
-        apply_result = apply_intent_patch(release_record["candidate_patch"], repo)
+        apply_result = apply_intent_patch(release_record["candidate_patch"], repo, release_id=release_record["release_id"])
         if apply_result["status"] == "ACCEPTED":
             release_record["status"] = "RELEASED"
         else:
@@ -80,6 +80,10 @@ def record_release_decision(decision_request: dict[str, Any], repository: TRTRep
                 "FAILED_STALE_VERSION" if not apply_result["validation_results"]["base_version"] else "NEEDS_REVISION"
             )
         release_record["audit_id"] = apply_result["audit_id"]
+        release_record["trt_version"] = apply_result.get("trt_version")
+        release_record["previous_trt_version"] = apply_result.get("previous_trt_version")
+        release_record["version_path"] = apply_result.get("version_path")
+        release_record["current_trt_path"] = apply_result.get("current_trt_path")
         repo.save_release_record(release_record)
         return release_record
 

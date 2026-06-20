@@ -1,0 +1,106 @@
+{
+  "audit_id": "audit-0c9f7a17-2614-4d2b-9335-e5650dfac10d",
+  "intent_text": "adjust the targets for all production lines to the ent surgical tooling set",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/selected_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/excluded_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/required_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/selected_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/excluded_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/required_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/selected_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/excluded_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/required_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/selected_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/excluded_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/required_tool_ids",
+      "value": []
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1781696939972",
+  "reason": "test for milestone 9",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-17T11:49:13.019786Z",
+  "trt_after_hash": "b20cfe651e09730a3f3d38318711f52dca05b725afdba70ad6b8fb7f53bf4b61",
+  "trt_after_version": "v18",
+  "trt_before_hash": "67cc371e9676b32be89fddc0cba0ad6ef7160c48c0160ebdae3f173b396a992a",
+  "trt_before_version": "v17",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

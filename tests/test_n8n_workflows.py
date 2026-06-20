@@ -129,6 +129,50 @@ def test_chat_operator_workflow_classifies_every_chat_turn_with_vllm():
     assert route["type"] == "n8n-nodes-base.code"
 
 
+def test_chat_workflow_preserves_pending_intent_for_clarification_turns():
+    workflow = load_workflow("chat_operator_task_allocation.workflow.json")
+    builder = node_by_name(workflow, "Build vLLM Chat Turn Parse Body")
+    normalizer = node_by_name(workflow, "Normalize Parsed Chat Turn")
+    context_normalizer = node_by_name(workflow, "Normalize Context After Intent Review")
+    builder_code = builder["parameters"]["jsCode"]
+    normalizer_code = normalizer["parameters"]["jsCode"]
+    context_code = context_normalizer["parameters"]["jsCode"]
+
+    assert "$getWorkflowStaticData(\"global\")" in builder_code
+    assert "pending_intents" in builder_code
+    assert "pending_intent" in builder_code
+    assert "resolves an unresolved pending intent" in builder_code
+    assert "without replacing the original request" in builder_code
+    assert "add_reference_number" in builder_code
+    assert "CLARIFICATION_VALUES" in builder_code
+    assert "pendingIntent?.operator_id" in normalizer_code
+    assert "pendingIntent?.reason" in normalizer_code
+    assert "Clarification:" in normalizer_code
+    assert "$getWorkflowStaticData('global')" in context_code
+    assert "delete staticData.pending_intents[sessionId]" in context_code
+    assert "staticData.pending_intents[sessionId]" in context_code
+
+
+def test_intent_workflow_supports_simulation_config_update_candidate():
+    workflow = load_workflow("intent_to_patch_review.workflow.json")
+    body = node_by_name(workflow, "LLM Generate Intent Patch")["parameters"]["jsonBody"]
+    retry_body = node_by_name(workflow, "Retry LLM Generate Intent Patch")["parameters"]["jsonBody"]
+    normalizer_code = node_by_name(workflow, "Normalize Candidate Patch")["parameters"]["jsCode"]
+    retry_normalizer_code = node_by_name(workflow, "Normalize Retried Candidate Patch")["parameters"]["jsCode"]
+    reviewed_code = node_by_name(workflow, "Return Reviewed Candidate")["parameters"]["jsCode"]
+
+    for prompt in [body, retry_body]:
+        assert "SIMULATION_CONFIG_UPDATE" in prompt
+        assert "add_reference_number" in prompt
+        assert "simulation_config_updates" in prompt
+        assert "Do not ask which five tools unless the user names specific tools to keep." in prompt
+    assert "simulation_config_updates: extracted.simulation_config_updates || null" in normalizer_code
+    assert "simulation_config_updates: extracted.simulation_config_updates || null" in retry_normalizer_code
+    assert "const simulationConfigUpdates = candidatePatch.simulation_config_updates || null;" in reviewed_code
+    assert "simulation_config_updates: simulationConfigUpdates" in reviewed_code
+    assert "The candidate simulation configuration update is valid" in reviewed_code
+
+
 def test_chat_operator_workflow_calls_existing_subworkflows():
     workflow = load_workflow("chat_operator_task_allocation.workflow.json")
     execute_nodes = {
@@ -161,9 +205,11 @@ def test_intent_candidate_vllm_budget_and_length_guard():
     assert "temperature: 0.0" in body
     assert "structured_outputs" in body
     assert "Extract compact domain intent JSON only." in body
-    assert "Allowed lines: line_1,line_2,line_3,line_4." in body
+    assert "Allowed lines come from Get Intent Context valid_line_ids." in body
     assert "Allowed goals: ROUTINE_CLASSIFICATION,TRAUMA_SET_PRIORITY,BACKLOG_CLEARING." in body
-    assert "Allowed instruments: SCISSORS,FORCEPS,CLAMPS,RETRACTOR." in body
+    assert "Allowed normalized tooling types are:" in body
+    assert "Known tooling aliases are:" in body
+    assert "Knife handle/knife handles maps to KNIFE_HANDLE." in body
     assert "Allowed abnormal strategies: STOP_LINE,CONTINUE_FEASIBLE_TASKS,ASK_OPERATOR." in body
     assert "target_scope: single line=SINGLE_LINE" in body
     assert "no deadline" in body
@@ -229,20 +275,14 @@ def test_intent_candidate_retry_supports_old_and_all_lines_requests_without_user
     assert "Do not map priority language to goal." in body
     assert "Do not set goal=TRAUMA_SET_PRIORITY unless the user explicitly asks for Trauma Set priority." in body
     assert "allowed_instruments is selected tooling for the strategy, not robot capability." in body
-    assert "allowed_instruments=[] means no tooling selected." in body
-    assert "excluded_instruments=[] means no explicit exclusions." in body
     assert "select no tooling or do not want all tooling selected => tooling_policy.required_scope=NONE" in body
-    assert "select all tooling => allowed_instruments" in body
-    assert (
-        'all tooling required by each production line or mark all tooling required for each production line as mandatory '
-        '=> tooling_policy.required_scope=ALL_SUPPORTED_INSTRUMENTS, '
-        'allowed_instruments=["SCISSORS","FORCEPS","CLAMPS","RETRACTOR"], excluded_instruments=[]'
-    ) in body
-    assert "Never use allowed_instruments=[] with tooling_policy.required_scope=ALL_SUPPORTED_INSTRUMENTS" in body
-    assert "tooling_policy.required_scope=ALL_SUPPORTED_INSTRUMENTS" in body
+    assert "select all tooling => tooling_policy.required_scope=ALL_SUPPORTED_TOOLING" in body
+    assert "all tooling required by each production line" in body
+    assert "tooling_policy.required_scope=ALL_SUPPORTED_TOOLING" in body
     assert "Entanglement is not an instrument exclusion" in body
-    assert "Return action,line_id,target_scope,target_lines,goal,priority,allowed_instruments,excluded_instruments" in body
+    assert "Return action,line_id,target_scope,target_lines,goal,priority,allowed_instruments,excluded_instruments,selected_normalized_types,excluded_normalized_types" in body
     assert "priority: extracted.priority ?? null" in normalizer_code
+    assert "excluded_normalized_types: extracted.excluded_normalized_types ?? null" in normalizer_code
     assert "tooling_policy.all_required" not in body
     assert "tooling_policy.all_required" not in retry_body
     assert retry_body.count("max_tokens: 1024") == 1
@@ -543,13 +583,19 @@ def test_release_approval_preserves_context_and_adds_release_fields():
 
 def test_reconciliation_preserves_release_id_and_adds_reconciliation_plan_id():
     workflow = load_workflow("released_trt_to_reconciliation.workflow.json")
+    create = node_by_name(workflow, "Create Reconciliation Plan")
     ready = node_by_name(workflow, "Return Ready Plan")
+    body = create["parameters"]["jsonBody"]
     context_expr = assignment_value(ready, "context")
 
+    assert "trt_id: $json.context?.trt_id || $json.payload?.trt_id || $json.trt_id || $json.body?.trt_id || null" in body
+    assert "trt_version: $json.context?.trt_version || $json.payload?.trt_version || $json.trt_version || $json.body?.trt_version || null" in body
+    assert "release_id: $json.context?.release_id || $json.payload?.release_id || null" in body
+    assert "affected_lines: $json.context?.affected_lines || $json.payload?.affected_lines || []" in body
     assert "release_id: $('Receive Released TRT').first().json.context?.release_id || null" in context_expr
     assert "reconciliation_plan_id: $json.plan_id" in context_expr
     assert "trt_id: $('Receive Released TRT').first().json.context?.trt_id || $json.trt_id" in context_expr
-    assert "trt_version: $('Receive Released TRT').first().json.context?.trt_version || $json.trt_version" in context_expr
+    assert "trt_version: $json.trt_version || $('Receive Released TRT').first().json.context?.trt_version" in context_expr
 
 
 def test_integrated_workflow_has_context_normalizer_after_each_subworkflow():
@@ -591,7 +637,8 @@ def test_generate_scenario_spec_request_body_uses_normalized_request():
     assert body == "={{ $json.scenario_request }}"
     assert "scenario_request" in code
     assert "candidate_strategy_id: 'primary'" in code
-    assert "scenario_template_id: 'surgical_sorting_v1'" in code
+    assert "scenario_template_id: context.scenario_template_id || payload.scenario_template_id || null" in code
+    assert "surgical_sorting_4line_v1" not in code
     assert "include_waiting_scenarios: false" in code
     assert "context.affected_lines" in code
     assert "payload.affected_lines" in code
@@ -601,6 +648,53 @@ def test_generate_scenario_spec_request_body_uses_normalized_request():
     assert "line_decisions: lineDecisions" in code
     assert "const plan = payload.plan || {};" in code
     assert "ids.release_id" not in body
+
+
+def test_generate_scenario_spec_runs_isaac_simulation_after_generation():
+    workflow = load_workflow("generate_scenario_spec.workflow.json")
+    run_node = node_by_name(workflow, "ScenarioSpec to Isaac Simulation Run")
+    wait_node = node_by_name(workflow, "Wait Before Simulation Poll")
+    poll_node = node_by_name(workflow, "Poll Isaac Simulation Run")
+    terminal_node = node_by_name(workflow, "Simulation Run Terminal?")
+    result_node = node_by_name(workflow, "Return Simulation Run Result")
+    run_body = run_node["parameters"]["jsonBody"]
+    status_expr = assignment_value(result_node, "status")
+
+    assert run_node["type"] == "n8n-nodes-base.httpRequest"
+    assert run_node["parameters"]["url"] == "http://trt-api:8000/simulation/runs"
+    assert "scenario_spec_id: $json.scenario_spec_id" in run_body
+    assert "scenario_spec_path:" in run_body
+    assert "run_mode: 'ASYNC'" in run_body
+    assert "headless: false" in run_body
+    assert "line_" not in run_body
+    assert workflow["connections"]["Generated?"]["main"][0][0]["node"] == "ScenarioSpec to Isaac Simulation Run"
+    assert workflow["connections"]["ScenarioSpec to Isaac Simulation Run"]["main"][0][0]["node"] == "Wait Before Simulation Poll"
+    assert wait_node["type"] == "n8n-nodes-base.wait"
+    assert poll_node["parameters"]["url"] == "=http://trt-api:8000/simulation/runs/{{$json.run_id}}"
+    assert workflow["connections"]["Wait Before Simulation Poll"]["main"][0][0]["node"] == "Poll Isaac Simulation Run"
+    assert workflow["connections"]["Poll Isaac Simulation Run"]["main"][0][0]["node"] == "Simulation Run Terminal?"
+    assert workflow["connections"]["Simulation Run Terminal?"]["main"][0][0]["node"] == "Return Simulation Run Result"
+    assert workflow["connections"]["Simulation Run Terminal?"]["main"][1][0]["node"] == "Wait Before Simulation Poll"
+    terminal_condition = terminal_node["parameters"]["conditions"]["conditions"][0]["leftValue"]
+    assert "RUNNING" not in terminal_condition
+    assert "COMPLETED" in terminal_condition
+    assert "FAILED_TIMEOUT" in terminal_condition
+    assert "SIMULATION_COMPLETED" not in status_expr
+    assert "'GENERATED'" in status_expr
+    assert "SIMULATION_FAILED" in status_expr
+    assert "$json.error_code" in assignment_value(result_node, "errors")
+
+
+def test_chat_scenario_summary_does_not_claim_generated_spec_missing_on_simulation_failure():
+    workflow = load_workflow("chat_operator_task_allocation.workflow.json")
+    summary_node = node_by_name(workflow, "Chat ScenarioSpec Path Summary")
+    payload_expr = assignment_value(summary_node, "payload")
+
+    assert "ScenarioSpec was generated, but simulation result processing failed" in payload_expr
+    assert "ScenarioSpec was generated and simulation completed" in payload_expr
+    assert "SIMULATION_COMPLETED" not in payload_expr
+    assert "ScenarioSpec was not generated" in payload_expr
+    assert "scenario_spec_id" in payload_expr
 
 
 def test_generate_scenario_spec_has_defensive_context_validation():

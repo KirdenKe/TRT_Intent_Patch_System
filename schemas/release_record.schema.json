@@ -81,6 +81,10 @@
       ]
     },
     "audit_id": { "type": ["string", "null"] },
+    "trt_version": { "type": ["string", "null"], "pattern": "^v[0-9]+$" },
+    "previous_trt_version": { "type": ["string", "null"], "pattern": "^v[0-9]+$" },
+    "version_path": { "type": ["string", "null"] },
+    "current_trt_path": { "type": ["string", "null"] },
     "created_at_utc": { "type": "string" },
     "updated_at_utc": { "type": "string" }
   }

@@ -15,6 +15,11 @@ def validate_semantics(trt: TRT | dict[str, Any]) -> list[str]:
         overlap = sorted(allowed & excluded)
         if overlap:
             reasons.append(f"line {line_id}: allowed_instruments and excluded_instruments overlap: {', '.join(overlap)}")
+        selected_tool_ids = set(line.get("selected_tool_ids", []))
+        excluded_tool_ids = set(line.get("excluded_tool_ids", []))
+        tool_overlap = sorted(selected_tool_ids & excluded_tool_ids)
+        if tool_overlap:
+            reasons.append(f"line {line_id}: selected_tool_ids and excluded_tool_ids overlap: {', '.join(tool_overlap)}")
         priority = line.get("priority")
         if not isinstance(priority, int) or not 1 <= priority <= 5:
             reasons.append(f"line {line_id}: priority must be an integer from 1 to 5")

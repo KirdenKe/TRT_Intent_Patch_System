@@ -1,0 +1,54 @@
+{
+  "affected_lines": [
+    "line_1",
+    "line_2",
+    "line_3",
+    "line_4"
+  ],
+  "created_at_utc": "2026-06-17T07:30:59.227694Z",
+  "line_decisions": [
+    {
+      "decision": "IMMEDIATE_SWITCH",
+      "degraded_strategy": null,
+      "line_id": "line_1",
+      "next_action": "Switch line to target TRT immediately.",
+      "reason": "Line is running with no WIP.",
+      "required_checkpoint": null,
+      "risk_flags": []
+    },
+    {
+      "decision": "IMMEDIATE_SWITCH",
+      "degraded_strategy": null,
+      "line_id": "line_2",
+      "next_action": "Switch line to target TRT immediately.",
+      "reason": "Line is running with no WIP.",
+      "required_checkpoint": null,
+      "risk_flags": []
+    },
+    {
+      "decision": "IMMEDIATE_SWITCH",
+      "degraded_strategy": null,
+      "line_id": "line_3",
+      "next_action": "Switch line to target TRT immediately.",
+      "reason": "Line is running with no WIP.",
+      "required_checkpoint": null,
+      "risk_flags": []
+    },
+    {
+      "decision": "IMMEDIATE_SWITCH",
+      "degraded_strategy": null,
+      "line_id": "line_4",
+      "next_action": "Switch line to target TRT immediately.",
+      "reason": "Line is running with no WIP.",
+      "required_checkpoint": null,
+      "risk_flags": []
+    }
+  ],
+  "overall_status": "READY",
+  "plan_id": "rec_97a95b06-29f1-4a95-aaad-34f19480557f",
+  "release_id": "rel_88fe99b0-2426-404d-a15a-c2945f51af6e",
+  "source_state_hash": "sha256:1be8e958988112ca584059071d1595525af713b262cece8c4f2c041b0b9e9172",
+  "source_trt_hash": "sha256:98260ee17e936fabe24198a102c85351e1570ccf3947546baefeb6a3cfea8e3c",
+  "trt_id": "trt-demo",
+  "trt_version": "v15"
+}

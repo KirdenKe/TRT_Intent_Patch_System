@@ -8,13 +8,56 @@
   "properties": {
     "trt_id": { "type": "string", "minLength": 1 },
     "version": { "type": "string", "pattern": "^v[0-9]+$" },
+    "previous_version": { "type": "string", "pattern": "^v[0-9]+$" },
+    "released_at": { "type": "string" },
+    "release_id": { "type": "string" },
+    "audit_id": { "type": "string" },
+    "experiment_id": { "type": "string" },
+    "tool_sets": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["set_id", "required_tool_ids", "non_member_tool_ids"],
+        "properties": {
+          "set_id": { "type": "string" },
+          "required_tool_ids": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/tool_id" },
+            "uniqueItems": true
+          },
+          "non_member_tool_ids": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/tool_id" },
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "tool_catalog": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["tool_id", "tool_number", "type", "normalized_type", "belongs_to_ent_set", "set_id", "quantity_instance"],
+        "properties": {
+          "tool_id": { "$ref": "#/$defs/tool_id" },
+          "tool_number": { "type": "integer", "minimum": 1, "maximum": 27 },
+          "type": { "type": "string" },
+          "normalized_type": { "$ref": "#/$defs/tool_type" },
+          "belongs_to_ent_set": { "type": "boolean" },
+          "set_id": { "type": ["string", "null"] },
+          "quantity_instance": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
     "lines": {
       "type": "object",
       "minProperties": 1,
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["goal", "allowed_instruments", "excluded_instruments", "priority", "kpi", "abnormal_strategy", "state"],
+        "required": ["goal", "allowed_instruments", "excluded_instruments", "priority", "kpi", "abnormal_strategy"],
         "properties": {
           "goal": {
             "enum": ["ROUTINE_CLASSIFICATION", "TRAUMA_SET_PRIORITY", "BACKLOG_CLEARING"]
@@ -27,6 +70,22 @@
           "excluded_instruments": {
             "type": "array",
             "items": { "$ref": "#/$defs/instrument" },
+            "uniqueItems": true
+          },
+          "target_set_id": { "type": "string" },
+          "selected_tool_ids": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/tool_id" },
+            "uniqueItems": true
+          },
+          "excluded_tool_ids": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/tool_id" },
+            "uniqueItems": true
+          },
+          "required_tool_ids": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/tool_id" },
             "uniqueItems": true
           },
           "priority": {
@@ -62,8 +121,47 @@
             "required": ["required_scope"],
             "properties": {
               "required_scope": {
-                "enum": ["ALLOWED_INSTRUMENTS", "ALL_SUPPORTED_INSTRUMENTS", "SELECTED_TOOLING", "NONE"]
+                "enum": ["ALLOWED_INSTRUMENTS", "ALL_SUPPORTED_INSTRUMENTS", "ALL_SUPPORTED_TOOLING", "SELECTED_TOOLING", "NONE"]
               }
+            }
+          },
+          "digital_twin": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "robot_id",
+              "robot_model",
+              "robot_scene_name",
+              "workspace_id",
+              "workspace_env_id",
+              "stage_workspace_prim_path",
+              "stage_robot_prim_path",
+              "stage_end_effector_prim_path",
+              "stage_tooling_root_prim_path",
+              "stage_tray_prim_path",
+              "tray_id",
+              "active_set_id",
+              "task_name"
+            ],
+            "properties": {
+              "robot_id": { "type": "string" },
+              "robot_model": { "type": "string" },
+              "robot_scene_name": { "type": "string" },
+              "workspace_id": { "type": "string" },
+              "workspace_env_id": { "type": "integer", "minimum": 0 },
+              "stage_workspace_prim_path": { "type": "string" },
+              "stage_robot_prim_path": { "type": "string" },
+              "stage_end_effector_prim_path": { "type": "string" },
+              "stage_tooling_root_prim_path": { "type": "string" },
+              "stage_tray_prim_path": { "type": ["string", "null"] },
+              "tray_id": { "type": "string" },
+              "active_set_id": { "type": "string" },
+              "task_name": { "type": "string" },
+              "line_type": { "type": "string" },
+              "simulation_mode": { "enum": ["PHYSICAL_OR_DIGITAL_TWIN", "LOGICAL_ONLY"] },
+              "physical_available": { "type": ["boolean", "null"] },
+              "input_area_path": { "type": "string" },
+              "output_area_path": { "type": "string" }
             }
           },
           "state": {
@@ -93,6 +191,24 @@
   "$defs": {
     "instrument": {
       "enum": ["SCISSORS", "FORCEPS", "CLAMPS", "RETRACTOR"]
+    },
+    "tool_id": {
+      "type": "string",
+      "pattern": "^tool_(0[1-9]|1[0-9]|2[0-7])$"
+    },
+    "tool_type": {
+      "enum": [
+        "FORCEPS",
+        "SCISSORS",
+        "DOUBLE_ENDED_SURGICAL_RETRACTOR",
+        "SURGICAL_FORCEPS",
+        "KNIFE_HANDLE",
+        "SPONGE_FORCEPS",
+        "NEEDLE_HOLDER",
+        "NERVE_RETRACTOR",
+        "MASTOID_RETRACTOR",
+        "SURGICAL_SUCTION_CANNULA"
+      ]
     }
   }
 }

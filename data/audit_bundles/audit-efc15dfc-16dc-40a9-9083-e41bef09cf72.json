@@ -1,0 +1,31 @@
+{
+  "audit_id": "audit-efc15dfc-16dc-40a9-9083-e41bef09cf72",
+  "intent_text": "line_1 throughput/hr = 210",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/min_throughput_per_hour",
+      "value": 210
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "manual-kpi-210",
+  "reason": "manual version progression verification",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-16T08:22:26.633455Z",
+  "trt_after_hash": "191a82aaebde56e7590c9780c43383879fe2708c3c79ac029a901933f6b65296",
+  "trt_after_version": "v2",
+  "trt_before_hash": "139e64052f9bc6e0d7df4122c579b7c2dca92e7eec82b62ffc7ed9e6b14ae252",
+  "trt_before_version": "v1",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

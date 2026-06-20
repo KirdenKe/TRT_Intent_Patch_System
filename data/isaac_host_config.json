@@ -1,0 +1,8 @@
+{
+  "host_project_root": "C:\\Users\\$93I000-7RFCRA0J9IC9\\Documents\\Docker\\n8n_data\\trt_intent_patch_system",
+  "container_project_root": "/app",
+  "isaac_working_directory": "C:\\Dev\\IsaacSim",
+  "python_bat": "C:\\Dev\\IsaacSim\\_build\\windows-x86_64\\release\\python.bat",
+  "entry_script": "C:\\Dev\\IsaacSim\\_build\\windows-x86_64\\release\\standalone_examples\\api\\isaacsim.robot.manipulators\\ur5\\pick_up_example.py",
+  "seed_db_path": "C:\\Dev\\IsaacSim\\_build\\windows-x86_64\\release\\standalone_examples\\api\\isaacsim.robot.manipulators\\ur5\\tasks\\seed_sweep.sqlite3"
+}

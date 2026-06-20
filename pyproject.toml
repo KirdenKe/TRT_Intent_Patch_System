@@ -22,4 +22,4 @@ dev = [
 testpaths = ["tests"]
 
 [tool.setuptools]
-packages = ["trt_core", "scenario_generation"]
+packages = ["trt_core", "trt_core.digital_twin_adapter", "scenario_generation"]

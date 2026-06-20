@@ -1,0 +1,56 @@
+{
+  "audit_id": "audit-246dc077-a84c-4a09-b1ff-46e67efc5599",
+  "intent_text": "set the line 1's throughput/hr to 180",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/tooling_policy/required_scope",
+      "value": "NONE"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/selected_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/excluded_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/allowed_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/excluded_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/min_throughput_per_hour",
+      "value": 180
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1781291723692",
+  "reason": "deadline!!",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-12T19:15:33.687304Z",
+  "trt_after_hash": "7abdd1fc5ad919a16ef9c339e3ccace1fa666313b6ff8a8f010582f01a4f32f6",
+  "trt_after_version": "v2",
+  "trt_before_hash": "139e64052f9bc6e0d7df4122c579b7c2dca92e7eec82b62ffc7ed9e6b14ae252",
+  "trt_before_version": "v1",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

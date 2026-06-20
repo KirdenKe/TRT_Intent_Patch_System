@@ -1,0 +1,47 @@
+{
+  "created_at_utc": "2026-06-12T19:05:39.260969Z",
+  "line_decisions": [
+    {
+      "decision": "IMMEDIATE_SWITCH",
+      "degraded_strategy": null,
+      "line_id": "line_1",
+      "next_action": "Switch line to target TRT immediately.",
+      "reason": "Line is running with no WIP.",
+      "required_checkpoint": null,
+      "risk_flags": []
+    },
+    {
+      "decision": "IMMEDIATE_SWITCH",
+      "degraded_strategy": null,
+      "line_id": "line_2",
+      "next_action": "Switch line to target TRT immediately.",
+      "reason": "Line is running with no WIP.",
+      "required_checkpoint": null,
+      "risk_flags": []
+    },
+    {
+      "decision": "IMMEDIATE_SWITCH",
+      "degraded_strategy": null,
+      "line_id": "line_3",
+      "next_action": "Switch line to target TRT immediately.",
+      "reason": "Line is running with no WIP.",
+      "required_checkpoint": null,
+      "risk_flags": []
+    },
+    {
+      "decision": "IMMEDIATE_SWITCH",
+      "degraded_strategy": null,
+      "line_id": "line_4",
+      "next_action": "Switch line to target TRT immediately.",
+      "reason": "Line is running with no WIP.",
+      "required_checkpoint": null,
+      "risk_flags": []
+    }
+  ],
+  "overall_status": "READY",
+  "plan_id": "rec_4783efbd-b7a4-4213-b385-0e61efa99016",
+  "source_state_hash": "sha256:1be8e958988112ca584059071d1595525af713b262cece8c4f2c041b0b9e9172",
+  "source_trt_hash": "sha256:139e64052f9bc6e0d7df4122c579b7c2dca92e7eec82b62ffc7ed9e6b14ae252",
+  "trt_id": "trt-demo",
+  "trt_version": "v1"
+}

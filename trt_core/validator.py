@@ -13,7 +13,19 @@ from trt_core.models import IntentPatch, TRT, ValidationResults
 
 
 SUPPORTED_OPERATIONS = {"test", "add", "replace", "remove"}
-WRITABLE_LINE_FIELDS = {"goal", "allowed_instruments", "excluded_instruments", "priority", "kpi", "abnormal_strategy", "tooling_policy"}
+WRITABLE_LINE_FIELDS = {
+    "goal",
+    "allowed_instruments",
+    "excluded_instruments",
+    "selected_tool_ids",
+    "excluded_tool_ids",
+    "required_tool_ids",
+    "target_set_id",
+    "priority",
+    "kpi",
+    "abnormal_strategy",
+    "tooling_policy",
+}
 WRITABLE_KPI_FIELDS = {"deadline_minutes", "max_downtime_seconds", "min_throughput_per_hour"}
 WRITABLE_TOOLING_POLICY_FIELDS = {"required_scope"}
 
@@ -91,8 +103,10 @@ def is_whitelisted_path(path: str) -> bool:
         return False
     if field in {"goal", "priority", "abnormal_strategy"}:
         return len(parts) == 3
-    if field in {"allowed_instruments", "excluded_instruments"}:
+    if field in {"allowed_instruments", "excluded_instruments", "selected_tool_ids", "excluded_tool_ids", "required_tool_ids"}:
         return len(parts) in {3, 4}
+    if field == "target_set_id":
+        return len(parts) == 3
     if field == "kpi":
         return len(parts) == 4 and parts[3] in WRITABLE_KPI_FIELDS
     if field == "tooling_policy":

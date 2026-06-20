@@ -36,8 +36,10 @@ def build_reconciliation_plan(
     trt: dict[str, Any],
     state_records: list[dict[str, Any]],
     line_decisions: list[dict[str, Any]],
+    release_id: str | None = None,
+    affected_lines: list[str] | None = None,
 ) -> dict[str, Any]:
-    return {
+    plan = {
         "plan_id": f"rec_{uuid4()}",
         "trt_id": trt["trt_id"],
         "trt_version": trt["version"],
@@ -47,6 +49,11 @@ def build_reconciliation_plan(
         "source_state_hash": sha256_prefixed(state_records),
         "source_trt_hash": sha256_prefixed(trt),
     }
+    if release_id is not None:
+        plan["release_id"] = release_id
+    if affected_lines is not None:
+        plan["affected_lines"] = affected_lines
+    return plan
 
 
 def save_plan(plan: dict[str, Any], repository: TRTRepository | None = None) -> dict[str, Any]:
@@ -58,4 +65,3 @@ def save_plan(plan: dict[str, Any], repository: TRTRepository | None = None) -> 
 def load_plan(plan_id: str, repository: TRTRepository | None = None) -> dict[str, Any]:
     repo = repository or TRTRepository()
     return repo.load_reconciliation_plan(plan_id)
-

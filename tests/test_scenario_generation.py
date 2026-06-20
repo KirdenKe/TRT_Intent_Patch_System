@@ -10,6 +10,7 @@ from jsonschema import Draft202012Validator
 from scenario_generation.errors import OperatorResolutionRequiredError, ScenarioGenerationError, TemplateRegistryError
 from scenario_generation.generator import generate_scenario_spec
 from scenario_generation.models import ScenarioGenerationRequest
+from scenario_generation.template_registry import normalize_template_registry, validate_template_registry
 
 
 SCHEMA_PATH = Path(__file__).resolve().parents[1] / "schemas" / "scenario_spec.schema.json"
@@ -74,9 +75,34 @@ def test_scenario_spec_uses_template_registry_defaults(fixture_loader):
     spec = generate_scenario_spec(make_request(fixture_loader))
 
     assert spec["scene_template"] == "pick_up_example.py"
-    assert spec["simulation_config"]["global_seed"] == 123
-    assert spec["operator_model"] == {"travel_time": 2.0, "fix_duration": 4.0, "resume_delay": 0.5}
+    assert "global_seed" not in spec["simulation_config"]
+    assert spec["simulation_config"]["num_envs"] == 2
+    assert spec["simulation_config"]["allowed_overlap_ratio"] == 0.99
+    assert spec["simulation_config"]["layout_source"] == "auto"
+    assert spec["simulation_config"]["episode_success_requires_reset_cycles"] == 1
+    assert spec["simulation_config"]["add_reference_number"] == 27
+    assert spec["simulation_config"]["reuse_verified_seed"] is True
+    assert "max_seed_trials" not in spec["simulation_config"]
+    assert "reuse_precomputed_layouts" not in spec["simulation_config"]
+    assert "seed_db_path" not in spec["simulation_config"]
+    assert spec["simulation_config"]["chosen_intervention_mode"] == "continue-until-arrival"
+    assert spec["simulation_config"]["travel_time"] == 5.0
+    assert spec["simulation_config"]["fix_duration"] == 8.0
+    assert spec["simulation_config"]["resume_delay"] == 0.5
+    assert spec["operator_model"] == {"travel_time": 5.0, "fix_duration": 8.0, "resume_delay": 0.5}
     assert spec["assertions"] == {"use_existing_validation_module": True}
+
+
+def test_template_registry_normalizes_null_optional_isaac_args(fixture_loader):
+    registry = deepcopy(fixture_loader("scenario_templates.json"))
+    registry["templates"][0]["simulation_config"]["global_seed"] = None
+    registry["templates"][0]["simulation_config"]["seed_db_path"] = None
+
+    normalized = normalize_template_registry(registry)
+
+    assert "global_seed" not in normalized["templates"][0]["simulation_config"]
+    assert "seed_db_path" not in normalized["templates"][0]["simulation_config"]
+    validate_template_registry(registry)
 
 
 def test_line_bindings_come_from_registry_not_hardcoded_assumptions(fixture_loader):

@@ -21,7 +21,7 @@
         "url": "http://trt-api:8000/supervisor/reconcile",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { trt_id: $json.context?.trt_id || $json.payload?.trt_id || $json.trt_id || $json.body?.trt_id || null } }}",
+        "jsonBody": "={{ { trt_id: $json.context?.trt_id || $json.payload?.trt_id || $json.trt_id || $json.body?.trt_id || null, trt_version: $json.context?.trt_version || $json.payload?.trt_version || $json.trt_version || $json.body?.trt_version || null, release_id: $json.context?.release_id || $json.payload?.release_id || null, affected_lines: $json.context?.affected_lines || $json.payload?.affected_lines || [] } }}",
         "options": {}
       },
       "id": "92aa1fbb-ccdb-47f5-89fa-8062d67e08ce",
@@ -146,7 +146,7 @@
             {
               "id": "ff45240a-55f9-48d0-81b3-ad8e67af605e",
               "name": "context",
-              "value": "={{ { ...($('Receive Released TRT').first().json.context || {}), release_id: $('Receive Released TRT').first().json.context?.release_id || null, audit_id: $('Receive Released TRT').first().json.context?.audit_id || null, patch_id: $('Receive Released TRT').first().json.context?.patch_id || null, trt_id: $('Receive Released TRT').first().json.context?.trt_id || $json.trt_id, trt_version: $('Receive Released TRT').first().json.context?.trt_version || $json.trt_version, reconciliation_plan_id: $json.plan_id, scenario_batch_id: $('Receive Released TRT').first().json.context?.scenario_batch_id || null, scenario_spec_ids: $('Receive Released TRT').first().json.context?.scenario_spec_ids || [], affected_lines: $('Receive Released TRT').first().json.context?.affected_lines || $('Receive Released TRT').first().json.payload?.affected_lines || [] } }}",
+              "value": "={{ { ...($('Receive Released TRT').first().json.context || {}), release_id: $('Receive Released TRT').first().json.context?.release_id || null, audit_id: $('Receive Released TRT').first().json.context?.audit_id || null, patch_id: $('Receive Released TRT').first().json.context?.patch_id || null, trt_id: $('Receive Released TRT').first().json.context?.trt_id || $json.trt_id, trt_version: $json.trt_version || $('Receive Released TRT').first().json.context?.trt_version, reconciliation_plan_id: $json.plan_id, scenario_batch_id: $('Receive Released TRT').first().json.context?.scenario_batch_id || null, scenario_spec_ids: $('Receive Released TRT').first().json.context?.scenario_spec_ids || [], affected_lines: $('Receive Released TRT').first().json.context?.affected_lines || $('Receive Released TRT').first().json.payload?.affected_lines || [] } }}",
               "type": "object"
             },
             {
@@ -193,7 +193,7 @@
             {
               "id": "0a216bb9-a1a8-453c-93da-b93ac8b09875",
               "name": "context",
-              "value": "={{ { ...($('Receive Released TRT').first().json.context || {}), release_id: $('Receive Released TRT').first().json.context?.release_id || null, audit_id: $('Receive Released TRT').first().json.context?.audit_id || null, patch_id: $('Receive Released TRT').first().json.context?.patch_id || null, trt_id: $('Receive Released TRT').first().json.context?.trt_id || $json.trt_id, trt_version: $('Receive Released TRT').first().json.context?.trt_version || $json.trt_version, reconciliation_plan_id: $json.plan_id, scenario_batch_id: $('Receive Released TRT').first().json.context?.scenario_batch_id || null, scenario_spec_ids: $('Receive Released TRT').first().json.context?.scenario_spec_ids || [], affected_lines: $('Receive Released TRT').first().json.context?.affected_lines || $('Receive Released TRT').first().json.payload?.affected_lines || [] } }}",
+              "value": "={{ { ...($('Receive Released TRT').first().json.context || {}), release_id: $('Receive Released TRT').first().json.context?.release_id || null, audit_id: $('Receive Released TRT').first().json.context?.audit_id || null, patch_id: $('Receive Released TRT').first().json.context?.patch_id || null, trt_id: $('Receive Released TRT').first().json.context?.trt_id || $json.trt_id, trt_version: $json.trt_version || $('Receive Released TRT').first().json.context?.trt_version, reconciliation_plan_id: $json.plan_id, scenario_batch_id: $('Receive Released TRT').first().json.context?.scenario_batch_id || null, scenario_spec_ids: $('Receive Released TRT').first().json.context?.scenario_spec_ids || [], affected_lines: $('Receive Released TRT').first().json.context?.affected_lines || $('Receive Released TRT').first().json.payload?.affected_lines || [] } }}",
               "type": "object"
             },
             {
@@ -240,7 +240,7 @@
             {
               "id": "33581316-30b2-41b3-8e6a-676fef3ef628",
               "name": "context",
-              "value": "={{ { ...($('Receive Released TRT').first().json.context || {}), release_id: $('Receive Released TRT').first().json.context?.release_id || null, audit_id: $('Receive Released TRT').first().json.context?.audit_id || null, patch_id: $('Receive Released TRT').first().json.context?.patch_id || null, trt_id: $('Receive Released TRT').first().json.context?.trt_id || $json.trt_id, trt_version: $('Receive Released TRT').first().json.context?.trt_version || $json.trt_version, reconciliation_plan_id: $json.plan_id, scenario_batch_id: $('Receive Released TRT').first().json.context?.scenario_batch_id || null, scenario_spec_ids: $('Receive Released TRT').first().json.context?.scenario_spec_ids || [], affected_lines: $('Receive Released TRT').first().json.context?.affected_lines || $('Receive Released TRT').first().json.payload?.affected_lines || [] } }}",
+              "value": "={{ { ...($('Receive Released TRT').first().json.context || {}), release_id: $('Receive Released TRT').first().json.context?.release_id || null, audit_id: $('Receive Released TRT').first().json.context?.audit_id || null, patch_id: $('Receive Released TRT').first().json.context?.patch_id || null, trt_id: $('Receive Released TRT').first().json.context?.trt_id || $json.trt_id, trt_version: $json.trt_version || $('Receive Released TRT').first().json.context?.trt_version, reconciliation_plan_id: $json.plan_id, scenario_batch_id: $('Receive Released TRT').first().json.context?.scenario_batch_id || null, scenario_spec_ids: $('Receive Released TRT').first().json.context?.scenario_spec_ids || [], affected_lines: $('Receive Released TRT').first().json.context?.affected_lines || $('Receive Released TRT').first().json.payload?.affected_lines || [] } }}",
               "type": "object"
             },
             {
@@ -287,7 +287,7 @@
             {
               "id": "5219f9e3-aa47-4467-bcaa-97ddaec4fbdd",
               "name": "context",
-              "value": "={{ { ...($('Receive Released TRT').first().json.context || {}), release_id: $('Receive Released TRT').first().json.context?.release_id || null, audit_id: $('Receive Released TRT').first().json.context?.audit_id || null, patch_id: $('Receive Released TRT').first().json.context?.patch_id || null, trt_id: $('Receive Released TRT').first().json.context?.trt_id || $json.trt_id, trt_version: $('Receive Released TRT').first().json.context?.trt_version || $json.trt_version, reconciliation_plan_id: $json.plan_id, scenario_batch_id: $('Receive Released TRT').first().json.context?.scenario_batch_id || null, scenario_spec_ids: $('Receive Released TRT').first().json.context?.scenario_spec_ids || [], affected_lines: $('Receive Released TRT').first().json.context?.affected_lines || $('Receive Released TRT').first().json.payload?.affected_lines || [] } }}",
+              "value": "={{ { ...($('Receive Released TRT').first().json.context || {}), release_id: $('Receive Released TRT').first().json.context?.release_id || null, audit_id: $('Receive Released TRT').first().json.context?.audit_id || null, patch_id: $('Receive Released TRT').first().json.context?.patch_id || null, trt_id: $('Receive Released TRT').first().json.context?.trt_id || $json.trt_id, trt_version: $json.trt_version || $('Receive Released TRT').first().json.context?.trt_version, reconciliation_plan_id: $json.plan_id, scenario_batch_id: $('Receive Released TRT').first().json.context?.scenario_batch_id || null, scenario_spec_ids: $('Receive Released TRT').first().json.context?.scenario_spec_ids || [], affected_lines: $('Receive Released TRT').first().json.context?.affected_lines || $('Receive Released TRT').first().json.payload?.affected_lines || [] } }}",
               "type": "object"
             },
             {

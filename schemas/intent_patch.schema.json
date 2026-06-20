@@ -28,9 +28,36 @@
         }
       }
     },
+    "request_types": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "affected_lines": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "message": { "type": "string" },
+    "simulation_config_updates": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "headless": { "type": ["boolean", "null"] },
+        "global_seed": { "type": ["integer", "null"], "minimum": 0 },
+        "reuse_verified_seed": { "type": ["boolean", "null"] },
+        "add_reference_number": { "type": ["integer", "null"], "minimum": 0 },
+        "allowed_overlap_ratio": { "type": ["number", "null"], "minimum": 0 },
+        "chosen_intervention_mode": {
+          "type": ["string", "null"],
+          "enum": ["continue-until-arrival", "immediate-stop", null]
+        },
+        "travel_time": { "type": ["number", "null"], "minimum": 0 },
+        "fix_duration": { "type": ["number", "null"], "minimum": 0 },
+        "resume_delay": { "type": ["number", "null"], "minimum": 0 },
+        "episode_success_requires_reset_cycles": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    },
     "status": {
       "enum": ["DRAFT", "REVIEWED", "VALIDATED", "RELEASED", "REJECTED"]
     }
   }
 }
-

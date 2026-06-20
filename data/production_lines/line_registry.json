@@ -1,0 +1,71 @@
+{
+  "registry_id": "ent_ur5_line_registry_v1",
+  "experiment_id": "ent_surgical_tooling_sorting_demo",
+  "default_scenario_template_id": "surgical_sorting_data_driven_v1",
+  "lines": {
+    "line_1": {
+      "enabled": true,
+      "line_type": "UR5_SORTING_CELL",
+      "env_id": 0,
+      "robot_id": "ur5_line_1",
+      "robot_model": "UR5",
+      "workspace_id": "workspace_line_1",
+      "tray_id": "tray_line_1",
+      "stage_robot_prim_path": "/World/Line1/UR5",
+      "stage_tray_prim_path": "/World/Line1/Tray",
+      "input_area_path": "/World/Line1/Input",
+      "output_area_path": "/World/Line1/Output",
+      "observation_camera_path": "/World/Line1/Camera",
+      "simulation_mode": "PHYSICAL_OR_DIGITAL_TWIN",
+      "physical_available": true
+    },
+    "line_2": {
+      "enabled": true,
+      "line_type": "UR5_SORTING_CELL",
+      "env_id": 1,
+      "robot_id": "ur5_line_2",
+      "robot_model": "UR5",
+      "workspace_id": "workspace_line_2",
+      "tray_id": "tray_line_2",
+      "stage_robot_prim_path": "/World/Line2/UR5",
+      "stage_tray_prim_path": "/World/Line2/Tray",
+      "input_area_path": "/World/Line2/Input",
+      "output_area_path": "/World/Line2/Output",
+      "observation_camera_path": "/World/Line2/Camera",
+      "simulation_mode": "PHYSICAL_OR_DIGITAL_TWIN",
+      "physical_available": true
+    },
+    "line_3": {
+      "enabled": true,
+      "line_type": "UR5_SORTING_CELL",
+      "env_id": 2,
+      "robot_id": "ur5_line_3",
+      "robot_model": "UR5",
+      "workspace_id": "workspace_line_3",
+      "tray_id": "tray_line_3",
+      "stage_robot_prim_path": "/World/Line3/UR5",
+      "stage_tray_prim_path": "/World/Line3/Tray",
+      "input_area_path": "/World/Line3/Input",
+      "output_area_path": "/World/Line3/Output",
+      "observation_camera_path": "/World/Line3/Camera",
+      "simulation_mode": "LOGICAL_ONLY",
+      "physical_available": false
+    },
+    "line_4": {
+      "enabled": true,
+      "line_type": "UR5_SORTING_CELL",
+      "env_id": 3,
+      "robot_id": "ur5_line_4",
+      "robot_model": "UR5",
+      "workspace_id": "workspace_line_4",
+      "tray_id": "tray_line_4",
+      "stage_robot_prim_path": "/World/Line4/UR5",
+      "stage_tray_prim_path": "/World/Line4/Tray",
+      "input_area_path": "/World/Line4/Input",
+      "output_area_path": "/World/Line4/Output",
+      "observation_camera_path": "/World/Line4/Camera",
+      "simulation_mode": "LOGICAL_ONLY",
+      "physical_available": false
+    }
+  }
+}

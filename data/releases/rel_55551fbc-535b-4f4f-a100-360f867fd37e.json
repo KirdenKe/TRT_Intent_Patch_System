@@ -1,0 +1,54 @@
+{
+  "audit_id": "audit-3229284a-b16e-4072-a0a4-6600c89b2608",
+  "base_version": "v3",
+  "candidate_patch": {
+    "base_version": "v3",
+    "intent_text": "line_1 throughput/hr = 230",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_1/kpi/min_throughput_per_hour",
+        "value": 230
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "manual-kpi-230",
+    "reason": "manual version progression verification",
+    "status": "REVIEWED",
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [
+      "/lines/line_1/kpi/min_throughput_per_hour"
+    ],
+    "affected_lines": [
+      "line_1"
+    ],
+    "intent_text": "line_1 throughput/hr = 230",
+    "reason": "manual version progression verification"
+  },
+  "created_at_utc": "2026-06-16T08:23:29.171882Z",
+  "current_trt_path": "/app/data/trt/current_trt.json",
+  "operator_decision": {
+    "comment": "approve 230 throughput",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-06-16T08:23:29.195522Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "manual-kpi-230",
+  "previous_trt_version": "v3",
+  "release_id": "rel_55551fbc-535b-4f4f-a100-360f867fd37e",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "trt_version": "v4",
+  "updated_at_utc": "2026-06-16T08:23:29.195522Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  },
+  "version_path": "/app/data/trt_versions/trt-demo_v4.json"
+}

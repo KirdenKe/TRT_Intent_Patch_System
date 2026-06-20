@@ -15,13 +15,37 @@ from scenario_generation.models import ScenarioTemplate
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = PROJECT_ROOT / "schemas" / "scenario_template_registry.schema.json"
+OPTIONAL_SIMULATION_CONFIG_FIELDS = {
+    "global_seed",
+    "max_seed_trials",
+    "seed_db_path",
+    "reuse_precomputed_layouts",
+}
+
+
+def omit_none_values(value: dict[str, Any]) -> dict[str, Any]:
+    return {key: item for key, item in value.items() if item is not None}
+
+
+def normalize_template_registry(registry: dict[str, Any]) -> dict[str, Any]:
+    normalized = deepcopy(registry)
+    for template in normalized.get("templates", []):
+        config = template.get("simulation_config")
+        if isinstance(config, dict):
+            cleaned = omit_none_values(config)
+            for field in OPTIONAL_SIMULATION_CONFIG_FIELDS:
+                if cleaned.get(field) is None:
+                    cleaned.pop(field, None)
+            template["simulation_config"] = cleaned
+    return normalized
 
 
 def load_template_registry(path: str | Path) -> dict[str, Any]:
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    return normalize_template_registry(json.loads(Path(path).read_text(encoding="utf-8")))
 
 
 def validate_template_registry(registry: dict[str, Any]) -> None:
+    registry = normalize_template_registry(registry)
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     errors = sorted(Draft202012Validator(schema).iter_errors(registry), key=lambda error: list(error.path))
     if errors:
@@ -43,4 +67,3 @@ def get_template(registry: dict[str, Any], template_id: str | None = None) -> Sc
         if template["template_id"] == selected_id:
             return deepcopy(template)
     raise TemplateRegistryError(f"Scenario template not found: {selected_id}")
-

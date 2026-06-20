@@ -1,28 +1,92 @@
 {
-  "state_records": [
-    {
+  "active_trt_id": "trt-demo",
+  "active_trt_version": "v1",
+  "experiment_id": "ent_surgical_tooling_sorting_demo",
+  "lines": {
+    "line_1": {
+      "active_set_id": "ENT_SURGICAL_TOOLING_SET",
       "checkpoint": "NONE",
+      "completed_tool_ids": [],
       "current_instruments": [],
       "current_task": null,
+      "entanglement": {
+        "detected": false,
+        "requires_operator": false,
+        "severity": null,
+        "tool_ids": []
+      },
       "last_exception": null,
-      "line_id": "line_1",
-      "locked_resources": [
-        "robot_arm_1"
-      ],
+      "locked_resources": [],
       "mode": "RUNNING",
-      "wip_count": 0
+      "pending_tool_ids": [],
+      "robot_id": "ur5_line_1",
+      "selected_tool_ids": [],
+      "wip_count": 0,
+      "workspace_id": "workspace_line_1"
     },
-    {
+    "line_2": {
+      "active_set_id": "ENT_SURGICAL_TOOLING_SET",
       "checkpoint": "NONE",
+      "completed_tool_ids": [],
       "current_instruments": [],
       "current_task": null,
+      "entanglement": {
+        "detected": false,
+        "requires_operator": false,
+        "severity": null,
+        "tool_ids": []
+      },
       "last_exception": null,
-      "line_id": "line_2",
-      "locked_resources": [
-        "robot_arm_2"
-      ],
+      "locked_resources": [],
       "mode": "RUNNING",
-      "wip_count": 0
+      "pending_tool_ids": [],
+      "robot_id": "ur5_line_2",
+      "selected_tool_ids": [],
+      "wip_count": 0,
+      "workspace_id": "workspace_line_2"
+    },
+    "line_3": {
+      "active_set_id": "ENT_SURGICAL_TOOLING_SET",
+      "checkpoint": "NONE",
+      "completed_tool_ids": [],
+      "current_instruments": [],
+      "current_task": null,
+      "entanglement": {
+        "detected": false,
+        "requires_operator": false,
+        "severity": null,
+        "tool_ids": []
+      },
+      "last_exception": null,
+      "locked_resources": [],
+      "mode": "RUNNING",
+      "pending_tool_ids": [],
+      "robot_id": "ur5_line_3",
+      "selected_tool_ids": [],
+      "wip_count": 0,
+      "workspace_id": "workspace_line_3"
+    },
+    "line_4": {
+      "active_set_id": "ENT_SURGICAL_TOOLING_SET",
+      "checkpoint": "NONE",
+      "completed_tool_ids": [],
+      "current_instruments": [],
+      "current_task": null,
+      "entanglement": {
+        "detected": false,
+        "requires_operator": false,
+        "severity": null,
+        "tool_ids": []
+      },
+      "last_exception": null,
+      "locked_resources": [],
+      "mode": "RUNNING",
+      "pending_tool_ids": [],
+      "robot_id": "ur5_line_4",
+      "selected_tool_ids": [],
+      "wip_count": 0,
+      "workspace_id": "workspace_line_4"
     }
-  ]
+  },
+  "state_version": "state-demo-v1"
 }

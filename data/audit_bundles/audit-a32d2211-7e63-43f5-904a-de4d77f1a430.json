@@ -1,0 +1,146 @@
+{
+  "audit_id": "audit-a32d2211-7e63-43f5-904a-de4d77f1a430",
+  "intent_text": "i want to set all line's throughput/hr to 150",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/tooling_policy/required_scope",
+      "value": "NONE"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/selected_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/excluded_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/allowed_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/excluded_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/min_throughput_per_hour",
+      "value": 150
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/tooling_policy/required_scope",
+      "value": "NONE"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/selected_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/excluded_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/allowed_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/excluded_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/kpi/min_throughput_per_hour",
+      "value": 150
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/tooling_policy/required_scope",
+      "value": "NONE"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/selected_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/excluded_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/allowed_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/excluded_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/kpi/min_throughput_per_hour",
+      "value": 150
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/tooling_policy/required_scope",
+      "value": "NONE"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/selected_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/excluded_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/allowed_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/excluded_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/kpi/min_throughput_per_hour",
+      "value": 150
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1781628707632",
+  "reason": "test for milestone 9",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-16T16:51:57.896983Z",
+  "trt_after_hash": "9094a368ec6b671fafbea8e36f8d34828b0c201f46631fc5038b51473ec95172",
+  "trt_after_version": "v12",
+  "trt_before_hash": "267d4cd075666c3d12c4b5574e7ed487bef9c5ea28f1266c89989e844228a71d",
+  "trt_before_version": "v11",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

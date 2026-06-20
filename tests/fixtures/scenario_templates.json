@@ -13,12 +13,13 @@
       },
       "simulation_config": {
         "num_envs": 4,
-        "headless": true,
-        "global_seed": 123,
+        "headless": false,
         "layout_source": "auto",
         "episode_success_requires_reset_cycles": 1,
-        "max_seed_trials": 1,
-        "add_reference_number": 6
+        "add_reference_number": 27,
+        "allowed_overlap_ratio": 0.99,
+        "reuse_verified_seed": true,
+        "chosen_intervention_mode": "continue-until-arrival"
       },
       "line_bindings": [
         {
@@ -31,8 +32,8 @@
         }
       ],
       "operator_model": {
-        "travel_time": 2.0,
-        "fix_duration": 4.0,
+        "travel_time": 5.0,
+        "fix_duration": 8.0,
         "resume_delay": 0.5
       },
       "abnormal_event_policy": {

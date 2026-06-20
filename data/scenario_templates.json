@@ -1,5 +1,5 @@
 {
-  "default_template_id": "surgical_sorting_v1",
+  "default_template_id": "surgical_sorting_data_driven_v1",
   "templates": [
     {
       "template_id": "surgical_sorting_v1",
@@ -13,12 +13,16 @@
       },
       "simulation_config": {
         "num_envs": 4,
-        "headless": true,
-        "global_seed": 123,
+        "headless": false,
         "layout_source": "auto",
         "episode_success_requires_reset_cycles": 1,
-        "max_seed_trials": 1,
-        "add_reference_number": 6
+        "add_reference_number": 27,
+        "allowed_overlap_ratio": 0.99,
+        "reuse_verified_seed": true,
+        "chosen_intervention_mode": "continue-until-arrival",
+        "travel_time": 5.0,
+        "fix_duration": 8.0,
+        "resume_delay": 0.5
       },
       "line_bindings": [
         {
@@ -31,8 +35,8 @@
         }
       ],
       "operator_model": {
-        "travel_time": 2.0,
-        "fix_duration": 4.0,
+        "travel_time": 5.0,
+        "fix_duration": 8.0,
         "resume_delay": 0.5
       },
       "abnormal_event_policy": {
@@ -47,6 +51,158 @@
       },
       "assertions": {
         "use_existing_validation_module": true
+      }
+    },
+    {
+      "template_id": "surgical_sorting_4line_v1",
+      "scene_template": "pick_up_example.py",
+      "workspace_contract": {
+        "producer_workspace": "governance",
+        "consumer_workspace": "isaac_sim",
+        "exchange_mode": "file",
+        "scenario_specs_dir": "outputs/scenario_specs",
+        "run_artifacts_dir": "outputs/run_artifacts"
+      },
+      "simulation_config": {
+        "num_envs": 4,
+        "headless": false,
+        "layout_source": "auto",
+        "episode_success_requires_reset_cycles": 1,
+        "add_reference_number": 27,
+        "template_scope": "FULL_SCENE",
+        "allowed_overlap_ratio": 0.99,
+        "reuse_verified_seed": true,
+        "chosen_intervention_mode": "continue-until-arrival",
+        "travel_time": 5.0,
+        "fix_duration": 8.0,
+        "resume_delay": 0.5
+      },
+      "line_bindings": [
+        {
+          "line_id": "line_1",
+          "env_id": 0,
+          "enabled": true,
+          "simulation_mode": "ISAAC_UR5",
+          "robot_id": "ur5_line_1",
+          "workspace_id": "workspace_line_1",
+          "stage_robot_prim_path": "/World/Envs/Env0",
+          "stage_tray_prim_path": null,
+          "tray_id": "tray_line_1",
+          "input_area_path": "/World/Envs/Env0/InputArea",
+          "output_area_path": "/World/Envs/Env0/OutputArea",
+          "observation_camera_path": "/World/Envs/Env0/Camera"
+        },
+        {
+          "line_id": "line_2",
+          "env_id": 1,
+          "enabled": true,
+          "simulation_mode": "ISAAC_UR5",
+          "robot_id": "ur5_line_2",
+          "workspace_id": "workspace_line_2",
+          "stage_robot_prim_path": "/World/Envs/Env1",
+          "stage_tray_prim_path": null,
+          "tray_id": "tray_line_2",
+          "input_area_path": "/World/Envs/Env1/InputArea",
+          "output_area_path": "/World/Envs/Env1/OutputArea",
+          "observation_camera_path": "/World/Envs/Env1/Camera"
+        },
+        {
+          "line_id": "line_3",
+          "env_id": 2,
+          "enabled": false,
+          "simulation_mode": "LOGICAL_ONLY",
+          "robot_id": "ur5_line_3",
+          "workspace_id": "workspace_line_3",
+          "stage_robot_prim_path": "/World/Envs/Env2",
+          "stage_tray_prim_path": null,
+          "tray_id": "tray_line_3",
+          "input_area_path": "/World/Envs/Env2/InputArea",
+          "output_area_path": "/World/Envs/Env2/OutputArea",
+          "observation_camera_path": "/World/Envs/Env2/Camera"
+        },
+        {
+          "line_id": "line_4",
+          "env_id": 3,
+          "enabled": false,
+          "simulation_mode": "LOGICAL_ONLY",
+          "robot_id": "ur5_line_4",
+          "workspace_id": "workspace_line_4",
+          "stage_robot_prim_path": "/World/Envs/Env3",
+          "stage_tray_prim_path": null,
+          "tray_id": "tray_line_4",
+          "input_area_path": "/World/Envs/Env3/InputArea",
+          "output_area_path": "/World/Envs/Env3/OutputArea",
+          "observation_camera_path": "/World/Envs/Env3/Camera"
+        }
+      ],
+      "operator_model": {
+        "travel_time": 5.0,
+        "fix_duration": 8.0,
+        "resume_delay": 0.5
+      },
+      "abnormal_event_policy": {
+        "entanglement": {
+          "generation_mode": "implicit_runtime_detection",
+          "enabled": true,
+          "allowed_overlap_ratio": 0.25,
+          "special_tooling_markers": [
+            "entanglement_candidate_tooling"
+          ]
+        }
+      },
+      "assertions": {
+        "use_existing_validation_module": true,
+        "template_binding_policy": "FULL_SCENE_TEMPLATE_MUST_BIND_EVERY_TRT_LINE"
+      }
+    },
+    {
+      "template_id": "surgical_sorting_data_driven_v1",
+      "scene_template": "pick_up_example.py",
+      "workspace_contract": {
+        "producer_workspace": "governance",
+        "consumer_workspace": "isaac_sim",
+        "exchange_mode": "file",
+        "scenario_specs_dir": "outputs/scenario_specs",
+        "run_artifacts_dir": "outputs/run_artifacts"
+      },
+      "simulation_config": {
+        "num_envs": 4,
+        "headless": false,
+        "layout_source": "auto",
+        "episode_success_requires_reset_cycles": 1,
+        "add_reference_number": 27,
+        "template_scope": "DATA_DRIVEN",
+        "full_scene_required": false,
+        "supported_line_type_values": [
+          "UR5_SORTING_CELL"
+        ],
+        "line_binding_source": "line_registry",
+        "allowed_overlap_ratio": 0.99,
+        "reuse_verified_seed": true,
+        "chosen_intervention_mode": "continue-until-arrival",
+        "travel_time": 5.0,
+        "fix_duration": 8.0,
+        "resume_delay": 0.5
+      },
+      "line_bindings": [],
+      "operator_model": {
+        "travel_time": 5.0,
+        "fix_duration": 8.0,
+        "resume_delay": 0.5
+      },
+      "abnormal_event_policy": {
+        "entanglement": {
+          "generation_mode": "implicit_runtime_detection",
+          "enabled": true,
+          "allowed_overlap_ratio": 0.25,
+          "special_tooling_markers": [
+            "entanglement_candidate_tooling"
+          ]
+        }
+      },
+      "assertions": {
+        "use_existing_validation_module": true,
+        "line_binding_source": "line_registry"
       }
     }
   ]

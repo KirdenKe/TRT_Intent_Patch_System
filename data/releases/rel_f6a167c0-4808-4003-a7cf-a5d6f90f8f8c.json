@@ -1,0 +1,85 @@
+{
+  "audit_id": "audit-64520d92-650d-411d-8999-de8ff911804c",
+  "base_version": "v16",
+  "candidate_patch": {
+    "base_version": "v16",
+    "intent_text": "remove the knife handles from production lines 3 and 4",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_3/selected_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/excluded_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/required_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/selected_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/excluded_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/required_tool_ids",
+        "value": []
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "patch-1781689461021",
+    "reason": "test for milestone 9",
+    "status": "REVIEWED",
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [
+      "/lines/line_3/selected_tool_ids",
+      "/lines/line_3/excluded_tool_ids",
+      "/lines/line_3/required_tool_ids",
+      "/lines/line_4/selected_tool_ids",
+      "/lines/line_4/excluded_tool_ids",
+      "/lines/line_4/required_tool_ids"
+    ],
+    "affected_lines": [
+      "line_3",
+      "line_4"
+    ],
+    "intent_text": "remove the knife handles from production lines 3 and 4",
+    "reason": "test for milestone 9"
+  },
+  "created_at_utc": "2026-06-17T09:44:28.603420Z",
+  "current_trt_path": "/app/data/trt/current_trt.json",
+  "operator_decision": {
+    "comment": "Test for the Milestone 9",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-06-17T09:44:28.646478Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1781689461021",
+  "previous_trt_version": "v16",
+  "release_id": "rel_f6a167c0-4808-4003-a7cf-a5d6f90f8f8c",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "trt_version": "v17",
+  "updated_at_utc": "2026-06-17T09:44:28.646478Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  },
+  "version_path": "/app/data/trt_versions/trt-demo_v17.json"
+}

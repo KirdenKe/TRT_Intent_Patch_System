@@ -174,3 +174,31 @@ def test_deterministic_precheck_detects_invalid_intents():
     assert "read_only_state_request" in readonly["detected_request_types"]
     assert conflict["action"] == "NEEDS_CLARIFICATION"
     assert "conflicting_goal" in conflict["detected_request_types"]
+
+
+def test_deterministic_precheck_allows_kpi_throughput_without_goal():
+    current_trt = {"lines": {"line_1": {}, "line_2": {}}}
+
+    precheck = deterministic_intent_precheck("set line 1 throughput/hr to 150", current_trt)
+
+    assert precheck["action"] == "PROPOSE_PATCH"
+    assert "KPI_LIMIT_UPDATE" in precheck["detected_request_types"]
+    assert "missing_goal" not in precheck["detected_request_types"]
+    assert precheck["clarification_questions"] == []
+
+
+def test_deterministic_precheck_rejects_restricted_simulation_settings():
+    current_trt = {"lines": {"line_1": {}, "line_2": {}}}
+
+    cases = [
+        ("set line 1 layout_source to database", "layout_source"),
+        ("set line 1 max_seed_trials to 5", "max_seed_trials"),
+        ("set line 1 seed_db_path to c:/tmp/seed.sqlite", "seed_db_path"),
+        ("set line 1 reuse_precomputed_layouts true", "reuse_precomputed_layouts"),
+    ]
+
+    for intent, term in cases:
+        precheck = deterministic_intent_precheck(intent, current_trt)
+        assert precheck["action"] == "UNSUPPORTED_REQUEST"
+        assert "restricted_simulation_setting" in precheck["detected_request_types"]
+        assert term in precheck["unsupported_terms"]

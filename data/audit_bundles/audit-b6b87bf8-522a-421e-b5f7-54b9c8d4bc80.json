@@ -1,0 +1,25 @@
+{
+  "audit_id": "audit-b6b87bf8-522a-421e-b5f7-54b9c8d4bc80",
+  "intent_text": "adjust the targets for all production lines to the ent surgical tooling set and the number of tooling on the production line so that only 6 remain",
+  "operations": [],
+  "operator_id": "op_001",
+  "patch_id": "patch-1781976096504",
+  "reason": "test for milestone 9",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-20T17:21:48.483258Z",
+  "trt_after_hash": "3b657102ed1830751ff81d4df3e9ee593d02ec8e10d1c7c2423e3d8b9c4aa483",
+  "trt_after_version": "v34",
+  "trt_before_hash": "c0c1b2e5e63ff598409a2383ebfc4e30ce638a16fb8199c75e99a2ee26da71c5",
+  "trt_before_version": "v33",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

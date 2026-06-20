@@ -1,0 +1,58 @@
+{
+  "lines": {
+    "line_1": {
+      "abnormal_strategy": "CONTINUE_FEASIBLE_TASKS",
+      "allowed_instruments": [
+        "SCISSORS",
+        "FORCEPS",
+        "CLAMPS",
+        "RETRACTOR"
+      ],
+      "excluded_instruments": [],
+      "goal": "ROUTINE_CLASSIFICATION",
+      "kpi": {
+        "deadline_minutes": null,
+        "max_downtime_seconds": null,
+        "min_throughput_per_hour": 120
+      },
+      "priority": 5,
+      "state": {
+        "current_task": "sort_set",
+        "last_exception": null,
+        "mode": "RUNNING",
+        "wip_count": 4
+      },
+      "tooling_policy": {
+        "required_scope": "ALL_SUPPORTED_INSTRUMENTS"
+      }
+    },
+    "line_2": {
+      "abnormal_strategy": "STOP_LINE",
+      "allowed_instruments": [
+        "SCISSORS",
+        "FORCEPS",
+        "CLAMPS",
+        "RETRACTOR"
+      ],
+      "excluded_instruments": [],
+      "goal": "ROUTINE_CLASSIFICATION",
+      "kpi": {
+        "deadline_minutes": null,
+        "max_downtime_seconds": null,
+        "min_throughput_per_hour": 80
+      },
+      "priority": 5,
+      "state": {
+        "current_task": null,
+        "last_exception": null,
+        "mode": "RUNNING",
+        "wip_count": 0
+      },
+      "tooling_policy": {
+        "required_scope": "ALL_SUPPORTED_INSTRUMENTS"
+      }
+    }
+  },
+  "trt_id": "trt-demo",
+  "version": "v28"
+}

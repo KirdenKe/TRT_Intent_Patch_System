@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import UTC, datetime
 import logging
 from typing import Any
+from uuid import uuid4
 
 import jsonpatch
 
@@ -16,6 +18,10 @@ from trt_core.validator import default_validation_results, migrate_legacy_toolin
 
 
 logger = logging.getLogger(__name__)
+
+
+def _now() -> str:
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def _line_tooling_policies(trt: dict[str, Any]) -> dict[str, Any]:
@@ -37,7 +43,7 @@ def validate_intent_patch(intent_patch: IntentPatch | dict[str, Any], repository
         try:
             patched = jsonpatch.apply_patch(deepcopy(current_trt), intent_patch.get("operations", []), in_place=False)
             patched = migrate_legacy_tooling_policy(patched)
-            patched["version"] = repo.next_version(current_trt["version"])
+            patched["version"] = repo.next_released_version(current_trt["trt_id"])
             schema_reasons = validate_trt_schema(patched)
             semantic_reasons = validate_semantics(patched) if not schema_reasons else []
             if schema_reasons:
@@ -58,17 +64,29 @@ def validate_intent_patch(intent_patch: IntentPatch | dict[str, Any], repository
     }
 
 
-def apply_intent_patch(intent_patch: IntentPatch | dict[str, Any], repository: TRTRepository | None = None) -> dict[str, Any]:
+def apply_intent_patch(
+    intent_patch: IntentPatch | dict[str, Any],
+    repository: TRTRepository | None = None,
+    *,
+    release_id: str | None = None,
+) -> dict[str, Any]:
     repo = repository or TRTRepository()
     current_trt = migrate_legacy_tooling_policy(repo.get_current_trt(intent_patch.get("trt_id")))
     validation_results, rejection_reasons = validate_firewall(intent_patch, current_trt)
     patched_trt: dict[str, Any] | None = None
+    save_result: dict[str, Any] | None = None
 
     if all(validation_results.values()):
         try:
             patched_trt = jsonpatch.apply_patch(deepcopy(current_trt), intent_patch.get("operations", []), in_place=False)
             patched_trt = migrate_legacy_tooling_policy(patched_trt)
-            patched_trt["version"] = repo.next_version(current_trt["version"])
+            next_version = repo.next_released_version(current_trt["trt_id"])
+            patched_trt["trt_id"] = current_trt["trt_id"]
+            patched_trt["version"] = next_version
+            patched_trt["previous_version"] = current_trt["version"]
+            patched_trt["released_at"] = _now()
+            if release_id:
+                patched_trt["release_id"] = release_id
             schema_reasons = validate_trt_schema(patched_trt)
             semantic_reasons = validate_semantics(patched_trt) if not schema_reasons else []
             if schema_reasons:
@@ -85,8 +103,9 @@ def apply_intent_patch(intent_patch: IntentPatch | dict[str, Any], repository: T
             patched_trt = None
 
     accepted = all(validation_results.values()) and patched_trt is not None
+    audit_id = f"audit-{uuid4()}"
     if accepted:
-        repo.save_trt(patched_trt)
+        patched_trt["audit_id"] = audit_id
 
     audit_bundle = build_audit_bundle(
         intent_patch=intent_patch,
@@ -95,13 +114,19 @@ def apply_intent_patch(intent_patch: IntentPatch | dict[str, Any], repository: T
         status="ACCEPTED" if accepted else "REJECTED",
         validation_results=validation_results,
         rejection_reasons=rejection_reasons,
+        audit_id=audit_id,
     )
+    if accepted:
+        save_result = repo.save_released_trt_version(patched_trt)
     repo.save_audit_bundle(audit_bundle)
 
     return {
         "status": audit_bundle["status"],
         "audit_id": audit_bundle["audit_id"],
         "trt_version": audit_bundle.get("trt_after_version") or audit_bundle["trt_before_version"],
+        "previous_trt_version": audit_bundle["trt_before_version"],
+        "version_path": (save_result or {}).get("version_path"),
+        "current_trt_path": (save_result or {}).get("current_trt_path"),
         "validation_results": validation_results,
         "rejection_reasons": rejection_reasons,
         "audit_bundle": audit_bundle,

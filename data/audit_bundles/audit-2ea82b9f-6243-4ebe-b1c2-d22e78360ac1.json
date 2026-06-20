@@ -1,0 +1,56 @@
+{
+  "audit_id": "audit-2ea82b9f-6243-4ebe-b1c2-d22e78360ac1",
+  "intent_text": "remove the knife handles from production lines 3 and 4",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_3/selected_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/excluded_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/required_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/selected_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/excluded_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/required_tool_ids",
+      "value": []
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1781686414719",
+  "reason": "test for milestone 9",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-17T08:53:46.470242Z",
+  "trt_after_hash": "cba5383bd8cafc585a4970a59e7f0f5431f65985ba9e6767057350c08b9b2096",
+  "trt_after_version": "v16",
+  "trt_before_hash": "98260ee17e936fabe24198a102c85351e1570ccf3947546baefeb6a3cfea8e3c",
+  "trt_before_version": "v15",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

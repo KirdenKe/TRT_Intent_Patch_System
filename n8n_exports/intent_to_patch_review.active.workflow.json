@@ -1,0 +1,615 @@
+{
+    "updatedAt":  "2026-05-25T10:08:52.462Z",
+    "createdAt":  "2026-05-25T10:08:52.462Z",
+    "id":  "IntentToPatchReviewDemo",
+    "name":  "Intent to Patch Review Orchestration",
+    "description":  null,
+    "active":  false,
+    "isArchived":  false,
+    "nodes":  [
+                  {
+                      "parameters":  {
+
+                                     },
+                      "id":  "1e9e2478-9796-4ea9-9634-cb3f34d85c79",
+                      "name":  "Receive Operator Intent",
+                      "type":  "n8n-nodes-base.executeWorkflowTrigger",
+                      "typeVersion":  1,
+                      "position":  [
+                                       0,
+                                       0
+                                   ],
+                      "notes":  "Sub-workflow trigger. Expected input keeps the webhook-compatible shape: { body: { operator_id, intent_text, reason } }."
+                  },
+                  {
+                      "parameters":  {
+                                         "url":  "http://trt-api:8000/intent/context",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "00a461ce-77dc-4d14-8434-40fda389b124",
+                      "name":  "Get Intent Context",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       260,
+                                       0
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "http://192.168.50.168:29987/v1/chat/completions",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "Content-Type",
+                                                                                         "value":  "application/json"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={{ { model: \u0027cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit\u0027, messages: [ { role: \u0027system\u0027, content: \u0027Extract compact domain intent JSON only. Do not generate patch IDs, TRT IDs, status, operations, or JSON Patch. Allowed lines: line_1,line_2,line_3,line_4. Allowed goals: ROUTINE_CLASSIFICATION,TRAUMA_SET_PRIORITY,BACKLOG_CLEARING. Allowed instruments: SCISSORS,FORCEPS,CLAMPS,RETRACTOR. Allowed abnormal strategies: STOP_LINE,CONTINUE_FEASIBLE_TASKS,ASK_OPERATOR. Tooling required_scope values: ALLOWED_INSTRUMENTS,ALL_SUPPORTED_INSTRUMENTS,SELECTED_TOOLING,NONE. target_scope: single line=SINGLE_LINE, several lines=MULTIPLE_LINES, all/every/each production line=ALL_LINES with target_lines=[]. Action rules: PROPOSE_PATCH only for supported goal, instrument scope, KPI limit, tooling policy, abnormal strategy, or multi-line policy updates; otherwise NEEDS_CLARIFICATION or UNSUPPORTED_REQUEST. TASK_GOAL_UPDATE requires goal. KPI_LIMIT_UPDATE, TOOLING_POLICY_UPDATE, INSTRUMENT_SCOPE_UPDATE, and PRIORITY_UPDATE do not require goal. KPI_LIMIT_UPDATE requests do not require goal. throughput/hr, throughput per hour, min throughput, minimum throughput, or KPI throughput =\u003e kpi_updates.min_throughput_per_hour=\u003cinteger\u003e and goal=null unless the user explicitly asks for a supported goal. highest priority/highest level priority/priority to the highest level =\u003e priority=5. lowest priority =\u003e priority=1. Do not map priority language to goal. Do not set goal=TRAUMA_SET_PRIORITY unless the user explicitly asks for Trauma Set priority. no deadline =\u003e kpi_updates.deadline_minutes=null. no maximum downtime limit =\u003e kpi_updates.max_downtime_seconds=null. allowed_instruments is selected tooling for the strategy, not robot capability. allowed_instruments=[] means no tooling selected. allowed_instruments=[\"SCISSORS\",\"FORCEPS\",\"CLAMPS\",\"RETRACTOR\"] means all supported tooling selected. excluded_instruments=[] means no explicit exclusions. select no tooling or do not want all tooling selected =\u003e tooling_policy.required_scope=NONE, allowed_instruments=[], excluded_instruments=[]. select all tooling =\u003e allowed_instruments=[\"SCISSORS\",\"FORCEPS\",\"CLAMPS\",\"RETRACTOR\"], excluded_instruments=[]. all tooling required by each production line or mark all tooling required for each production line as mandatory =\u003e tooling_policy.required_scope=ALL_SUPPORTED_INSTRUMENTS, allowed_instruments=[\"SCISSORS\",\"FORCEPS\",\"CLAMPS\",\"RETRACTOR\"], excluded_instruments=[]. all supported instruments required on every line =\u003e tooling_policy.required_scope=ALL_SUPPORTED_INSTRUMENTS, allowed_instruments=[\"SCISSORS\",\"FORCEPS\",\"CLAMPS\",\"RETRACTOR\"], excluded_instruments=[]. Never use allowed_instruments=[] with tooling_policy.required_scope=ALL_SUPPORTED_INSTRUMENTS. Entanglement is not an instrument exclusion; use abnormal_strategy for tangled tooling events.\u0027 }, { role: \u0027user\u0027, content: `Operator intent: ${$(\u0027Receive Operator Intent\u0027).first().json.body.intent_text}. Return action,line_id,target_scope,target_lines,goal,priority,allowed_instruments,excluded_instruments,kpi_updates,tooling_policy,abnormal_strategy,clarification_questions,unsupported_terms,detected_request_types,request_types.` } ], temperature: 0.0, max_tokens: 768, structured_outputs: { json: $(\u0027Get Intent Context\u0027).first().json.llm_candidate_generation_schema } } }}",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "e8f2a2d8-5023-43a5-93f1-b998f0da2168",
+                      "name":  "LLM Generate Intent Patch",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       520,
+                                       0
+                                   ],
+                      "notes":  "Calls vLLM for a domain-level candidate only. It does not generate JSON Patch operations and does not validate semantics."
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "const choice = $json.choices?.[0];\nconst content = choice?.message?.content;\nconst finishReason = choice?.finish_reason;\nconst webhookBody = $(\u0027Receive Operator Intent\u0027).first().json.body || {};\nconst context = $(\u0027Get Intent Context\u0027).first().json;\n\nfunction retryOutput(reason) {\n  return [{\n    json: {\n      retry_needed: true,\n      llm_action: \u0027RETRY_INTENT_GENERATION\u0027,\n      retry_reason: reason,\n      llm_raw_content: content || null,\n      llm_finish_reason: finishReason,\n      llm_usage: $json.usage,\n      errors: [reason]\n    }\n  }];\n}\n\nfunction buildCandidate(extracted) {\n  return {\n    patch_id: `patch-${Date.now()}`,\n    trt_id: context.current_trt.trt_id,\n    base_version: context.current_trt.version,\n    operator_id: webhookBody.operator_id,\n    intent_text: webhookBody.intent_text,\n    reason: webhookBody.reason,\n    line_id: extracted.line_id,\n    target_scope: extracted.target_scope || (extracted.line_id ? \u0027SINGLE_LINE\u0027 : \u0027SINGLE_LINE\u0027),\n    target_lines: extracted.target_lines || [],\n    request_types: extracted.request_types || extracted.detected_request_types || [],\n    goal: extracted.goal,\n    priority: extracted.priority ?? null,\n    allowed_instruments: extracted.allowed_instruments ?? null,\n    excluded_instruments: extracted.excluded_instruments ?? null,\n    kpi_updates: extracted.kpi_updates || {},\n    tooling_policy: extracted.tooling_policy || null,\n    abnormal_strategy: extracted.abnormal_strategy || null,\n    status: \u0027REVIEWED\u0027\n  };\n}\n\nif (finishReason === \u0027length\u0027) {\n  return retryOutput(\u0027Intent candidate generation reached max_tokens before producing complete JSON.\u0027);\n}\nif (!content) {\n  return retryOutput(\u0027vLLM response did not include choices[0].message.content.\u0027);\n}\n\nlet extracted;\ntry {\n  extracted = typeof content === \u0027string\u0027 ? JSON.parse(content) : content;\n} catch (error) {\n  return retryOutput(`Could not parse vLLM candidate JSON: ${error.message}`);\n}\n\nconst candidate = buildCandidate(extracted);\nconst rejection_reasons = extracted.action === \u0027PROPOSE_PATCH\u0027 ? [] : [extracted.action, ...(extracted.clarification_questions || []), ...(extracted.unsupported_terms || [])];\nreturn [{ json: { retry_needed: false, candidate, llm_extracted: extracted, llm_action: extracted.action, rejection_reasons, llm_raw_content: content, llm_finish_reason: finishReason, llm_usage: $json.usage, errors: [] } }];"
+                                     },
+                      "id":  "1558ffdf-9b06-4618-bdc0-0ec68275c1fd",
+                      "name":  "Normalize Candidate Patch",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       780,
+                                       0
+                                   ],
+                      "notes":  "Parses the first structured vLLM response. Truncated or incomplete JSON is retried automatically once."
+                  },
+                  {
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+                                                                            "caseSensitive":  true,
+                                                                            "leftValue":  "",
+                                                                            "typeValidation":  "strict",
+                                                                            "version":  2
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "id":  "8ad8aa45-d15c-4a64-a3d0-82f7a8e8b181",
+                                                                                   "leftValue":  "={{ $json.retry_needed }}",
+                                                                                   "rightValue":  true,
+                                                                                   "operator":  {
+                                                                                                    "type":  "boolean",
+                                                                                                    "operation":  "true",
+                                                                                                    "singleValue":  true
+                                                                                                }
+                                                                               }
+                                                                           ],
+                                                            "combinator":  "and"
+                                                        },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "f98d69d9-013e-451a-8e27-7d07348bb70a",
+                      "name":  "Intent Candidate Needs Retry?",
+                      "type":  "n8n-nodes-base.if",
+                      "typeVersion":  2.2,
+                      "position":  [
+                                       1040,
+                                       0
+                                   ],
+                      "notes":  "Retries once when the first intent candidate response is truncated or not complete JSON."
+                  },
+                  {
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "http://192.168.50.168:29987/v1/chat/completions",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "Content-Type",
+                                                                                         "value":  "application/json"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={{ { model: \u0027cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit\u0027, messages: [ { role: \u0027system\u0027, content: \u0027Extract compact domain intent JSON only. Do not generate patch IDs, TRT IDs, status, operations, or JSON Patch. Allowed lines: line_1,line_2,line_3,line_4. Allowed goals: ROUTINE_CLASSIFICATION,TRAUMA_SET_PRIORITY,BACKLOG_CLEARING. Allowed instruments: SCISSORS,FORCEPS,CLAMPS,RETRACTOR. Allowed abnormal strategies: STOP_LINE,CONTINUE_FEASIBLE_TASKS,ASK_OPERATOR. Tooling required_scope values: ALLOWED_INSTRUMENTS,ALL_SUPPORTED_INSTRUMENTS,SELECTED_TOOLING,NONE. target_scope: single line=SINGLE_LINE, several lines=MULTIPLE_LINES, all/every/each production line=ALL_LINES with target_lines=[]. Action rules: PROPOSE_PATCH only for supported goal, instrument scope, KPI limit, tooling policy, abnormal strategy, or multi-line policy updates; otherwise NEEDS_CLARIFICATION or UNSUPPORTED_REQUEST. TASK_GOAL_UPDATE requires goal. KPI_LIMIT_UPDATE, TOOLING_POLICY_UPDATE, INSTRUMENT_SCOPE_UPDATE, and PRIORITY_UPDATE do not require goal. KPI_LIMIT_UPDATE requests do not require goal. throughput/hr, throughput per hour, min throughput, minimum throughput, or KPI throughput =\u003e kpi_updates.min_throughput_per_hour=\u003cinteger\u003e and goal=null unless the user explicitly asks for a supported goal. highest priority/highest level priority/priority to the highest level =\u003e priority=5. lowest priority =\u003e priority=1. Do not map priority language to goal. Do not set goal=TRAUMA_SET_PRIORITY unless the user explicitly asks for Trauma Set priority. no deadline =\u003e kpi_updates.deadline_minutes=null. no maximum downtime limit =\u003e kpi_updates.max_downtime_seconds=null. allowed_instruments is selected tooling for the strategy, not robot capability. allowed_instruments=[] means no tooling selected. allowed_instruments=[\"SCISSORS\",\"FORCEPS\",\"CLAMPS\",\"RETRACTOR\"] means all supported tooling selected. excluded_instruments=[] means no explicit exclusions. select no tooling or do not want all tooling selected =\u003e tooling_policy.required_scope=NONE, allowed_instruments=[], excluded_instruments=[]. select all tooling =\u003e allowed_instruments=[\"SCISSORS\",\"FORCEPS\",\"CLAMPS\",\"RETRACTOR\"], excluded_instruments=[]. all tooling required by each production line or mark all tooling required for each production line as mandatory =\u003e tooling_policy.required_scope=ALL_SUPPORTED_INSTRUMENTS, allowed_instruments=[\"SCISSORS\",\"FORCEPS\",\"CLAMPS\",\"RETRACTOR\"], excluded_instruments=[]. all supported instruments required on every line =\u003e tooling_policy.required_scope=ALL_SUPPORTED_INSTRUMENTS, allowed_instruments=[\"SCISSORS\",\"FORCEPS\",\"CLAMPS\",\"RETRACTOR\"], excluded_instruments=[]. Never use allowed_instruments=[] with tooling_policy.required_scope=ALL_SUPPORTED_INSTRUMENTS. Entanglement is not an instrument exclusion; use abnormal_strategy for tangled tooling events.\u0027 }, { role: \u0027user\u0027, content: `Operator intent: ${$(\u0027Receive Operator Intent\u0027).first().json.body.intent_text}. Return action,line_id,target_scope,target_lines,goal,priority,allowed_instruments,excluded_instruments,kpi_updates,tooling_policy,abnormal_strategy,clarification_questions,unsupported_terms,detected_request_types,request_types.` } ], temperature: 0.0, max_tokens: 1024, structured_outputs: { json: $(\u0027Get Intent Context\u0027).first().json.llm_candidate_generation_schema } } }}",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "8e2cb239-c221-483a-a9a2-06bbf03aa57b",
+                      "name":  "Retry LLM Generate Intent Patch",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       1300,
+                                       120
+                                   ],
+                      "notes":  "One automatic retry for truncated or incomplete domain candidate JSON. Does not affect other vLLM nodes."
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "const choice = $json.choices?.[0];\nconst content = choice?.message?.content;\nconst finishReason = choice?.finish_reason;\nconst webhookBody = $(\u0027Receive Operator Intent\u0027).first().json.body || {};\nconst context = $(\u0027Get Intent Context\u0027).first().json;\n\nfunction failed(reason) {\n  return [{\n    json: {\n      retry_needed: false,\n      candidate: null,\n      llm_extracted: null,\n      llm_action: \u0027NEEDS_REVISION\u0027,\n      rejection_reasons: [\u0027Intent candidate generation failed after retry.\u0027],\n      llm_raw_content: content || null,\n      llm_finish_reason: finishReason,\n      llm_usage: $json.usage,\n      retry_failed_reason: reason,\n      errors: [\u0027Intent candidate generation failed after retry.\u0027]\n    }\n  }];\n}\n\nif (finishReason === \u0027length\u0027) {\n  return failed(\u0027retry_finish_reason_length\u0027);\n}\nif (!content) {\n  return failed(\u0027retry_empty_content\u0027);\n}\n\nlet extracted;\ntry {\n  extracted = typeof content === \u0027string\u0027 ? JSON.parse(content) : content;\n} catch (error) {\n  return failed(`retry_invalid_json: ${error.message}`);\n}\n\nconst candidate = {\n  patch_id: `patch-${Date.now()}`,\n  trt_id: context.current_trt.trt_id,\n  base_version: context.current_trt.version,\n  operator_id: webhookBody.operator_id,\n  intent_text: webhookBody.intent_text,\n  reason: webhookBody.reason,\n  line_id: extracted.line_id,\n  target_scope: extracted.target_scope || (extracted.line_id ? \u0027SINGLE_LINE\u0027 : \u0027SINGLE_LINE\u0027),\n  target_lines: extracted.target_lines || [],\n  request_types: extracted.request_types || extracted.detected_request_types || [],\n  goal: extracted.goal,\n  priority: extracted.priority ?? null,\n  allowed_instruments: extracted.allowed_instruments ?? null,\n  excluded_instruments: extracted.excluded_instruments ?? null,\n  kpi_updates: extracted.kpi_updates || {},\n  tooling_policy: extracted.tooling_policy || null,\n  abnormal_strategy: extracted.abnormal_strategy || null,\n  status: \u0027REVIEWED\u0027\n};\nconst rejection_reasons = extracted.action === \u0027PROPOSE_PATCH\u0027 ? [] : [extracted.action, ...(extracted.clarification_questions || []), ...(extracted.unsupported_terms || [])];\nreturn [{ json: { retry_needed: false, candidate, llm_extracted: extracted, llm_action: extracted.action, rejection_reasons, llm_raw_content: content, llm_finish_reason: finishReason, llm_usage: $json.usage, errors: [] } }];"
+                                     },
+                      "id":  "bbda37b6-3466-412c-b844-4c421df389c2",
+                      "name":  "Normalize Retried Candidate Patch",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       1560,
+                                       120
+                                   ],
+                      "notes":  "Normalizes retry output. If retry fails, returns NEEDS_REVISION with a controlled error."
+                  },
+                  {
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+                                                                            "caseSensitive":  true,
+                                                                            "leftValue":  "",
+                                                                            "typeValidation":  "strict",
+                                                                            "version":  2
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "id":  "af8b60c7-b6c3-4869-9ef1-af304e52c943",
+                                                                                   "leftValue":  "={{ $json.llm_action }}",
+                                                                                   "rightValue":  "PROPOSE_PATCH",
+                                                                                   "operator":  {
+                                                                                                    "type":  "string",
+                                                                                                    "operation":  "equals"
+                                                                                                }
+                                                                               }
+                                                                           ],
+                                                            "combinator":  "and"
+                                                        },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "778da8cb-6fb1-4a8d-bf9b-523e984412a7",
+                      "name":  "LLM Proposes Patch?",
+                      "type":  "n8n-nodes-base.if",
+                      "typeVersion":  2.2,
+                      "position":  [
+                                       1820,
+                                       0
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "http://trt-api:8000/intent/normalize",
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={{ $json.candidate }}",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "0892601f-6e98-4265-a814-503628a9b207",
+                      "name":  "Normalize Domain Candidate with Python",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       2080,
+                                       -120
+                                   ],
+                      "continueOnFail":  true
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "const result = $input.first().json;\n\nif (result.intent_patch) {\n  return [{ json: result }];\n}\n\nconst source = $(\u0027Receive Operator Intent\u0027).first().json;\nconst sourceContext = source.context || {};\n\nfunction collectStrings(value, output = []) {\n  if (value === null || value === undefined) return output;\n  if (typeof value === \u0027string\u0027) {\n    output.push(value);\n    try {\n      const parsed = JSON.parse(value);\n      collectStrings(parsed, output);\n    } catch (error) {\n      const start = value.indexOf(\u0027{\u0027);\n      const end = value.lastIndexOf(\u0027}\u0027);\n      if (start \u003e= 0 \u0026\u0026 end \u003e start) {\n        try {\n          collectStrings(JSON.parse(value.slice(start, end + 1)), output);\n        } catch (nestedError) {}\n      }\n    }\n    return output;\n  }\n  if (typeof value === \u0027number\u0027 || typeof value === \u0027boolean\u0027) {\n    output.push(String(value));\n    return output;\n  }\n  if (Array.isArray(value)) {\n    for (const item of value) collectStrings(item, output);\n    return output;\n  }\n  if (typeof value === \u0027object\u0027) {\n    if (value.detail) collectStrings(value.detail, output);\n    if (value.errorDescription) collectStrings(value.errorDescription, output);\n    if (value.errorMessage) collectStrings(value.errorMessage, output);\n    if (value.message) collectStrings(value.message, output);\n    if (value.description) collectStrings(value.description, output);\n    if (value.error) collectStrings(value.error, output);\n    if (value.response) collectStrings(value.response, output);\n    if (value.body) collectStrings(value.body, output);\n  }\n  return output;\n}\n\nfunction bestErrorMessage(value) {\n  const candidates = collectStrings(value).map(item =\u003e item.trim()).filter(Boolean);\n  const businessReasons = candidates.filter(item =\u003e item.includes(\u0027line_2 is currently in ERROR mode\u0027));\n  if (businessReasons.length) return businessReasons.sort((a, b) =\u003e a.length - b.length)[0];\n  const details = candidates.filter(item =\u003e item.includes(\u0027Resolve the line error\u0027) || item.includes(\u0027currently in ERROR mode\u0027));\n  if (details.length) return details.sort((a, b) =\u003e a.length - b.length)[0];\n  const first = candidates.find(item =\u003e item !== \u0027[object Object]\u0027);\n  return first || \u0027Normalize Domain Candidate with Python failed.\u0027;\n}\n\nconst message = bestErrorMessage(result);\n\nreturn [{\n  json: {\n    status: \u0027REJECTED\u0027,\n    context: {\n      ...sourceContext,\n      operator_id: sourceContext.operator_id || source.body?.operator_id || source.operator_id || null,\n      scenario_spec_ids: sourceContext.scenario_spec_ids || []\n    },\n    ids: {\n      patch_id: null,\n      release_id: null,\n      audit_id: null,\n      trt_id: sourceContext.trt_id || null,\n      trt_version: sourceContext.trt_version || null,\n      reconciliation_plan_id: null,\n      scenario_spec_id: null\n    },\n    payload: {\n      message,\n      source_node: \u0027Normalize Domain Candidate with Python\u0027\n    },\n    errors: [message]\n  }\n}];"
+                                     },
+                      "id":  "6a50f3e4-5999-4c86-8aa9-fda840ed17cc",
+                      "name":  "Normalize Python Candidate Result",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       2340,
+                                       -120
+                                   ],
+                      "notes":  "Converts successful Python normalization and expected HTTP business-rule errors into normal workflow envelopes."
+                  },
+                  {
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+                                                                            "caseSensitive":  true,
+                                                                            "leftValue":  "",
+                                                                            "typeValidation":  "strict",
+                                                                            "version":  2
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "id":  "db5afdad-c999-4ff9-b85c-0640e8beabff",
+                                                                                   "leftValue":  "={{ $json.status }}",
+                                                                                   "rightValue":  "REJECTED",
+                                                                                   "operator":  {
+                                                                                                    "type":  "string",
+                                                                                                    "operation":  "notEquals"
+                                                                                                }
+                                                                               }
+                                                                           ],
+                                                            "combinator":  "and"
+                                                        },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "cb070a87-bc1d-4de2-8f85-934de17af5d4",
+                      "name":  "Python Candidate Accepted?",
+                      "type":  "n8n-nodes-base.if",
+                      "typeVersion":  2.2,
+                      "position":  [
+                                       2600,
+                                       -120
+                                   ],
+                      "notes":  "Routes normal Python candidate results to patch validation and leaves REJECTED envelopes as terminal output for chat formatting."
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "const input = $input.first().json;\nreturn [{\n  json: {\n    status: input.status,\n    context: input.context || {},\n    ids: input.ids || {},\n    payload: input.payload || {},\n    errors: input.errors || []\n  }\n}];"
+                                     },
+                      "id":  "9da13377-d0fc-4539-932f-3213cd7a6400",
+                      "name":  "Return Python Candidate Rejection",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       2860,
+                                       80
+                                   ],
+                      "notes":  "Terminal pass-through for expected Python business-rule rejections so the parent chat workflow can format them."
+                  },
+                  {
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "http://trt-api:8000/patch/validate",
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={{ $json.intent_patch }}",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "36cbdf89-f461-42b6-bd9b-cfb5d47d89bf",
+                      "name":  "Validate Candidate Patch",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       2860,
+                                       -120
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+                                                                            "caseSensitive":  true,
+                                                                            "leftValue":  "",
+                                                                            "typeValidation":  "strict",
+                                                                            "version":  2
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "id":  "844427d9-d170-4b2e-94c4-80f8f386f483",
+                                                                                   "leftValue":  "={{ $json.status }}",
+                                                                                   "rightValue":  "ACCEPTED",
+                                                                                   "operator":  {
+                                                                                                    "type":  "string",
+                                                                                                    "operation":  "equals"
+                                                                                                }
+                                                                               }
+                                                                           ],
+                                                            "combinator":  "and"
+                                                        },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "b59d8e36-9450-4bd4-b74e-78337ced3598",
+                      "name":  "Candidate Valid?",
+                      "type":  "n8n-nodes-base.if",
+                      "typeVersion":  2.2,
+                      "position":  [
+                                       3120,
+                                       -120
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "const validation = $input.first().json;\nconst source = $(\u0027Receive Operator Intent\u0027).first().json;\nconst candidatePatch = $(\u0027Normalize Domain Candidate with Python\u0027).item.json.intent_patch;\n\nfunction affectedLinesFromOperations(operations) {\n  const seen = new Set();\n  for (const operation of operations || []) {\n    const parts = String(operation.path || \u0027\u0027).split(\u0027/\u0027).filter(Boolean);\n    const lineIndex = parts.indexOf(\u0027lines\u0027);\n    if (lineIndex \u003e= 0 \u0026\u0026 parts[lineIndex + 1]) seen.add(parts[lineIndex + 1]);\n  }\n  return Array.from(seen).sort();\n}\n\nconst affectedLines = affectedLinesFromOperations(candidatePatch.operations);\nconst sourceContext = source.context || {};\nreturn [{\n  json: {\n    status: \u0027REVIEWED\u0027,\n    context: {\n      ...sourceContext,\n      operator_id: sourceContext.operator_id || source.body?.operator_id || source.operator_id || null,\n      patch_id: candidatePatch.patch_id,\n      release_id: sourceContext.release_id || null,\n      audit_id: sourceContext.audit_id || null,\n      trt_id: candidatePatch.trt_id,\n      trt_version: candidatePatch.base_version,\n      reconciliation_plan_id: sourceContext.reconciliation_plan_id || null,\n      scenario_batch_id: sourceContext.scenario_batch_id || null,\n      scenario_spec_ids: sourceContext.scenario_spec_ids || [],\n      affected_lines: affectedLines\n    },\n    ids: {\n      patch_id: candidatePatch.patch_id,\n      release_id: null,\n      audit_id: null,\n      trt_id: candidatePatch.trt_id,\n      trt_version: candidatePatch.base_version,\n      reconciliation_plan_id: null,\n      scenario_spec_id: null,\n      affected_lines: affectedLines\n    },\n    payload: {\n      candidate_patch: candidatePatch,\n      affected_lines: affectedLines,\n      validation_results: validation.validation_results,\n      message: \u0027Candidate patch is valid. Operator confirmation is required before release.\u0027\n    },\n    errors: []\n  }\n}];"
+                                     },
+                      "id":  "5749854e-755a-4c89-b7d1-34ec0c96fbf3",
+                      "name":  "Return Reviewed Candidate",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       3380,
+                                       -120
+                                   ],
+                      "notes":  "Derives affected_lines from candidate_patch.operations after Python normalization and validation."
+                  },
+                  {
+                      "parameters":  {
+                                         "assignments":  {
+                                                             "assignments":  [
+                                                                                 {
+                                                                                     "id":  "44b98b4f-eb4b-4ae2-ad35-3f2201a4abb0",
+                                                                                     "name":  "status",
+                                                                                     "value":  "NEEDS_REVISION",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "4c528df8-a1be-408a-a091-e69bdc965a5c",
+                                                                                     "name":  "context",
+                                                                                     "value":  "={{ { ...($(\u0027Receive Operator Intent\u0027).first().json.context || {}), operator_id: $(\u0027Receive Operator Intent\u0027).first().json.context?.operator_id || $(\u0027Receive Operator Intent\u0027).first().json.body?.operator_id || $(\u0027Receive Operator Intent\u0027).first().json.operator_id || null, scenario_spec_ids: $(\u0027Receive Operator Intent\u0027).first().json.context?.scenario_spec_ids || [] } }}",
+                                                                                     "type":  "object"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "76370691-02f0-4a81-a959-f790515897cf",
+                                                                                     "name":  "ids",
+                                                                                     "value":  "={{ { patch_id: null, release_id: null, audit_id: null, trt_id: null, trt_version: null, reconciliation_plan_id: null, scenario_spec_id: null } }}",
+                                                                                     "type":  "object"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "db798d67-696d-419d-8c87-97a7a0be24d8",
+                                                                                     "name":  "payload",
+                                                                                     "value":  "={{ { rejection_reasons: $json.rejection_reasons || [\u0027Candidate was not accepted for review.\u0027], clarification_prompt: \u0027Please revise the request or provide missing fields.\u0027 } }}",
+                                                                                     "type":  "object"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "99e912a8-0786-4329-82ce-5f2e4ebd57dc",
+                                                                                     "name":  "errors",
+                                                                                     "value":  "={{ $json.rejection_reasons || [\u0027Candidate was not accepted for review.\u0027] }}",
+                                                                                     "type":  "array"
+                                                                                 }
+                                                                             ]
+                                                         },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "9cbdd8f9-a3f8-426c-8143-211104f44bb8",
+                      "name":  "Return Revision Request",
+                      "type":  "n8n-nodes-base.set",
+                      "typeVersion":  3.4,
+                      "position":  [
+                                       3380,
+                                       120
+                                   ]
+                  }
+              ],
+    "connections":  {
+                        "Receive Operator Intent":  {
+                                                        "main":  [
+                                                                     [
+                                                                         {
+                                                                             "node":  "Get Intent Context",
+                                                                             "type":  "main",
+                                                                             "index":  0
+                                                                         }
+                                                                     ]
+                                                                 ]
+                                                    },
+                        "Get Intent Context":  {
+                                                   "main":  [
+                                                                [
+                                                                    {
+                                                                        "node":  "LLM Generate Intent Patch",
+                                                                        "type":  "main",
+                                                                        "index":  0
+                                                                    }
+                                                                ]
+                                                            ]
+                                               },
+                        "LLM Generate Intent Patch":  {
+                                                          "main":  [
+                                                                       [
+                                                                           {
+                                                                               "node":  "Normalize Candidate Patch",
+                                                                               "type":  "main",
+                                                                               "index":  0
+                                                                           }
+                                                                       ]
+                                                                   ]
+                                                      },
+                        "Normalize Candidate Patch":  {
+                                                          "main":  [
+                                                                       [
+                                                                           {
+                                                                               "node":  "Intent Candidate Needs Retry?",
+                                                                               "type":  "main",
+                                                                               "index":  0
+                                                                           }
+                                                                       ]
+                                                                   ]
+                                                      },
+                        "LLM Proposes Patch?":  {
+                                                    "main":  [
+                                                                 [
+                                                                     {
+                                                                         "node":  "Normalize Domain Candidate with Python",
+                                                                         "type":  "main",
+                                                                         "index":  0
+                                                                     }
+                                                                 ],
+                                                                 [
+                                                                     {
+                                                                         "node":  "Return Revision Request",
+                                                                         "type":  "main",
+                                                                         "index":  0
+                                                                     }
+                                                                 ]
+                                                             ]
+                                                },
+                        "Normalize Domain Candidate with Python":  {
+                                                                       "main":  [
+                                                                                    [
+                                                                                        {
+                                                                                            "node":  "Normalize Python Candidate Result",
+                                                                                            "type":  "main",
+                                                                                            "index":  0
+                                                                                        }
+                                                                                    ]
+                                                                                ]
+                                                                   },
+                        "Normalize Python Candidate Result":  {
+                                                                  "main":  [
+                                                                               [
+                                                                                   {
+                                                                                       "node":  "Python Candidate Accepted?",
+                                                                                       "type":  "main",
+                                                                                       "index":  0
+                                                                                   }
+                                                                               ]
+                                                                           ]
+                                                              },
+                        "Python Candidate Accepted?":  {
+                                                           "main":  [
+                                                                        [
+                                                                            {
+                                                                                "node":  "Validate Candidate Patch",
+                                                                                "type":  "main",
+                                                                                "index":  0
+                                                                            }
+                                                                        ],
+                                                                        [
+                                                                            {
+                                                                                "node":  "Return Python Candidate Rejection",
+                                                                                "type":  "main",
+                                                                                "index":  0
+                                                                            }
+                                                                        ]
+                                                                    ]
+                                                       },
+                        "Validate Candidate Patch":  {
+                                                         "main":  [
+                                                                      [
+                                                                          {
+                                                                              "node":  "Candidate Valid?",
+                                                                              "type":  "main",
+                                                                              "index":  0
+                                                                          }
+                                                                      ]
+                                                                  ]
+                                                     },
+                        "Candidate Valid?":  {
+                                                 "main":  [
+                                                              [
+                                                                  {
+                                                                      "node":  "Return Reviewed Candidate",
+                                                                      "type":  "main",
+                                                                      "index":  0
+                                                                  }
+                                                              ],
+                                                              [
+                                                                  {
+                                                                      "node":  "Return Revision Request",
+                                                                      "type":  "main",
+                                                                      "index":  0
+                                                                  }
+                                                              ]
+                                                          ]
+                                             },
+                        "Intent Candidate Needs Retry?":  {
+                                                              "main":  [
+                                                                           [
+                                                                               {
+                                                                                   "node":  "Retry LLM Generate Intent Patch",
+                                                                                   "type":  "main",
+                                                                                   "index":  0
+                                                                               }
+                                                                           ],
+                                                                           [
+                                                                               {
+                                                                                   "node":  "LLM Proposes Patch?",
+                                                                                   "type":  "main",
+                                                                                   "index":  0
+                                                                               }
+                                                                           ]
+                                                                       ]
+                                                          },
+                        "Retry LLM Generate Intent Patch":  {
+                                                                "main":  [
+                                                                             [
+                                                                                 {
+                                                                                     "node":  "Normalize Retried Candidate Patch",
+                                                                                     "type":  "main",
+                                                                                     "index":  0
+                                                                                 }
+                                                                             ]
+                                                                         ]
+                                                            },
+                        "Normalize Retried Candidate Patch":  {
+                                                                  "main":  [
+                                                                               [
+                                                                                   {
+                                                                                       "node":  "LLM Proposes Patch?",
+                                                                                       "type":  "main",
+                                                                                       "index":  0
+                                                                                   }
+                                                                               ]
+                                                                           ]
+                                                              }
+                    },
+    "settings":  {
+                     "executionOrder":  "v1"
+                 },
+    "staticData":  null,
+    "meta":  null,
+    "pinData":  {
+
+                },
+    "versionId":  "6aa790b5-4068-4edc-ad92-92e475cc45b7",
+    "activeVersionId":  null,
+    "versionCounter":  39,
+    "triggerCount":  0,
+    "tags":  [
+
+             ],
+    "shared":  [
+                   {
+                       "updatedAt":  "2026-05-25T10:08:52.466Z",
+                       "createdAt":  "2026-05-25T10:08:52.466Z",
+                       "role":  "workflow:owner",
+                       "workflowId":  "IntentToPatchReviewDemo",
+                       "projectId":  "nLW2bK7SqVljsFSA",
+                       "project":  {
+                                       "updatedAt":  "2025-06-29T10:56:57.445Z",
+                                       "createdAt":  "2025-06-29T10:56:26.234Z",
+                                       "id":  "nLW2bK7SqVljsFSA",
+                                       "name":  "?ป็ป ??\u003c113323104@office365.ncu.edu.tw\u003e",
+                                       "type":  "personal",
+                                       "icon":  null,
+                                       "description":  null,
+                                       "creatorId":  "e91ba0d7-024a-4ca7-b147-6597905761e9"
+                                   }
+                   }
+               ],
+    "versionMetadata":  {
+                            "name":  null,
+                            "description":  null
+                        }
+}

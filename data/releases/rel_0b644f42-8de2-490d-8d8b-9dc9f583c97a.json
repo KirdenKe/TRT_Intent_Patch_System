@@ -1,0 +1,80 @@
+{
+  "audit_id": "audit-92b3baff-5a92-4c2d-8dbb-010f731efdef",
+  "base_version": "v1",
+  "candidate_patch": {
+    "base_version": "v1",
+    "intent_text": "set the line 2's throughput/hr to 150",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_2/tooling_policy/required_scope",
+        "value": "NONE"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/selected_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/excluded_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/allowed_instruments",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/excluded_instruments",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/kpi/min_throughput_per_hour",
+        "value": 150
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "patch-1781521197053",
+    "reason": "testing",
+    "status": "REVIEWED",
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [
+      "/lines/line_2/tooling_policy/required_scope",
+      "/lines/line_2/selected_tool_ids",
+      "/lines/line_2/excluded_tool_ids",
+      "/lines/line_2/allowed_instruments",
+      "/lines/line_2/excluded_instruments",
+      "/lines/line_2/kpi/min_throughput_per_hour"
+    ],
+    "affected_lines": [
+      "line_2"
+    ],
+    "intent_text": "set the line 2's throughput/hr to 150",
+    "reason": "testing"
+  },
+  "created_at_utc": "2026-06-15T11:00:21.793687Z",
+  "operator_decision": {
+    "comment": "Test for the Milestone 8",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-06-15T11:00:21.882695Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1781521197053",
+  "release_id": "rel_0b644f42-8de2-490d-8d8b-9dc9f583c97a",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "updated_at_utc": "2026-06-15T11:00:21.882695Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

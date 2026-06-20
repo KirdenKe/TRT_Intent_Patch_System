@@ -27,10 +27,11 @@ def build_audit_bundle(
     validation_results: ValidationResults,
     rejection_reasons: list[str],
     trt_after: TRT | dict[str, Any] | None = None,
+    audit_id: str | None = None,
 ) -> AuditBundle:
     accepted = status == "ACCEPTED"
     return {
-        "audit_id": f"audit-{uuid4()}",
+        "audit_id": audit_id or f"audit-{uuid4()}",
         "patch_id": intent_patch.get("patch_id", ""),
         "trt_id": intent_patch.get("trt_id", trt_before.get("trt_id", "")),
         "operator_id": intent_patch.get("operator_id", ""),

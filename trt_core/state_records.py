@@ -11,6 +11,7 @@ VALID_MODES = {"IDLE", "RUNNING", "INTERVENTION", "PAUSED", "ERROR"}
 VALID_TASKS = {"ROUTINE_CLASSIFICATION", "TRAUMA_SET_PRIORITY", "BACKLOG_CLEARING", None}
 VALID_INSTRUMENTS = {"SCISSORS", "FORCEPS", "CLAMPS", "RETRACTOR"}
 VALID_CHECKPOINTS = {"NONE", "TRAY_COMPLETE", "BATCH_COMPLETE", "MANUAL_CLEARANCE_REQUIRED"}
+VALID_TOOL_IDS = {f"tool_{index:02d}" for index in range(1, 28)}
 
 
 def validate_state_records(state_records: list[dict[str, Any]]) -> list[str]:
@@ -37,6 +38,30 @@ def validate_state_records(state_records: list[dict[str, Any]]) -> list[str]:
                 reasons.append(f"state record {index}: invalid current instrument {instrument!r}")
         if not isinstance(record.get("locked_resources", []), list):
             reasons.append(f"state record {index}: locked_resources must be a list")
+        for field in ("selected_tool_ids", "completed_tool_ids", "pending_tool_ids"):
+            values = record.get(field, [])
+            if not isinstance(values, list):
+                reasons.append(f"state record {index}: {field} must be a list")
+                continue
+            for tool_id in values:
+                if tool_id not in VALID_TOOL_IDS:
+                    reasons.append(f"state record {index}: invalid {field} tool_id {tool_id!r}")
+        entanglement = record.get("entanglement")
+        if entanglement is not None:
+            if not isinstance(entanglement, dict):
+                reasons.append(f"state record {index}: entanglement must be an object")
+            else:
+                if not isinstance(entanglement.get("detected"), bool):
+                    reasons.append(f"state record {index}: entanglement.detected must be a boolean")
+                if not isinstance(entanglement.get("requires_operator"), bool):
+                    reasons.append(f"state record {index}: entanglement.requires_operator must be a boolean")
+                tool_ids = entanglement.get("tool_ids", [])
+                if not isinstance(tool_ids, list):
+                    reasons.append(f"state record {index}: entanglement.tool_ids must be a list")
+                else:
+                    for tool_id in tool_ids:
+                        if tool_id not in VALID_TOOL_IDS:
+                            reasons.append(f"state record {index}: invalid entanglement tool_id {tool_id!r}")
     return reasons
 
 
@@ -52,4 +77,3 @@ def save_current_state(state_records: list[dict[str, Any]], repository: TRTRepos
 def load_current_state(repository: TRTRepository | None = None) -> list[dict[str, Any]]:
     repo = repository or TRTRepository()
     return repo.load_state_records()
-

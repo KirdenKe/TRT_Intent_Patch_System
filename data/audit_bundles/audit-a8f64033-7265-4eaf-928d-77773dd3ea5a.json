@@ -1,0 +1,25 @@
+{
+  "audit_id": "audit-a8f64033-7265-4eaf-928d-77773dd3ea5a",
+  "intent_text": "remove the knife handles from production lines 3 and 4 for me, and adjust the number of tooling on the production line so that only 5 remain",
+  "operations": [],
+  "operator_id": "op_001",
+  "patch_id": "patch-1781765701050",
+  "reason": "test for milestone 9",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-18T06:55:13.593585Z",
+  "trt_after_hash": "0ba61e74340e82b60d353619f1b2bf2556ec7dd4bf0b01a479e5f9de4efba778",
+  "trt_after_version": "v26",
+  "trt_before_hash": "e3bcee43205e2a40e53ca587c4d49483ec60574cc89f56b96f394ef9ae88b93e",
+  "trt_before_version": "v25",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

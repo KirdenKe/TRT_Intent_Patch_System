@@ -9,7 +9,11 @@ from jsonschema import Draft202012Validator
 import json
 from pathlib import Path
 
-from scenario_generation.errors import OperatorResolutionRequiredError, ScenarioGenerationError
+from scenario_generation.errors import (
+    OperatorResolutionRequiredError,
+    ScenarioGenerationError,
+    ScenarioTemplateLineBindingError,
+)
 from scenario_generation.models import (
     ScenarioGenerationRequest,
     ScenarioSpec,
@@ -25,6 +29,10 @@ SCHEMA_PATH = PROJECT_ROOT / "schemas" / "scenario_spec.schema.json"
 ISAAC_SUPPORTED_STRATEGIES = {"STOP_LINE", "CONTINUE_FEASIBLE_TASKS"}
 
 
+def omit_none_values(value: dict[str, Any]) -> dict[str, Any]:
+    return {key: item for key, item in value.items() if item is not None}
+
+
 def generate_scenario_spec(
     request: ScenarioGenerationRequest | None = None,
     *,
@@ -38,6 +46,10 @@ def generate_scenario_spec(
     operator_model_override: dict[str, Any] | None = None,
     assertions_override: dict[str, Any] | None = None,
     include_waiting_scenarios: bool = False,
+    line_bindings: list[dict[str, Any]] | None = None,
+    required_line_ids: list[str] | None = None,
+    simulation_scope: str | None = None,
+    simulation_config_override: dict[str, Any] | None = None,
 ) -> ScenarioSpec | WaitingForCheckpointResult:
     request = _coerce_request(
         request=request,
@@ -48,6 +60,10 @@ def generate_scenario_spec(
         candidate_strategy_id=candidate_strategy_id,
         template_registry=template_registry,
         include_waiting_scenarios=include_waiting_scenarios,
+        line_bindings=line_bindings,
+        required_line_ids=required_line_ids,
+        simulation_scope=simulation_scope,
+        simulation_config_override=simulation_config_override,
     )
     trt = request.released_trt
     state_records = request.state_records
@@ -56,7 +72,17 @@ def generate_scenario_spec(
 
     _validate_source_alignment(trt, plan)
     _validate_reconciliation_status(plan)
-    _validate_template_line_bindings(template, trt)
+    line_bindings = deepcopy(request.line_bindings or template.get("line_bindings") or [])
+    required_line_ids = request.required_line_ids or sorted(trt["lines"])
+    simulation_scope_obj = _build_simulation_scope(request.simulation_scope, required_line_ids)
+    if request.line_bindings is None:
+        _validate_template_line_bindings(template, trt)
+    else:
+        _validate_resolved_line_bindings(
+            template_id=template.get("template_id"),
+            line_bindings=line_bindings,
+            required_line_ids=required_line_ids,
+        )
 
     release_id = _resolve_release_id(trt, plan, request)
     candidate_strategy_id = request.candidate_strategy_id or plan.get("candidate_strategy_id") or f"strategy_{plan['plan_id']}"
@@ -70,17 +96,30 @@ def generate_scenario_spec(
     scenario_spec_id = new_scenario_spec_id()
     spec: ScenarioSpec = {
         "scenario_spec_id": scenario_spec_id,
+        "scenario_template_id": template["template_id"],
         "release_id": release_id,
         "trt_id": trt["trt_id"],
         "trt_version": trt["version"],
         "reconciliation_plan_id": plan["plan_id"],
         "candidate_strategy_id": candidate_strategy_id,
         "scenario_readiness": _scenario_readiness(plan),
+        "affected_lines": list(plan.get("affected_lines", [])),
+        "simulation_scope": simulation_scope_obj,
+        "line_decisions": deepcopy(plan["line_decisions"]),
+        "tool_catalog": deepcopy(trt.get("tool_catalog", {})),
+        "tool_sets": deepcopy(trt.get("tool_sets", {})),
         "workspace_contract": _build_workspace_contract(template, scenario_spec_id, output_path),
         "scene_template": template["scene_template"],
-        "simulation_config": deepcopy(template["simulation_config"]),
-        "line_bindings": deepcopy(template["line_bindings"]),
-        "line_policies": _build_line_policies(trt, plan),
+        "simulation_config": _build_simulation_config(
+            template,
+            line_bindings,
+            trt,
+            simulation_scope_obj,
+            operator_model_override or template["operator_model"],
+            request.simulation_config_override,
+        ),
+        "line_bindings": line_bindings,
+        "line_policies": _build_line_policies(trt, plan, required_line_ids),
         "operator_model": deepcopy(operator_model_override or template["operator_model"]),
         "abnormal_event_policy": _build_abnormal_event_policy(template),
         "assertions": _build_assertions(template, assertions_override),
@@ -108,6 +147,10 @@ def _coerce_request(
     candidate_strategy_id: str | None,
     template_registry: dict[str, Any] | None,
     include_waiting_scenarios: bool,
+    line_bindings: list[dict[str, Any]] | None,
+    required_line_ids: list[str] | None,
+    simulation_scope: str | None,
+    simulation_config_override: dict[str, Any] | None,
 ) -> ScenarioGenerationRequest:
     if request is not None:
         return request
@@ -131,6 +174,10 @@ def _coerce_request(
         template_id=scenario_template_id,
         candidate_strategy_id=candidate_strategy_id,
         include_waiting_scenarios=include_waiting_scenarios,
+        line_bindings=line_bindings,
+        required_line_ids=required_line_ids,
+        simulation_scope=simulation_scope,
+        simulation_config_override=simulation_config_override,
     )
 
 
@@ -168,7 +215,93 @@ def _validate_template_line_bindings(template: dict[str, Any], trt: dict[str, An
     bound_lines = {binding["line_id"] for binding in template["line_bindings"]}
     missing = sorted(trt_lines - bound_lines)
     if missing:
-        raise ScenarioGenerationError(f"Scenario template missing line_bindings for TRT lines: {missing}")
+        raise ScenarioTemplateLineBindingError(
+            template_id=template.get("template_id"),
+            required_trt_lines=sorted(trt_lines),
+            template_bound_lines=sorted(bound_lines),
+            missing_line_bindings=missing,
+        )
+
+
+def _validate_resolved_line_bindings(
+    *,
+    template_id: str | None,
+    line_bindings: list[dict[str, Any]],
+    required_line_ids: list[str],
+) -> None:
+    required = set(required_line_ids)
+    bound = {binding["line_id"] for binding in line_bindings if isinstance(binding, dict) and binding.get("line_id")}
+    missing = sorted(required - bound)
+    if missing:
+        raise ScenarioTemplateLineBindingError(
+            template_id=template_id,
+            required_trt_lines=sorted(required),
+            template_bound_lines=sorted(bound),
+            missing_line_bindings=missing,
+    )
+
+
+def _build_simulation_scope(value: dict[str, Any] | str | None, required_line_ids: list[str]) -> dict[str, Any]:
+    default_reason = "Full-system simulation is required by default because the Time-Arrival Model is a system-level variable."
+    if isinstance(value, dict):
+        mode = value.get("mode") or "FULL_SYSTEM_DEFAULT"
+        lines = list(value.get("lines") or required_line_ids)
+        return {
+            "mode": mode,
+            "lines": lines,
+            "reason": value.get("reason") or (
+                "Operator explicitly requested a reduced simulation scope."
+                if mode == "EXPLICIT_OPERATOR_LIMITED"
+                else default_reason
+            ),
+        }
+    if value == "EXPLICIT_OPERATOR_LIMITED":
+        return {
+            "mode": "EXPLICIT_OPERATOR_LIMITED",
+            "lines": list(required_line_ids),
+            "reason": "Operator explicitly requested a reduced simulation scope.",
+        }
+    return {
+        "mode": "FULL_SYSTEM_DEFAULT",
+        "lines": list(required_line_ids),
+        "reason": default_reason,
+    }
+
+
+def _build_simulation_config(
+    template: dict[str, Any],
+    line_bindings: list[dict[str, Any]],
+    trt: dict[str, Any],
+    simulation_scope: dict[str, Any],
+    operator_model: dict[str, Any],
+    override: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    config = deepcopy(template["simulation_config"])
+    if override:
+        config.update({key: value for key, value in override.items() if value is not None})
+    simulation_lines = simulation_scope.get("lines") or []
+    config["num_envs"] = len(simulation_lines) or len(line_bindings) or int(config.get("num_envs") or 1)
+    config["headless"] = bool(config.get("headless", False))
+    if config.get("global_seed") is not None:
+        config["global_seed"] = int(config["global_seed"])
+    else:
+        config.pop("global_seed", None)
+    config.pop("max_seed_trials", None)
+    config["allowed_overlap_ratio"] = float(config.get("allowed_overlap_ratio", 0.99))
+    config["layout_source"] = config.get("layout_source") or "auto"
+    config["episode_success_requires_reset_cycles"] = int(config.get("episode_success_requires_reset_cycles", 1))
+    if override and override.get("add_reference_number") is not None:
+        config["add_reference_number"] = int(override["add_reference_number"])
+    else:
+        config["add_reference_number"] = len(trt.get("tool_catalog") or {}) or int(config.get("add_reference_number") or 27)
+    config["reuse_verified_seed"] = config.get("global_seed") is None and bool(config.get("reuse_verified_seed", True))
+    config.pop("reuse_precomputed_layouts", None)
+    config.pop("seed_db_path", None)
+    config["chosen_intervention_mode"] = config.get("chosen_intervention_mode") or "continue-until-arrival"
+    config["travel_time"] = float(config.get("travel_time", operator_model.get("travel_time", 5.0)))
+    config["fix_duration"] = float(config.get("fix_duration", operator_model.get("fix_duration", 8.0)))
+    config["resume_delay"] = float(config.get("resume_delay", operator_model.get("resume_delay", 0.5)))
+    return omit_none_values(config)
 
 
 def _resolve_release_id(trt: dict[str, Any], plan: dict[str, Any], request: ScenarioGenerationRequest) -> str:
@@ -260,10 +393,13 @@ def _portable_path(path: Path) -> str:
     return path.as_posix()
 
 
-def _build_line_policies(trt: dict[str, Any], plan: dict[str, Any]) -> list[dict[str, Any]]:
+def _build_line_policies(trt: dict[str, Any], plan: dict[str, Any], required_line_ids: list[str] | None = None) -> list[dict[str, Any]]:
     decisions = {decision["line_id"]: decision for decision in plan["line_decisions"]}
+    affected_lines = set(plan.get("affected_lines") or [])
     policies: list[dict[str, Any]] = []
-    for line_id, line in sorted(trt["lines"].items()):
+    selected_line_ids = required_line_ids or sorted(trt["lines"])
+    for line_id in selected_line_ids:
+        line = trt["lines"][line_id]
         abnormal_strategy = line["abnormal_strategy"]
         if abnormal_strategy == "ASK_OPERATOR":
             raise OperatorResolutionRequiredError(
@@ -281,9 +417,16 @@ def _build_line_policies(trt: dict[str, Any], plan: dict[str, Any]) -> list[dict
             raise ScenarioGenerationError("Cannot generate ScenarioSpec for REJECT_INCOMPATIBLE line decision.")
         policy = {
             "line_id": line_id,
+            "patch_affected": line_id in affected_lines,
             "goal": line["goal"],
             "allowed_instruments": list(line["allowed_instruments"]),
             "excluded_instruments": list(line["excluded_instruments"]),
+            "selected_tool_ids": list(line.get("selected_tool_ids", [])),
+            "excluded_tool_ids": list(line.get("excluded_tool_ids", [])),
+            "required_tool_ids": list(line.get("required_tool_ids", [])),
+            "target_set_id": line.get("target_set_id"),
+            "tooling_policy": deepcopy(line.get("tooling_policy", {})),
+            "digital_twin": deepcopy(line.get("digital_twin", {})),
             "priority": int(line["priority"]),
             "kpi": deepcopy(line["kpi"]),
             "abnormal_strategy": abnormal_strategy,

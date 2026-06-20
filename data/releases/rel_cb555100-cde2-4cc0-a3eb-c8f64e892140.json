@@ -1,0 +1,58 @@
+{
+  "audit_id": "audit-0a45d173-8597-47e3-9811-7d69e1eb0bfb",
+  "base_version": "v32",
+  "candidate_patch": {
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "base_version": "v32",
+    "intent_text": "adjust the targets for all production lines to the ent surgical tooling set and the number of tooling on the production line so that only 5 remain",
+    "message": "The candidate simulation configuration update is valid. It will set add_reference_number to 5 for the full-system simulation.",
+    "operations": [],
+    "operator_id": "op_001",
+    "patch_id": "patch-1781793579673",
+    "reason": "test for milestone 9",
+    "request_types": [
+      "TOOLING_POLICY_UPDATE",
+      "SIMULATION_CONFIG_UPDATE"
+    ],
+    "simulation_config_updates": {
+      "add_reference_number": 5
+    },
+    "status": "REVIEWED",
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [],
+    "affected_lines": [],
+    "intent_text": "adjust the targets for all production lines to the ent surgical tooling set and the number of tooling on the production line so that only 5 remain",
+    "reason": "test for milestone 9"
+  },
+  "created_at_utc": "2026-06-18T14:39:50.220100Z",
+  "current_trt_path": "/app/data/trt/current_trt.json",
+  "operator_decision": {
+    "comment": "Test for the Milestone 9",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-06-18T14:39:50.282857Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1781793579673",
+  "previous_trt_version": "v32",
+  "release_id": "rel_cb555100-cde2-4cc0-a3eb-c8f64e892140",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "trt_version": "v33",
+  "updated_at_utc": "2026-06-18T14:39:50.282857Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  },
+  "version_path": "/app/data/trt_versions/trt-demo_v33.json"
+}

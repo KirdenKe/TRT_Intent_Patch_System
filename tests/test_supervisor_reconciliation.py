@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 from copy import deepcopy
 
 from fastapi.testclient import TestClient
 
 import trt_core.api as api
+from trt_core.ent_demo import build_current_state, build_trt, state_object_to_records
 from trt_core.repository import TRTRepository
 from trt_core.supervisor import reconcile_current_trt
 
@@ -202,10 +204,85 @@ def test_state_and_reconciliation_api_endpoints(tmp_path):
 
     update_response = client.post("/state/update", json={"state_records": state_records})
     current_response = client.get("/state/current")
-    reconcile_response = client.post("/supervisor/reconcile", json={})
+    reconcile_response = client.post("/supervisor/reconcile", json={"trt_id": "trt-demo", "trt_version": "v2"})
     loaded_response = client.get(f"/reconciliation/{reconcile_response.json()['plan_id']}")
 
     assert update_response.status_code == 200
     assert current_response.json()["state_records"] == state_records
     assert reconcile_response.status_code == 200
     assert loaded_response.json()["plan_id"] == reconcile_response.json()["plan_id"]
+
+
+def test_supervisor_reconcile_api_accepts_ent_trt_schema_with_four_lines(tmp_path):
+    repo = TRTRepository(tmp_path)
+    repo.save_trt(build_trt())
+    repo.save_state_records(state_object_to_records(build_current_state()))
+    api.repository = repo
+    client = TestClient(api.app)
+
+    response = client.post("/supervisor/reconcile", json={"trt_id": "trt-demo", "trt_version": "v1"})
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["trt_id"] == "trt-demo"
+    assert body["trt_version"] == "v1"
+    assert [decision["line_id"] for decision in body["line_decisions"]] == ["line_1", "line_2", "line_3", "line_4"]
+
+
+def test_supervisor_reconcile_api_accepts_four_line_current_state_object(tmp_path):
+    repo = TRTRepository(tmp_path)
+    repo.save_trt(build_trt())
+    state_path = tmp_path / "data" / "state_records" / "current_state.json"
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_text(json.dumps(build_current_state(), indent=2), encoding="utf-8")
+    api.repository = repo
+    client = TestClient(api.app)
+
+    response = client.post("/supervisor/reconcile", json={"trt_id": "trt-demo", "trt_version": "v1"})
+
+    assert response.status_code == 200
+    assert len(response.json()["line_decisions"]) == 4
+
+
+def test_supervisor_reconcile_allows_empty_selected_and_excluded_tool_ids(tmp_path):
+    repo = TRTRepository(tmp_path)
+    trt = build_trt()
+    for line in trt["lines"].values():
+        line["selected_tool_ids"] = []
+        line["excluded_tool_ids"] = []
+    repo.save_trt(trt)
+    state = build_current_state()
+    for line_state in state["lines"].values():
+        line_state["selected_tool_ids"] = []
+        line_state["pending_tool_ids"] = []
+        line_state["completed_tool_ids"] = []
+    repo.save_state_records(state_object_to_records(state))
+    api.repository = repo
+    client = TestClient(api.app)
+
+    response = client.post("/supervisor/reconcile", json={"trt_id": "trt-demo", "trt_version": "v1"})
+
+    assert response.status_code == 200
+
+
+def test_supervisor_reconcile_missing_changed_line_state_returns_422(tmp_path):
+    repo = TRTRepository(tmp_path)
+    repo.save_trt(build_trt())
+    records = [record for record in state_object_to_records(build_current_state()) if record["line_id"] != "line_4"]
+    repo.save_state_records(records)
+    api.repository = repo
+    client = TestClient(api.app)
+
+    response = client.post("/supervisor/reconcile", json={"trt_id": "trt-demo", "trt_version": "v1"})
+
+    assert response.status_code == 422
+    assert "Missing runtime state records for changed TRT lines: line_4" in response.json()["detail"]
+
+
+def test_supervisor_reconcile_legacy_allowed_instruments_fallback_still_works(tmp_path):
+    repo = repo_with_versions(tmp_path, base_line(), excluded_scissors_line())
+
+    plan = reconcile_current_trt([state_record(mode="RUNNING", wip_count=2, current_instruments=["SCISSORS"])], repo)
+
+    assert decision_for(plan)["decision"] == "WAIT_FOR_CHECKPOINT"
+    assert "excluded_instrument_in_wip" in decision_for(plan)["risk_flags"]

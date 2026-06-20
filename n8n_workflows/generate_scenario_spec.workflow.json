@@ -102,50 +102,70 @@
     },
     {
       "parameters": {
+        "method": "POST",
+        "url": "http://trt-api:8000/simulation/runs",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { scenario_spec_id: $json.scenario_spec_id, scenario_spec_path: $json.scenario_spec_path || $json.scenario_spec?.workspace_contract?.expected_scenario_spec_path || $json.workspace_contract?.expected_scenario_spec_path, run_mode: 'ASYNC', headless: false } }}",
+        "options": {}
+      },
+      "id": "d3ed3c30-e143-49eb-bd49-4b4aee2c23d6",
+      "name": "ScenarioSpec to Isaac Simulation Run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1900,
+        -200
+      ],
+      "notes": "Starts the generated ScenarioSpec simulation asynchronously. n8n polls /simulation/runs/{run_id} instead of waiting on the full Isaac process."
+    },
+    {
+      "parameters": {
         "assignments": {
           "assignments": [
             {
               "id": "f3c8c30e-da85-4f3d-94bf-5192217dbaac",
               "name": "status",
-              "value": "GENERATED",
+              "value": "={{ $json.status === 'COMPLETED' && !$json.error_code && $json.run_artifact?.status === 'COMPLETED' ? 'GENERATED' : 'SIMULATION_FAILED' }}",
               "type": "string"
             },
             {
               "id": "40b8a7ed-f16f-4971-943b-4c74ad1d0f42",
               "name": "context",
-              "value": "={{ { ...($('Normalize ScenarioSpec Generation Input').first().json.context || {}), scenario_spec_ids: [...($('Normalize ScenarioSpec Generation Input').first().json.context?.scenario_spec_ids || []), $json.scenario_spec_id] } }}",
+              "value": "={{ { ...($('Normalize ScenarioSpec Generation Input').first().json.context || {}), simulation_run_id: $json.run_id || null, scenario_spec_ids: [...($('Normalize ScenarioSpec Generation Input').first().json.context?.scenario_spec_ids || []), $json.scenario_spec_id] } }}",
               "type": "object"
             },
             {
               "id": "406a70f9-4bfc-4200-ba04-8d279f7012e2",
               "name": "ids",
-              "value": "={{ { release_id: $('Normalize ScenarioSpec Generation Input').first().json.context.release_id, audit_id: $('Normalize ScenarioSpec Generation Input').first().json.context.audit_id || null, trt_id: $('Normalize ScenarioSpec Generation Input').first().json.context.trt_id, trt_version: $('Normalize ScenarioSpec Generation Input').first().json.context.trt_version, reconciliation_plan_id: $('Normalize ScenarioSpec Generation Input').first().json.context.reconciliation_plan_id, scenario_spec_id: $json.scenario_spec_id, scenario_spec_ids: [...($('Normalize ScenarioSpec Generation Input').first().json.context?.scenario_spec_ids || []), $json.scenario_spec_id] } }}",
+              "value": "={{ { release_id: $('Normalize ScenarioSpec Generation Input').first().json.context.release_id, audit_id: $('Normalize ScenarioSpec Generation Input').first().json.context.audit_id || null, trt_id: $('Normalize ScenarioSpec Generation Input').first().json.context.trt_id, trt_version: $('Normalize ScenarioSpec Generation Input').first().json.context.trt_version, reconciliation_plan_id: $('Normalize ScenarioSpec Generation Input').first().json.context.reconciliation_plan_id, scenario_spec_id: $json.scenario_spec_id, simulation_run_id: $json.run_id || null, scenario_spec_ids: [...($('Normalize ScenarioSpec Generation Input').first().json.context?.scenario_spec_ids || []), $json.scenario_spec_id] } }}",
               "type": "object"
             },
             {
               "id": "d511846f-be13-4042-90ea-6f9e6df5b7bb",
               "name": "payload",
-              "value": "={{ { scenario_spec_id: $json.scenario_spec_id, scenario_spec_path: $json.scenario_spec_path || $json.workspace_contract?.expected_scenario_spec_path, scenario_spec: $json.scenario_spec || $json } }}",
+              "value": "={{ { scenario_spec_id: $json.scenario_spec_id, scenario_spec_path: $('Generate ScenarioSpec').first().json.scenario_spec_path || $('Generate ScenarioSpec').first().json.scenario_spec?.workspace_contract?.expected_scenario_spec_path || $('Generate ScenarioSpec').first().json.workspace_contract?.expected_scenario_spec_path || null, simulation_run_id: $json.run_id || null, output_db_path: $json.output_db_path || null, affected_lines: $json.affected_lines || $('Generate ScenarioSpec').first().json.scenario_spec?.affected_lines || [], simulation_scope: $json.simulation_scope || $('Generate ScenarioSpec').first().json.scenario_spec?.simulation_scope || null, kpis: $json.kpis || {}, run_artifact: $json.run_artifact || null, simulation: $json, message: $json.status === 'COMPLETED' && !$json.error_code && $json.run_artifact?.status === 'COMPLETED' ? (($json.simulation_scope?.mode || $('Generate ScenarioSpec').first().json.scenario_spec?.simulation_scope?.mode) === 'EXPLICIT_OPERATOR_LIMITED' ? `The patch affected production lines ${($json.affected_lines || []).map(line => line.replace('line_', '')).join(', ') || 'none'}. The simulation was limited to lines ${($json.simulation_scope?.lines || []).map(line => line.replace('line_', '')).join(', ') || 'unknown'} because the operator explicitly requested a reduced simulation scope. RunArtifact: ${$json.run_id}. KPI rows were recorded for ${($json.run_artifact?.line_kpis || []).length} lines.` : `The patch affected production lines ${($json.affected_lines || []).map(line => line.replace('line_', '')).join(', ') || 'none'}. The full production system was simulated across lines ${($json.simulation_scope?.lines || []).map(line => line.replace('line_', '')).join(', ') || 'unknown'} because the Time-Arrival Model is system-level. RunArtifact: ${$json.run_id}. KPI rows were recorded for ${($json.run_artifact?.line_kpis || []).length} lines.`) : `ScenarioSpec was generated, but simulation result processing failed: ${$json.error_code || ($json.errors || []).join('; ') || $json.status}.` } }}",
               "type": "object"
             },
             {
               "id": "bbe8c872-2cca-4b79-b8e0-c14e7f8e8956",
               "name": "errors",
-              "value": "={{ [] }}",
+              "value": "={{ $json.status === 'COMPLETED' && !$json.error_code && $json.run_artifact?.status === 'COMPLETED' ? [] : [$json.error_code || null, ...($json.errors || ['Simulation failed.'])].filter(Boolean) }}",
               "type": "array"
             }
           ]
         },
         "options": {}
       },
-      "id": "d3ed3c30-e143-49eb-bd49-4b4aee2c23d6",
-      "name": "Return Generated ScenarioSpec",
+      "id": "dc13f1fb-dc37-4219-b3f4-fc2a0eaa8705",
+      "name": "Return Simulation Run Result",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1900,
-        -200
-      ]
+        3020,
+        -260
+      ],
+      "notes": "Normalizes simulation RunArtifact output into the orchestration envelope."
     },
     {
       "parameters": {
@@ -336,7 +356,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst context = input.context || {};\nconst payload = input.payload || {};\nconst plan = payload.plan || {};\nfunction firstAffectedLines(...values) {\n  for (const value of values) {\n    if (Array.isArray(value) && value.length) return value;\n  }\n  for (const value of values) {\n    if (Array.isArray(value)) return value;\n  }\n  return [];\n}\nconst affectedLines = firstAffectedLines(\n  context.affected_lines,\n  payload.affected_lines,\n  input.affected_lines\n);\nconst lineDecisions = payload.line_decisions || payload.plan?.line_decisions || [];\nconst missing = [];\n\nfor (const field of ['release_id', 'trt_id', 'trt_version', 'reconciliation_plan_id']) {\n  if (!context[field]) missing.push(field);\n}\n\nif (missing.length) {\n  const message = `Missing ScenarioSpec generation fields: ${missing.join(', ')}`;\n  return [{\n    json: {\n      status: 'REJECTED',\n      context,\n      ids: {\n        release_id: context.release_id || null,\n        audit_id: context.audit_id || null,\n        trt_id: context.trt_id || null,\n        trt_version: context.trt_version || null,\n        reconciliation_plan_id: context.reconciliation_plan_id || null,\n        scenario_spec_id: null\n      },\n      payload: {\n        ...payload,\n        plan,\n        affected_lines: affectedLines,\n        line_decisions: lineDecisions,\n        message,\n        missing_fields: missing\n      },\n      errors: [message]\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...input,\n    status: 'READY_FOR_SCENARIO_GENERATION',\n    context,\n    payload: {\n      ...payload,\n      plan,\n      affected_lines: affectedLines,\n      line_decisions: lineDecisions\n    },\n    scenario_request: {\n      release_id: context.release_id,\n      trt_id: context.trt_id,\n      trt_version: context.trt_version,\n      reconciliation_plan_id: context.reconciliation_plan_id,\n      candidate_strategy_id: 'primary',\n      scenario_template_id: 'surgical_sorting_v1',\n      include_waiting_scenarios: false,\n      affected_lines: affectedLines,\n      line_decisions: lineDecisions\n    },\n    errors: []\n  }\n}];"
+        "jsCode": "const input = $input.first().json;\nconst context = input.context || {};\nconst payload = input.payload || {};\nconst plan = payload.plan || {};\nfunction firstAffectedLines(...values) {\n  for (const value of values) {\n    if (Array.isArray(value) && value.length) return value;\n  }\n  for (const value of values) {\n    if (Array.isArray(value)) return value;\n  }\n  return [];\n}\nconst affectedLines = firstAffectedLines(\n  context.affected_lines,\n  payload.affected_lines,\n  input.affected_lines\n);\nconst lineDecisions = payload.line_decisions || payload.plan?.line_decisions || [];\nconst simulationScope = context.simulation_scope || payload.simulation_scope || input.simulation_scope || null;\nconst simulationConfigUpdates = context.simulation_config_updates || payload.simulation_config_updates || input.simulation_config_updates || null;\nconst missing = [];\n\nfor (const field of ['release_id', 'trt_id', 'trt_version', 'reconciliation_plan_id']) {\n  if (!context[field]) missing.push(field);\n}\n\nif (missing.length) {\n  const message = `Missing ScenarioSpec generation fields: ${missing.join(', ')}`;\n  return [{\n    json: {\n      status: 'REJECTED',\n      context,\n      ids: {\n        release_id: context.release_id || null,\n        audit_id: context.audit_id || null,\n        trt_id: context.trt_id || null,\n        trt_version: context.trt_version || null,\n        reconciliation_plan_id: context.reconciliation_plan_id || null,\n        scenario_spec_id: null\n      },\n      payload: {\n        ...payload,\n        plan,\n        affected_lines: affectedLines,\n        line_decisions: lineDecisions,\n        message,\n        missing_fields: missing\n      },\n      errors: [message]\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...input,\n    status: 'READY_FOR_SCENARIO_GENERATION',\n    context,\n    payload: {\n      ...payload,\n      plan,\n      affected_lines: affectedLines,\n      simulation_scope: simulationScope,\n      simulation_config_updates: simulationConfigUpdates,\n      line_decisions: lineDecisions\n    },\n    scenario_request: {\n      release_id: context.release_id,\n      trt_id: context.trt_id,\n      trt_version: context.trt_version,\n      reconciliation_plan_id: context.reconciliation_plan_id,\n      candidate_strategy_id: 'primary',\n      scenario_template_id: context.scenario_template_id || payload.scenario_template_id || null,\n      include_waiting_scenarios: false,\n      affected_lines: affectedLines,\n      simulation_scope: simulationScope,\n      simulation_config_updates: simulationConfigUpdates,\n      line_decisions: lineDecisions\n    },\n    errors: []\n  }\n}];"
       },
       "id": "4fa7a00d-2c21-4b36-9762-1779f55a47b8",
       "name": "Normalize ScenarioSpec Generation Input",
@@ -395,6 +415,71 @@
         240
       ],
       "notes": "Normalized rejection envelope for missing ScenarioSpec generation fields."
+    },
+    {
+      "parameters": {
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "id": "a3ad2cc2-7f8c-4d31-9f17-asyncwait001",
+      "name": "Wait Before Simulation Poll",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2180,
+        -200
+      ],
+      "notes": "Waits briefly before polling the backend simulation status endpoint."
+    },
+    {
+      "parameters": {
+        "url": "=http://trt-api:8000/simulation/runs/{{$json.run_id}}",
+        "options": {}
+      },
+      "id": "f12ed78c-3997-4f08-a7d0-asyncpoll001",
+      "name": "Poll Isaac Simulation Run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2460,
+        -200
+      ],
+      "notes": "Polls the async simulation run until a terminal status is returned."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "terminal-status-check",
+              "leftValue": "={{ ['COMPLETED','FAILED','FAILED_TIMEOUT','COMPLETED_NO_RESULT_DB','SIMULATION_COMPLETED_BUT_RESULT_DB_MISSING','SIMULATION_RESULT_NOT_FINALIZED','SIMULATION_DB_SCHEMA_INVALID','SIMULATION_RUN_NOT_FOUND'].includes($json.status) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b75e59ac-c497-4a16-b501-asyncterm001",
+      "name": "Simulation Run Terminal?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2740,
+        -200
+      ],
+      "notes": "Routes terminal simulation results to the response envelope; RUNNING loops back to the wait/poll path."
     }
   ],
   "connections": {
@@ -453,7 +538,7 @@
       "main": [
         [
           {
-            "node": "Return Generated ScenarioSpec",
+            "node": "ScenarioSpec to Isaac Simulation Run",
             "type": "main",
             "index": 0
           }
@@ -461,6 +546,17 @@
         [
           {
             "node": "Waiting?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ScenarioSpec to Isaac Simulation Run": {
+      "main": [
+        [
+          {
+            "node": "Wait Before Simulation Poll",
             "type": "main",
             "index": 0
           }
@@ -508,6 +604,46 @@
         [
           {
             "node": "Return Missing ScenarioSpec Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Before Simulation Poll": {
+      "main": [
+        [
+          {
+            "node": "Poll Isaac Simulation Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Poll Isaac Simulation Run": {
+      "main": [
+        [
+          {
+            "node": "Simulation Run Terminal?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simulation Run Terminal?": {
+      "main": [
+        [
+          {
+            "node": "Return Simulation Run Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait Before Simulation Poll",
             "type": "main",
             "index": 0
           }
