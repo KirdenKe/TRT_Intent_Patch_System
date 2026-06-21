@@ -22,12 +22,20 @@ WRITABLE_LINE_FIELDS = {
     "required_tool_ids",
     "target_set_id",
     "priority",
+    "manipulator_priority",
     "kpi",
     "abnormal_strategy",
     "tooling_policy",
 }
 WRITABLE_KPI_FIELDS = {"deadline_minutes", "max_downtime_seconds", "min_throughput_per_hour"}
 WRITABLE_TOOLING_POLICY_FIELDS = {"required_scope"}
+WRITABLE_MANIPULATOR_PRIORITY_FIELDS = {
+    "policy",
+    "ordered_tool_ids",
+    "ordered_normalized_types",
+    "tie_breaker",
+    "enabled",
+}
 
 
 def default_validation_results() -> ValidationResults:
@@ -107,6 +115,14 @@ def is_whitelisted_path(path: str) -> bool:
         return len(parts) in {3, 4}
     if field == "target_set_id":
         return len(parts) == 3
+    if field == "manipulator_priority":
+        if len(parts) == 3:
+            return True
+        if len(parts) == 4:
+            return parts[3] in WRITABLE_MANIPULATOR_PRIORITY_FIELDS
+        if len(parts) == 5 and parts[3] in {"ordered_tool_ids", "ordered_normalized_types"}:
+            return True
+        return False
     if field == "kpi":
         return len(parts) == 4 and parts[3] in WRITABLE_KPI_FIELDS
     if field == "tooling_policy":

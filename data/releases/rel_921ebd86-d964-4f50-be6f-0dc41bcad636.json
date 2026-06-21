@@ -1,0 +1,58 @@
+{
+  "audit_id": "audit-eb435e1d-e7d7-405b-a3a7-ab29cd9c0c5a",
+  "base_version": "v37",
+  "candidate_patch": {
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "base_version": "v37",
+    "intent_text": "adjust the targets for all production lines to the ent surgical tooling set and the number of tooling on the production line so that only 6 remain",
+    "message": "The candidate simulation configuration update is valid. It will set add_reference_number to 6 for the full-system simulation.",
+    "operations": [],
+    "operator_id": "op_001",
+    "patch_id": "patch-1782037290731",
+    "reason": "test for milestone 10",
+    "request_types": [
+      "TOOLING_POLICY_UPDATE",
+      "SIMULATION_CONFIG_UPDATE"
+    ],
+    "simulation_config_updates": {
+      "add_reference_number": 6
+    },
+    "status": "REVIEWED",
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [],
+    "affected_lines": [],
+    "intent_text": "adjust the targets for all production lines to the ent surgical tooling set and the number of tooling on the production line so that only 6 remain",
+    "reason": "test for milestone 10"
+  },
+  "created_at_utc": "2026-06-21T10:21:44.751718Z",
+  "current_trt_path": "/app/data/trt/current_trt.json",
+  "operator_decision": {
+    "comment": "Test for the Milestone 10",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-06-21T10:21:44.821916Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1782037290731",
+  "previous_trt_version": "v37",
+  "release_id": "rel_921ebd86-d964-4f50-be6f-0dc41bcad636",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "trt_version": "v38",
+  "updated_at_utc": "2026-06-21T10:21:44.821916Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  },
+  "version_path": "/app/data/trt_versions/trt-demo_v38.json"
+}

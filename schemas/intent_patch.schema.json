@@ -56,6 +56,27 @@
         "episode_success_requires_reset_cycles": { "type": ["integer", "null"], "minimum": 1 }
       }
     },
+    "manipulator_priority": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "policy": {
+          "enum": ["FCFS", "REQUIRED_FIRST", "UNWANTED_FIRST", "EXPLICIT_TOOL_ORDER", "EXPLICIT_TYPE_ORDER", "HIGHEST_RISK_FIRST", "LOWEST_RISK_FIRST"]
+        },
+        "ordered_tool_ids": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^tool_(0[1-9]|1[0-9]|2[0-7])$" },
+          "uniqueItems": true
+        },
+        "ordered_normalized_types": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "tie_breaker": { "const": "FCFS" },
+        "enabled": { "type": "boolean" }
+      }
+    },
     "status": {
       "enum": ["DRAFT", "REVIEWED", "VALIDATED", "RELEASED", "REJECTED"]
     }

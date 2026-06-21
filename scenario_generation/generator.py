@@ -428,6 +428,18 @@ def _build_line_policies(trt: dict[str, Any], plan: dict[str, Any], required_lin
             "tooling_policy": deepcopy(line.get("tooling_policy", {})),
             "digital_twin": deepcopy(line.get("digital_twin", {})),
             "priority": int(line["priority"]),
+            "manipulator_priority": deepcopy(
+                line.get(
+                    "manipulator_priority",
+                    {
+                        "policy": "FCFS",
+                        "ordered_tool_ids": [],
+                        "ordered_normalized_types": [],
+                        "tie_breaker": "FCFS",
+                        "enabled": False,
+                    },
+                )
+            ),
             "kpi": deepcopy(line["kpi"]),
             "abnormal_strategy": abnormal_strategy,
             "reconciliation_decision": decision["decision"],

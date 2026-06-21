@@ -17,6 +17,7 @@ REQUEST_TYPES = [
     "INSTRUMENT_SCOPE_UPDATE",
     "KPI_LIMIT_UPDATE",
     "PRIORITY_UPDATE",
+    "MANIPULATOR_PRIORITY_UPDATE",
     "ABNORMAL_STRATEGY_UPDATE",
     "TOOLING_POLICY_UPDATE",
     "SIMULATION_CONFIG_UPDATE",
@@ -62,6 +63,22 @@ TOOLING_REQUIRED_SCOPES = [
     "ALL_SUPPORTED_TOOLING",
     "SELECTED_TOOLING",
     "NONE",
+]
+MANIPULATOR_PRIORITY_POLICIES = [
+    "FCFS",
+    "REQUIRED_FIRST",
+    "UNWANTED_FIRST",
+    "EXPLICIT_TOOL_ORDER",
+    "EXPLICIT_TYPE_ORDER",
+    "HIGHEST_RISK_FIRST",
+    "LOWEST_RISK_FIRST",
+]
+IMPLEMENTED_MANIPULATOR_PRIORITY_POLICIES = [
+    "FCFS",
+    "REQUIRED_FIRST",
+    "UNWANTED_FIRST",
+    "EXPLICIT_TOOL_ORDER",
+    "EXPLICIT_TYPE_ORDER",
 ]
 RESTRICTED_SIMULATION_SETTING_MESSAGES = {
     "layout_source": "layout_source is an infrastructure simulation setting and cannot be changed through normal operator requests.",
@@ -119,6 +136,23 @@ LLM_EXTRACTED_FIELDS_SCHEMA: dict[str, Any] = {
             "items": {"type": "string", "enum": SUPPORTED_TOOL_IDS},
         },
         "target_set_id": {"type": ["string", "null"]},
+        "manipulator_priority": {
+            "type": ["object", "null"],
+            "properties": {
+                "policy": {"type": "string", "enum": IMPLEMENTED_MANIPULATOR_PRIORITY_POLICIES},
+                "ordered_tool_ids": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": SUPPORTED_TOOL_IDS},
+                },
+                "ordered_normalized_types": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
+                "tie_breaker": {"type": "string", "enum": ["FCFS"]},
+                "enabled": {"type": "boolean"},
+            },
+            "additionalProperties": False,
+        },
         "simulation_config_updates": {
             "type": ["object", "null"],
             "properties": {
@@ -185,6 +219,7 @@ LLM_EXTRACTED_FIELDS_SCHEMA: dict[str, Any] = {
         "excluded_tool_ids",
         "required_tool_ids",
         "target_set_id",
+        "manipulator_priority",
         "simulation_config_updates",
         "kpi_updates",
         "tooling_policy",
@@ -249,6 +284,23 @@ DOMAIN_CANDIDATE_SCHEMA: dict[str, Any] = {
             "items": {"type": "string", "enum": SUPPORTED_TOOL_IDS},
         },
         "target_set_id": {"type": ["string", "null"]},
+        "manipulator_priority": {
+            "type": ["object", "null"],
+            "properties": {
+                "policy": {"type": "string", "enum": IMPLEMENTED_MANIPULATOR_PRIORITY_POLICIES},
+                "ordered_tool_ids": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": SUPPORTED_TOOL_IDS},
+                },
+                "ordered_normalized_types": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
+                "tie_breaker": {"type": "string", "enum": ["FCFS"]},
+                "enabled": {"type": "boolean"},
+            },
+            "additionalProperties": False,
+        },
         "simulation_config_updates": {
             "type": ["object", "null"],
             "properties": {
@@ -313,6 +365,12 @@ def validate_domain_candidate(candidate: dict[str, Any], current_trt: dict[str, 
     validator = Draft202012Validator(schema_for_current_trt(DOMAIN_CANDIDATE_SCHEMA, current_trt))
     reasons = _dedupe_reasons(error.message for error in sorted(validator.iter_errors(candidate), key=lambda item: item.path))
     reasons.extend(_restricted_simulation_setting_reasons(candidate))
+    if candidate.get("action") == "NEEDS_CLARIFICATION":
+        questions = candidate.get("clarification_questions") or ["Intent requires clarification."]
+        reasons.extend(str(question) for question in questions)
+    if candidate.get("action") == "UNSUPPORTED_REQUEST":
+        unsupported = candidate.get("unsupported_terms") or ["Unsupported request."]
+        reasons.extend(str(term) for term in unsupported)
 
     if candidate.get("trt_id") != current_trt.get("trt_id"):
         reasons.append(f"trt_id mismatch: candidate targets {candidate.get('trt_id')}, current is {current_trt.get('trt_id')}")
@@ -322,11 +380,14 @@ def validate_domain_candidate(candidate: dict[str, Any], current_trt: dict[str, 
         )
     if candidate.get("line_id") and candidate.get("line_id") not in current_trt.get("lines", {}):
         reasons.append(f"line_id not found in current TRT: {candidate.get('line_id')}")
-    for line_id in candidate.get("target_lines", []):
+    for line_id in candidate.get("target_lines") or []:
         if line_id not in current_trt.get("lines", {}):
             reasons.append(f"target line not found in current TRT: {line_id}")
     if candidate.get("target_set_id") is not None and candidate["target_set_id"] not in (current_trt.get("tool_sets") or {}):
         reasons.append(f"target_set_id not found in current TRT: {candidate['target_set_id']}")
+    manipulator_priority = candidate.get("manipulator_priority") or {}
+    if manipulator_priority:
+        reasons.extend(_manipulator_priority_reasons(manipulator_priority, current_trt))
     if not reasons:
         reasons.extend(_tooling_policy_consistency_reasons(candidate))
     if not reasons:
@@ -354,9 +415,20 @@ def schema_for_current_trt(schema: dict[str, Any], current_trt: dict[str, Any]) 
         for field in ("selected_tool_ids", "excluded_tool_ids", "required_tool_ids"):
             if field in properties and isinstance(properties[field].get("items"), dict):
                 properties[field]["items"]["enum"] = tool_ids
+        manipulator_priority = properties.get("manipulator_priority") or {}
+        priority_props = manipulator_priority.get("properties") or {}
+        ordered_tool_ids = priority_props.get("ordered_tool_ids") or {}
+        if isinstance(ordered_tool_ids.get("items"), dict):
+            ordered_tool_ids["items"]["enum"] = tool_ids
     target_set_ids = sorted((current_trt.get("tool_sets") or {}).keys())
     if target_set_ids and "target_set_id" in properties:
         properties["target_set_id"]["enum"] = [*target_set_ids, None]
+    if normalized_types:
+        manipulator_priority = properties.get("manipulator_priority") or {}
+        priority_props = manipulator_priority.get("properties") or {}
+        ordered_types = priority_props.get("ordered_normalized_types") or {}
+        if isinstance(ordered_types.get("items"), dict):
+            ordered_types["items"]["enum"] = normalized_types
     return scoped
 
 
@@ -375,7 +447,23 @@ def normalize_domain_candidate(candidate: dict[str, Any], current_trt: dict[str,
     line_ids = _target_lines(candidate, current_trt)
     operations: list[dict[str, Any]] = []
     simulation_config_updates = candidate.get("simulation_config_updates") or {}
-    if "SIMULATION_CONFIG_UPDATE" in set(candidate.get("request_types") or []):
+    operation_driving_fields = (
+        "manipulator_priority",
+        "tooling_policy",
+        "goal",
+        "priority",
+        "target_set_id",
+        "selected_tool_ids",
+        "excluded_tool_ids",
+        "required_tool_ids",
+        "allowed_instruments",
+        "excluded_instruments",
+        "abnormal_strategy",
+    )
+    has_operation_driving_update = any(candidate.get(field) is not None for field in operation_driving_fields) or bool(
+        candidate.get("kpi_updates")
+    )
+    if "SIMULATION_CONFIG_UPDATE" in set(candidate.get("request_types") or []) and not has_operation_driving_update:
         if not simulation_config_updates:
             raise ValueError("SIMULATION_CONFIG_UPDATE requires simulation_config_updates.")
         return {
@@ -393,6 +481,14 @@ def normalize_domain_candidate(candidate: dict[str, Any], current_trt: dict[str,
             "status": "REVIEWED",
         }
     for line_id in line_ids:
+        if candidate.get("manipulator_priority") is not None:
+            operations.append(
+                {
+                    "op": "replace" if "manipulator_priority" in current_trt["lines"][line_id] else "add",
+                    "path": f"/lines/{line_id}/manipulator_priority",
+                    "value": _normalize_manipulator_priority(candidate["manipulator_priority"]),
+                }
+            )
         tooling_policy = candidate.get("tooling_policy")
         if tooling_policy:
             required_scope = tooling_policy.get("required_scope")
@@ -498,7 +594,7 @@ def normalize_domain_candidate(candidate: dict[str, Any], current_trt: dict[str,
             operations.append(
                 {"op": "replace", "path": f"/lines/{line_id}/abnormal_strategy", "value": candidate["abnormal_strategy"]}
             )
-    return {
+    patch = {
         "patch_id": candidate["patch_id"],
         "trt_id": candidate["trt_id"],
         "base_version": candidate["base_version"],
@@ -506,8 +602,15 @@ def normalize_domain_candidate(candidate: dict[str, Any], current_trt: dict[str,
         "intent_text": candidate["intent_text"],
         "reason": candidate["reason"],
         "operations": operations,
+        "request_types": candidate.get("request_types") or [],
+        "affected_lines": line_ids,
         "status": "REVIEWED",
     }
+    if simulation_config_updates:
+        patch["simulation_config_updates"] = simulation_config_updates
+    if candidate.get("manipulator_priority"):
+        patch["message"] = _manipulator_priority_review_message(candidate)
+    return patch
 
 
 def _target_lines(candidate: dict[str, Any], current_trt: dict[str, Any]) -> list[str]:
@@ -523,6 +626,7 @@ def _target_lines(candidate: dict[str, Any], current_trt: dict[str, Any]) -> lis
 def _coerce_domain_candidate_v2(candidate: dict[str, Any], current_trt: dict[str, Any]) -> dict[str, Any]:
     coerced = dict(candidate)
     _coerce_simulation_config_intent(coerced)
+    _coerce_manipulator_priority_intent(coerced, current_trt)
     _coerce_target_set_intent(coerced, current_trt)
     _coerce_remove_tooling_intent(coerced, current_trt)
     tooling_policy = _coerce_tooling_policy(coerced, current_trt)
@@ -568,6 +672,232 @@ def _coerce_domain_candidate_v2(candidate: dict[str, Any], current_trt: dict[str
     if coerced.get("detected_request_types") is None:
         coerced["detected_request_types"] = list(coerced.get("request_types") or [])
     return coerced
+
+
+def _coerce_manipulator_priority_intent(candidate: dict[str, Any], current_trt: dict[str, Any]) -> None:
+    intent_text = str(candidate.get("intent_text") or "").lower()
+    if not intent_text:
+        return
+    if _is_ambiguous_priority_adjustment(intent_text):
+        candidate["action"] = "NEEDS_CLARIFICATION"
+        candidate["clarification_questions"] = _dedupe_values(
+            [
+                *(candidate.get("clarification_questions") or []),
+                "Do you mean production-line priority, or should the robots on lines 1 and 3 pick ENT-required tools first?",
+            ]
+        )
+        return
+    if not _mentions_grasp_priority(intent_text):
+        return
+
+    priority = dict(candidate.get("manipulator_priority") or {})
+    if (
+        "required" in intent_text
+        or "ent-required" in intent_text
+        or "ent required" in intent_text
+        or "wanted" in intent_text
+        or _mentions_target_set_focus(intent_text, current_trt)
+    ):
+        if "first" in intent_text or "before unwanted" in intent_text:
+            priority["policy"] = "REQUIRED_FIRST"
+        elif _mentions_target_set_focus(intent_text, current_trt):
+            priority["policy"] = "REQUIRED_FIRST"
+    if "unwanted" in intent_text and "first" in intent_text:
+        priority["policy"] = "UNWANTED_FIRST"
+
+    ordered_tool_ids = _ordered_tool_ids_from_text(intent_text, current_trt)
+    if ordered_tool_ids:
+        priority["policy"] = "EXPLICIT_TOOL_ORDER"
+        priority["ordered_tool_ids"] = ordered_tool_ids
+
+    ordered_types = _ordered_normalized_types_from_text(intent_text, current_trt)
+    if ordered_types and not ordered_tool_ids:
+        priority["policy"] = "EXPLICIT_TYPE_ORDER"
+        priority["ordered_normalized_types"] = ordered_types
+
+    if not priority.get("policy"):
+        candidate["clarification_questions"] = _dedupe_values(
+            [
+                *(candidate.get("clarification_questions") or []),
+                "Which production line should use this grasp order, or should it apply to all lines?",
+            ]
+        )
+        candidate["action"] = "NEEDS_CLARIFICATION"
+        return
+
+    candidate["goal"] = None
+    priority = _normalize_manipulator_priority(priority)
+    candidate["manipulator_priority"] = priority
+    candidate["request_types"] = _dedupe_values([*(candidate.get("request_types") or []), "MANIPULATOR_PRIORITY_UPDATE"])
+    candidate["detected_request_types"] = _dedupe_values(
+        [*(candidate.get("detected_request_types") or []), "MANIPULATOR_PRIORITY_UPDATE"]
+    )
+    if _is_all_lines_text(intent_text):
+        candidate["target_scope"] = "ALL_LINES"
+        candidate["target_lines"] = []
+        candidate["line_id"] = None
+    else:
+        parsed_lines = _line_ids_from_text(intent_text, current_trt)
+        if parsed_lines:
+            candidate["target_lines"] = parsed_lines
+            candidate["target_scope"] = "MULTIPLE_LINES" if len(parsed_lines) > 1 else "SINGLE_LINE"
+            candidate["line_id"] = parsed_lines[0] if len(parsed_lines) == 1 else None
+        elif not candidate.get("line_id") and not candidate.get("target_lines") and candidate.get("target_scope") != "ALL_LINES":
+            candidate["clarification_questions"] = _dedupe_values(
+                [
+                    *(candidate.get("clarification_questions") or []),
+                    "Which production line should use this grasp order, or should it apply to all lines?",
+                ]
+            )
+            candidate["action"] = "NEEDS_CLARIFICATION"
+    candidate["clarification_questions"] = [
+        question
+        for question in (candidate.get("clarification_questions") or [])
+        if "goal" not in question.lower()
+    ]
+
+
+def _mentions_grasp_priority(intent_text: str) -> bool:
+    priority_terms = ("pick", "grasp", "pickup", "pick up", "grasp order", "picking order", "priority queue")
+    ordering_terms = ("first", "last", "before", "after", "order", "prioritize", "priority")
+    if any(term in intent_text for term in priority_terms) and any(term in intent_text for term in ordering_terms):
+        return True
+    return "prioritize" in intent_text and "focus" in intent_text and "ent" in intent_text
+
+
+def _mentions_target_set_focus(intent_text: str, current_trt: dict[str, Any]) -> bool:
+    if "focus" not in intent_text and "prioritize" not in intent_text:
+        return False
+    aliases = build_target_set_aliases(current_trt)
+    return any(re.search(rf"\b{re.escape(alias.lower())}\b", intent_text) for alias in aliases)
+
+
+def _is_ambiguous_priority_adjustment(intent_text: str) -> bool:
+    if "prioritize" not in intent_text:
+        return False
+    if not any(term in intent_text for term in ("adjustment", "adjustments", "adjust")):
+        return False
+    disambiguating_terms = (
+        "pick",
+        "grasp",
+        "required",
+        "wanted",
+        "unwanted",
+        "focus on",
+        "ent surgical tooling set",
+        "ent tooling set",
+        "ent set",
+        "ent-required",
+        "ent required",
+    )
+    return not any(term in intent_text for term in disambiguating_terms)
+
+
+def _is_all_lines_text(intent_text: str) -> bool:
+    return any(
+        phrase in intent_text
+        for phrase in (
+            "all production lines",
+            "every production line",
+            "each production line",
+            "all lines",
+            "every line",
+            "each line",
+            "all robots",
+            "every robot",
+            "each robot",
+        )
+    )
+
+
+def _ordered_tool_ids_from_text(intent_text: str, current_trt: dict[str, Any]) -> list[str]:
+    valid = set((current_trt.get("tool_catalog") or {}).keys()) or set(SUPPORTED_TOOL_IDS)
+    return _dedupe_values([tool_id for tool_id in re.findall(r"\btool_(?:0[1-9]|1[0-9]|2[0-7])\b", intent_text) if tool_id in valid])
+
+
+def _ordered_normalized_types_from_text(intent_text: str, current_trt: dict[str, Any]) -> list[str]:
+    aliases = build_tool_vocabulary(current_trt)["aliases"]
+    matches: list[tuple[int, str]] = []
+    for alias, normalized_type in sorted(aliases.items(), key=lambda item: len(item[0]), reverse=True):
+        for match in re.finditer(rf"\b{re.escape(alias.lower())}\b", intent_text):
+            matches.append((match.start(), normalized_type))
+    return _dedupe_values(normalized_type for _, normalized_type in sorted(matches))
+
+
+def _normalize_manipulator_priority(priority: dict[str, Any]) -> dict[str, Any]:
+    policy = priority.get("policy") or "FCFS"
+    return {
+        "policy": policy,
+        "ordered_tool_ids": _dedupe_values(priority.get("ordered_tool_ids") or []),
+        "ordered_normalized_types": _dedupe_values(priority.get("ordered_normalized_types") or []),
+        "tie_breaker": priority.get("tie_breaker") or "FCFS",
+        "enabled": bool(priority.get("enabled", True)),
+    }
+
+
+def _manipulator_priority_reasons(priority: dict[str, Any], current_trt: dict[str, Any]) -> list[str]:
+    reasons: list[str] = []
+    normalized = _normalize_manipulator_priority(priority)
+    policy = normalized["policy"]
+    if policy not in IMPLEMENTED_MANIPULATOR_PRIORITY_POLICIES:
+        reasons.append(f"manipulator_priority.policy is not implemented: {policy}")
+    if policy == "EXPLICIT_TOOL_ORDER" and not normalized["ordered_tool_ids"]:
+        reasons.append("EXPLICIT_TOOL_ORDER requires ordered_tool_ids.")
+    if policy == "EXPLICIT_TYPE_ORDER" and not normalized["ordered_normalized_types"]:
+        reasons.append("EXPLICIT_TYPE_ORDER requires ordered_normalized_types.")
+    valid_tool_ids = set((current_trt.get("tool_catalog") or {}).keys()) or set(SUPPORTED_TOOL_IDS)
+    for tool_id in normalized["ordered_tool_ids"]:
+        if tool_id not in valid_tool_ids:
+            reasons.append(f"ordered_tool_id not found in current TRT: {tool_id}")
+    valid_types = set(build_tool_vocabulary(current_trt)["normalized_types"])
+    for tool_type in normalized["ordered_normalized_types"]:
+        if valid_types and tool_type not in valid_types:
+            reasons.append(f"ordered_normalized_type not found in current TRT: {tool_type}")
+    return reasons
+
+
+def _manipulator_priority_review_message(candidate: dict[str, Any]) -> str:
+    priority = _normalize_manipulator_priority(candidate.get("manipulator_priority") or {})
+    policy = priority["policy"]
+    lines = _dedupe_values(candidate.get("target_lines") or [])
+    if candidate.get("target_scope") == "ALL_LINES":
+        target = "all production lines"
+    elif lines:
+        target = ", ".join(lines)
+    elif candidate.get("line_id"):
+        target = candidate["line_id"]
+    else:
+        target = "the selected production lines"
+    simulation_updates = candidate.get("simulation_config_updates") or {}
+    if policy == "REQUIRED_FIRST" and candidate.get("target_set_id") and simulation_updates.get("add_reference_number") is not None:
+        return (
+            "The candidate patch passed validation. It will set "
+            f"{target} to target the {candidate['target_set_id']}, make their robots pick ENT-required tools first, "
+            f"and set add_reference_number to {simulation_updates['add_reference_number']} for the full-system simulation. "
+            "Please approve, reject, or request revision."
+        )
+    if policy == "REQUIRED_FIRST" and candidate.get("target_set_id"):
+        return (
+            "The candidate patch passed validation. It will set "
+            f"{target} to target the {candidate['target_set_id']} and make their robots pick ENT-required tools first. "
+            "Please approve, reject, or request revision."
+        )
+    if policy == "EXPLICIT_TYPE_ORDER":
+        order = ", ".join(priority["ordered_normalized_types"])
+        return (
+            "The candidate manipulator priority update is valid. It will set "
+            f"{target} to pick tooling types in this order: {order}. Please approve, reject, or request revision."
+        )
+    if policy == "EXPLICIT_TOOL_ORDER":
+        order = ", ".join(priority["ordered_tool_ids"])
+        return (
+            "The candidate manipulator priority update is valid. It will set "
+            f"{target} to pick tool IDs in this order: {order}. Please approve, reject, or request revision."
+        )
+    return (
+        "The candidate manipulator priority update is valid. It will set "
+        f"{target} manipulator priority policy to {policy}. Please approve, reject, or request revision."
+    )
 
 
 def _coerce_simulation_config_intent(candidate: dict[str, Any]) -> None:
@@ -619,6 +949,10 @@ def _coerce_simulation_config_intent(candidate: dict[str, Any]) -> None:
         number_match = re.search(r"\b(?:add_reference_number|add reference number)\b[^\d]*(\d+)\b", intent_text)
         if not number_match:
             number_match = re.search(r"\bonly\s+(\d+)\s+(?:remain|references?|tooling|tools?)\b", intent_text)
+        if number_match:
+            updates["add_reference_number"] = int(number_match.group(1))
+    elif any(term in intent_text for term in ("number of tooling", "tooling count", "reference tooling")):
+        number_match = re.search(r"\bonly\s+(\d+)\s+(?:remain|references?|tooling|tools?)\b", intent_text)
         if number_match:
             updates["add_reference_number"] = int(number_match.group(1))
     if "immediate stop" in intent_text or "immediate-stop" in intent_text:
@@ -685,7 +1019,7 @@ def _coerce_target_set_intent(candidate: dict[str, Any], current_trt: dict[str, 
     if not matched_set_id:
         return
 
-    target_words = ("target", "targets", "classify", "classification", "use", "adjust", "set")
+    target_words = ("target", "targets", "classify", "classification", "use", "adjust", "set", "focus", "prioritize")
     if not any(word in intent_text for word in target_words):
         return
 
@@ -901,6 +1235,8 @@ def _infer_request_types(candidate: dict[str, Any]) -> list[str]:
         request_types.append("TASK_GOAL_UPDATE")
     if candidate.get("priority") is not None:
         request_types.append("PRIORITY_UPDATE")
+    if candidate.get("manipulator_priority") is not None:
+        request_types.append("MANIPULATOR_PRIORITY_UPDATE")
     if (
         candidate.get("allowed_instruments") is not None
         or candidate.get("excluded_instruments") is not None

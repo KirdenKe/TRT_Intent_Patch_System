@@ -1,5 +1,5 @@
 {
-  "audit_id": "audit-9e236b31-4c30-46fd-9fbd-9b34bcaf9391",
+  "audit_id": "audit-a66e082b-3139-4ec1-9fd6-a754d5f0e5b9",
   "experiment_id": "ent_surgical_tooling_sorting_demo",
   "lines": {
     "line_1": {
@@ -161,9 +161,9 @@
       }
     }
   },
-  "previous_version": "v43",
-  "release_id": "rel_1a144e7e-a305-414a-bbe6-9e73fd74629d",
-  "released_at": "2026-06-21T13:25:39.707083Z",
+  "previous_version": "v40",
+  "release_id": "rel_6fee314f-c98a-4d34-8438-0cacaaf75f6a",
+  "released_at": "2026-06-21T12:21:54.719990Z",
   "tool_catalog": {
     "tool_01": {
       "belongs_to_ent_set": false,
@@ -446,5 +446,5 @@
     }
   },
   "trt_id": "trt-demo",
-  "version": "v44"
+  "version": "v41"
 }

@@ -232,19 +232,62 @@ def _ensure_result_schema(connection: sqlite3.Connection) -> None:
           entanglement_count INTEGER,
           downtime_seconds REAL,
           cycle_time_seconds REAL,
-          success INTEGER
+          success INTEGER,
+          required_tray_completion_seconds REAL,
+          unwanted_box_completion_seconds REAL,
+          all_sorting_completion_seconds REAL,
+          priority_deviation_count INTEGER,
+          priority_policy TEXT
         );
         CREATE TABLE IF NOT EXISTS tool_events(
           run_id TEXT,
           line_id TEXT,
           tool_id TEXT,
           tool_type TEXT,
+          env_id INTEGER,
+          tool_number INTEGER,
           wanted INTEGER,
           picked INTEGER,
           placed INTEGER,
           placement_target TEXT,
           placement_correct INTEGER,
+          event_time_seconds REAL,
+          actual_pick_index INTEGER,
+          intended_priority_rank INTEGER,
+          priority_policy TEXT
+        );
+        CREATE TABLE IF NOT EXISTS priority_events(
+          run_id TEXT,
+          line_id TEXT,
+          env_id INTEGER,
+          tool_id TEXT,
+          tool_number INTEGER,
+          intended_rank INTEGER,
+          actual_pick_index INTEGER,
+          priority_policy TEXT,
+          deviation_reason TEXT,
           event_time_seconds REAL
+        );
+        CREATE TABLE IF NOT EXISTS container_completion_events(
+          run_id TEXT,
+          line_id TEXT,
+          env_id INTEGER,
+          container_type TEXT,
+          completed_at_seconds REAL,
+          required_count INTEGER,
+          completed_count INTEGER,
+          success INTEGER
+        );
+        CREATE TABLE IF NOT EXISTS line_completion_kpis(
+          run_id TEXT,
+          line_id TEXT,
+          env_id INTEGER,
+          priority_policy TEXT,
+          required_tray_completion_seconds REAL,
+          unwanted_box_completion_seconds REAL,
+          all_sorting_completion_seconds REAL,
+          priority_deviation_count INTEGER,
+          success INTEGER
         );
         """
     )
@@ -257,20 +300,44 @@ def _minimal_line_kpi_rows(connection: sqlite3.Connection, run_id: str, num_envs
     ).fetchone()[0]
     if int(existing_count) > 0:
         return
+    line_kpi_columns = [row[1] for row in connection.execute("PRAGMA table_info(line_kpis)").fetchall()]
     for env_index in range(max(1, int(num_envs))):
+        line_id = f"line_{env_index + 1}"
+        row = {
+            "run_id": run_id,
+            "line_id": line_id,
+            "throughput_per_hour": None,
+            "completed_count": 0,
+            "wanted_completed_count": 0,
+            "unwanted_completed_count": 0,
+            "misplaced_count": 0,
+            "entanglement_count": 0,
+            "downtime_seconds": 0.0,
+            "cycle_time_seconds": None,
+            "success": 1 if success else 0,
+            "required_tray_completion_seconds": None,
+            "unwanted_box_completion_seconds": None,
+            "all_sorting_completion_seconds": None,
+            "priority_deviation_count": 0,
+            "priority_policy": "FCFS",
+        }
+        insert_columns = [column for column in line_kpi_columns if column in row]
+        placeholders = ", ".join("?" for _ in insert_columns)
         connection.execute(
-            "INSERT INTO line_kpis VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            f"INSERT INTO line_kpis ({', '.join(insert_columns)}) VALUES ({placeholders})",
+            tuple(row[column] for column in insert_columns),
+        )
+        connection.execute(
+            "INSERT INTO line_completion_kpis VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 run_id,
-                f"line_{env_index + 1}",
+                line_id,
+                env_index,
+                "FCFS",
+                None,
+                None,
                 None,
                 0,
-                0,
-                0,
-                0,
-                0,
-                0.0,
-                None,
                 1 if success else 0,
             ),
         )

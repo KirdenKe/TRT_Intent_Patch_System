@@ -6,6 +6,7 @@ import os
 import logging
 import json
 from typing import Any
+from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
@@ -31,9 +32,16 @@ from trt_core.digital_twin_adapter import (
     read_simulation_results,
 )
 from trt_core.ent_demo import build_current_state, state_object_to_records
+from trt_core.chat_sessions import (
+    clear_chat_session,
+    load_chat_session,
+    merge_pending_clarification,
+    save_chat_session,
+)
 from trt_core.intent_normalizer import (
     DOMAIN_CANDIDATE_SCHEMA,
     LLM_EXTRACTED_FIELDS_SCHEMA,
+    IMPLEMENTED_MANIPULATOR_PRIORITY_POLICIES,
     build_target_set_aliases,
     build_tool_vocabulary,
     normalize_domain_candidate,
@@ -240,6 +248,10 @@ def build_intent_context(current_trt: dict[str, Any]) -> dict[str, Any]:
         "valid_line_ids": valid_line_ids,
         "valid_target_set_ids": valid_target_set_ids,
         "target_set_aliases": target_set_aliases,
+        "valid_manipulator_priority_policies": IMPLEMENTED_MANIPULATOR_PRIORITY_POLICIES,
+        "valid_normalized_tool_types": tool_vocabulary["normalized_types"],
+        "valid_tool_ids": tool_ids,
+        "tool_aliases": tool_vocabulary["aliases"],
         "tool_vocabulary": tool_vocabulary,
         "allowed_patch_operation_types": sorted(SUPPORTED_OPERATIONS),
         "editable_path_whitelist": [
@@ -256,6 +268,14 @@ def build_intent_context(current_trt: dict[str, Any]) -> dict[str, Any]:
             "/lines/{line_id}/required_tool_ids/{index}",
             "/lines/{line_id}/target_set_id",
             "/lines/{line_id}/priority",
+            "/lines/{line_id}/manipulator_priority",
+            "/lines/{line_id}/manipulator_priority/policy",
+            "/lines/{line_id}/manipulator_priority/ordered_tool_ids",
+            "/lines/{line_id}/manipulator_priority/ordered_tool_ids/{index}",
+            "/lines/{line_id}/manipulator_priority/ordered_normalized_types",
+            "/lines/{line_id}/manipulator_priority/ordered_normalized_types/{index}",
+            "/lines/{line_id}/manipulator_priority/tie_breaker",
+            "/lines/{line_id}/manipulator_priority/enabled",
             "/lines/{line_id}/kpi/deadline_minutes",
             "/lines/{line_id}/kpi/max_downtime_seconds",
             "/lines/{line_id}/kpi/min_throughput_per_hour",
@@ -277,6 +297,7 @@ def build_intent_context(current_trt: dict[str, Any]) -> dict[str, Any]:
             "instrument_type": tool_vocabulary["normalized_types"],
             "tool_id": tool_ids,
             "target_set_id": valid_target_set_ids,
+            "manipulator_priority_policy": IMPLEMENTED_MANIPULATOR_PRIORITY_POLICIES,
             "abnormal_strategy": ["STOP_LINE", "CONTINUE_FEASIBLE_TASKS", "ASK_OPERATOR"],
             "line_mode": ["IDLE", "RUNNING", "INTERVENTION", "PAUSED", "ERROR"],
             "tooling_required_scope": [
@@ -418,6 +439,19 @@ def get_debug_trt_version_state(trt_id: str = "trt-demo") -> dict[str, Any]:
     return repository.trt_version_state(trt_id)
 
 
+@app.get("/debug/current-manipulator-priority")
+def get_debug_current_manipulator_priority(trt_id: str | None = None) -> dict[str, str]:
+    try:
+        current_trt = repository.get_current_trt(trt_id)
+    except RepositoryError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    result: dict[str, str] = {}
+    for line_id, line in sorted((current_trt.get("lines") or {}).items()):
+        priority = line.get("manipulator_priority") or {}
+        result[line_id] = str(priority.get("policy") or "FCFS")
+    return result
+
+
 @app.post("/debug/repair-current-trt")
 def post_debug_repair_current_trt(trt_id: str = "trt-demo") -> dict[str, Any]:
     _require_debug_environment("current TRT repair")
@@ -446,6 +480,86 @@ def get_intent_context(trt_id: str | None = None) -> dict[str, Any]:
         return context
     except RepositoryError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/chat/session/{session_id}")
+def get_chat_session(session_id: str) -> dict[str, Any]:
+    return load_chat_session(session_id, repository)
+
+
+@app.put("/chat/session/{session_id}")
+def put_chat_session(session_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    try:
+        return save_chat_session(session_id, payload, repository)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.delete("/chat/session/{session_id}")
+def delete_chat_session(session_id: str) -> dict[str, Any]:
+    return clear_chat_session(session_id, repository)
+
+
+@app.post("/chat/session/{session_id}/merge-clarification")
+def post_chat_session_merge_clarification(session_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    session = load_chat_session(session_id, repository)
+    pending = session.get("pending_intent")
+    if not pending:
+        raise HTTPException(status_code=404, detail="No pending intent for chat session.")
+    clarification_text = str(payload.get("clarification_text") or payload.get("message") or "")
+    if not clarification_text.strip():
+        raise HTTPException(status_code=422, detail="clarification_text is required.")
+    merged = merge_pending_clarification(pending, clarification_text)
+    trt_id = payload.get("trt_id") or pending.get("trt_id") or "trt-demo"
+    try:
+        current_trt = repository.get_current_trt(trt_id)
+        candidate = {
+            "patch_id": str(pending.get("patch_id") or f"patch_{uuid4()}"),
+            "trt_id": current_trt["trt_id"],
+            "base_version": current_trt["version"],
+            "operator_id": str(merged.get("operator_id") or pending.get("operator_id") or ""),
+            "intent_text": str(merged["merged_intent_text"]),
+            "reason": str(merged.get("reason") or pending.get("reason") or ""),
+            "excluded_instruments": None,
+            "status": "DRAFT",
+        }
+        intent_patch = normalize_domain_candidate(candidate, current_trt)
+    except RepositoryError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        return {
+            "session_id": session["session_id"],
+            "state": session.get("state"),
+            "pending_intent": pending,
+            **merged,
+            "resolved": False,
+            "error": str(exc),
+        }
+
+    manipulator_priority = None
+    target_set_id = None
+    for operation in intent_patch.get("operations", []):
+        path = str(operation.get("path") or "")
+        if path.endswith("/manipulator_priority"):
+            manipulator_priority = operation.get("value")
+        elif path.endswith("/target_set_id"):
+            target_set_id = operation.get("value")
+
+    return {
+        "session_id": session["session_id"],
+        "state": session.get("state"),
+        "pending_intent": pending,
+        **merged,
+        "resolved": True,
+        "intent_text": merged["merged_intent_text"],
+        "request_types": intent_patch.get("request_types") or [],
+        "target_lines": intent_patch.get("affected_lines") or [],
+        "target_set_id": target_set_id,
+        "manipulator_priority": manipulator_priority,
+        "simulation_config_updates": intent_patch.get("simulation_config_updates") or {},
+        "candidate_patch": intent_patch,
+        "intent_patch": intent_patch,
+    }
 
 
 @app.get("/debug/intent-schema")
@@ -1389,6 +1503,8 @@ def get_debug_runtime_config() -> dict[str, Any]:
 
 
 def _simulation_scope_result_error(scenario_spec: dict[str, Any], run_artifact: dict[str, Any]) -> dict[str, Any] | None:
+    if run_artifact.get("error_code") or run_artifact.get("status") == "ERROR":
+        return None
     scope = scenario_spec.get("simulation_scope") or {}
     if not isinstance(scope, dict):
         return None

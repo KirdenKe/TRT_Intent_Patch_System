@@ -23,6 +23,13 @@ def validate_semantics(trt: TRT | dict[str, Any]) -> list[str]:
         priority = line.get("priority")
         if not isinstance(priority, int) or not 1 <= priority <= 5:
             reasons.append(f"line {line_id}: priority must be an integer from 1 to 5")
+        manipulator_priority = line.get("manipulator_priority")
+        if manipulator_priority is not None:
+            policy = manipulator_priority.get("policy")
+            if policy == "EXPLICIT_TOOL_ORDER" and not manipulator_priority.get("ordered_tool_ids"):
+                reasons.append(f"line {line_id}: EXPLICIT_TOOL_ORDER requires ordered_tool_ids")
+            if policy == "EXPLICIT_TYPE_ORDER" and not manipulator_priority.get("ordered_normalized_types"):
+                reasons.append(f"line {line_id}: EXPLICIT_TYPE_ORDER requires ordered_normalized_types")
 
         kpi = line.get("kpi", {})
         for field in ("deadline_minutes", "max_downtime_seconds", "min_throughput_per_hour"):

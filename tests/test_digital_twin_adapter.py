@@ -722,6 +722,68 @@ def test_result_reader_reports_running_result_not_finalized(tmp_path):
     assert result["tool_events_count"] == 0
 
 
+def test_result_reader_classifies_isaac_script_exception(tmp_path):
+    db_path = tmp_path / "script_exception.sqlite"
+    with sqlite3.connect(db_path) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE simulation_runs(run_id TEXT PRIMARY KEY, scenario_spec_id TEXT, scenario_spec_path TEXT, started_at TEXT, completed_at TEXT, status TEXT, error_message TEXT);
+            CREATE TABLE line_kpis(run_id TEXT, line_id TEXT, throughput_per_hour REAL, completed_count INTEGER, wanted_completed_count INTEGER, unwanted_completed_count INTEGER, misplaced_count INTEGER, entanglement_count INTEGER, downtime_seconds REAL, cycle_time_seconds REAL, success INTEGER);
+            CREATE TABLE tool_events(run_id TEXT, line_id TEXT, tool_id TEXT, tool_type TEXT, wanted INTEGER, picked INTEGER, placed INTEGER, placement_target TEXT, placement_correct INTEGER, event_time_seconds REAL);
+            """
+        )
+        connection.execute(
+            "INSERT INTO simulation_runs VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                "sim_failed",
+                "scn",
+                "spec.json",
+                "a",
+                "b",
+                "FAILED",
+                "invalid literal for int() with base 10: 'tooling_14_15'",
+            ),
+        )
+
+    result = read_simulation_results(db_path, "sim_failed")
+
+    assert result["status"] == "ERROR"
+    assert result["error_code"] == "SIMULATION_SCRIPT_EXCEPTION"
+    assert result["root_exception"] == "invalid literal for int() with base 10: 'tooling_14_15'"
+    assert result["failed_function"] == "_current_table_tool_numbers"
+    assert result["script"] == "pick_up_example.py"
+
+
+def test_result_reader_classifies_runtime_logging_collision(tmp_path):
+    db_path = tmp_path / "logging_collision.sqlite"
+    with sqlite3.connect(db_path) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE simulation_runs(run_id TEXT PRIMARY KEY, scenario_spec_id TEXT, scenario_spec_path TEXT, started_at TEXT, completed_at TEXT, status TEXT, error_message TEXT);
+            CREATE TABLE line_kpis(run_id TEXT, line_id TEXT, throughput_per_hour REAL, completed_count INTEGER, wanted_completed_count INTEGER, unwanted_completed_count INTEGER, misplaced_count INTEGER, entanglement_count INTEGER, downtime_seconds REAL, cycle_time_seconds REAL, success INTEGER);
+            CREATE TABLE tool_events(run_id TEXT, line_id TEXT, tool_id TEXT, tool_type TEXT, wanted INTEGER, picked INTEGER, placed INTEGER, placement_target TEXT, placement_correct INTEGER, event_time_seconds REAL);
+            """
+        )
+        connection.execute(
+            "INSERT INTO simulation_runs VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                "sim_failed",
+                "scn",
+                "spec.json",
+                "a",
+                "b",
+                "FAILED",
+                "log_runtime_event() got multiple values for argument 'event_type'",
+            ),
+        )
+
+    result = read_simulation_results(db_path, "sim_failed")
+
+    assert result["status"] == "ERROR"
+    assert result["error_code"] == "SIMULATION_SCRIPT_EXCEPTION"
+    assert result["failed_function"] == "log_runtime_event"
+
+
 def test_simulation_scope_result_validation_requires_kpis_for_all_simulated_lines(tmp_path):
     from trt_core.api import _simulation_scope_result_error
 

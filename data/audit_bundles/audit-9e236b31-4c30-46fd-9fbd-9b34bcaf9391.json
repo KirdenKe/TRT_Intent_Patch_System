@@ -1,0 +1,58 @@
+{
+  "audit_id": "audit-9e236b31-4c30-46fd-9fbd-9b34bcaf9391",
+  "intent_text": "prioritize the adjustment of production lines 1 and 3 to focus on the ent surgical tooling set, and adjust the number of tooling on the production line so that only 6 remain Clarification: i mean the robots on lines 1 and 3 pick ENT-required tools first",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "REQUIRED_FIRST",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "REQUIRED_FIRST",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch_dfd0e296-977b-456f-9d95-16cf71985665",
+  "reason": "test for milestone 10",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-21T13:25:39.713310Z",
+  "trt_after_hash": "60a84ac8c1a1bedbbb0b619e017432fc293a8c573748a9a4c293990171b009f9",
+  "trt_after_version": "v44",
+  "trt_before_hash": "e279378a89288d781ff15fb94cd6b8a70a68c3ef4f9a233b75d2efb5c15cbc79",
+  "trt_before_version": "v43",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

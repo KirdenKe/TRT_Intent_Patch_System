@@ -88,6 +88,7 @@
             "items": { "$ref": "#/$defs/tool_id" },
             "uniqueItems": true
           },
+          "manipulator_priority": { "$ref": "#/$defs/manipulator_priority" },
           "priority": {
             "type": "integer",
             "minimum": 1,
@@ -209,6 +210,28 @@
         "MASTOID_RETRACTOR",
         "SURGICAL_SUCTION_CANNULA"
       ]
+    },
+    "manipulator_priority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy", "ordered_tool_ids", "ordered_normalized_types", "tie_breaker", "enabled"],
+      "properties": {
+        "policy": {
+          "enum": ["FCFS", "REQUIRED_FIRST", "UNWANTED_FIRST", "EXPLICIT_TOOL_ORDER", "EXPLICIT_TYPE_ORDER", "HIGHEST_RISK_FIRST", "LOWEST_RISK_FIRST"]
+        },
+        "ordered_tool_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/tool_id" },
+          "uniqueItems": true
+        },
+        "ordered_normalized_types": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/tool_type" },
+          "uniqueItems": true
+        },
+        "tie_breaker": { "enum": ["FCFS"] },
+        "enabled": { "type": "boolean" }
+      }
     }
   }
 }

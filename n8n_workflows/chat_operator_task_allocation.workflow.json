@@ -22,14 +22,14 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst fieldLabels = {\n  operator_id: 'operator ID',\n  intent_text: 'task request',\n  reason: 'reason for the change'\n};\nconst intentText = input.intent_text || input.raw_chat_input || '';\nconst missing = [];\nif (!input.operator_id) missing.push('operator_id');\nif (!intentText) missing.push('intent_text');\nif (!input.reason) missing.push('reason');\nreturn [{\n  json: {\n    status: missing.length ? 'NEEDS_CLARIFICATION' : 'READY_FOR_INTENT_EXTRACTION',\n    missing_fields: missing,\n    field_labels: fieldLabels,\n    operator_id: input.operator_id || null,\n    intent_text: intentText,\n    reason: input.reason || null,\n    raw_chat_input: input.raw_chat_input || intentText,\n    confirmations: input.confirmations || {},\n    debug: input.debug === true,\n    context: { ...(input.context || {}), operator_id: input.operator_id || null, debug: input.debug === true },\n    body: {\n      operator_id: input.operator_id || null,\n      intent_text: intentText,\n      reason: input.reason || null\n    },\n    errors: []\n  }\n}];"
+        "jsCode": "const input = $input.first().json;\nconst fieldLabels = {\n  operator_id: 'operator ID',\n  intent_text: 'task request',\n  reason: 'reason for the change'\n};\nconst intentText = input.intent_text || input.raw_chat_input || '';\nconst sessionId = input.context?.session_id || input.session_id || input.sessionId || input.chatSessionId || input.chatId || input.conversationId || input.body?.sessionId || 'default';\nconst missing = [];\nif (!input.operator_id) missing.push('operator_id');\nif (!intentText) missing.push('intent_text');\nif (!input.reason) missing.push('reason');\nreturn [{\n  json: {\n    status: missing.length ? 'NEEDS_CLARIFICATION' : 'READY_FOR_INTENT_EXTRACTION',\n    missing_fields: missing,\n    field_labels: fieldLabels,\n    operator_id: input.operator_id || null,\n    intent_text: intentText,\n    reason: input.reason || null,\n    raw_chat_input: input.raw_chat_input || intentText,\n    confirmations: input.confirmations || {},\n    debug: input.debug === true,\n    context: { ...(input.context || {}), operator_id: input.operator_id || null, session_id: sessionId, debug: input.debug === true },\n    body: {\n      operator_id: input.operator_id || null,\n      intent_text: intentText,\n      reason: input.reason || null\n    },\n    errors: []\n  }\n}];"
       },
       "id": "b6dd51e2-358f-4ec8-9e1c-3d061fb5e9a1",
       "name": "Check Required Chat Fields",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        520,
+        2600,
         0
       ],
       "notes": "Checks only operator_id, intent_text, and reason. Outputs canonical missing_fields only; never raw error strings."
@@ -63,14 +63,14 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        780,
+        2860,
         0
       ],
       "notes": "Routes canonical missing-field clarifications before the intent LLM can run."
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nreturn [{\n  json: {\n    status: 'NEEDS_CLARIFICATION',\n    intent_summary: input.intent_text || input.raw_chat_input || '',\n    missing_fields: input.missing_fields || [],\n    field_labels: input.field_labels || {\n      operator_id: 'operator ID',\n      intent_text: 'task request',\n      reason: 'reason for the change'\n    },\n    example: {\n      operator_id: 'op_001',\n      reason: 'urgent trauma set deadline'\n    },\n    debug: input.debug === true,\n    raw_backend_response: null\n  }\n}];"
+        "jsCode": "const input = $input.first().json;\nreturn [{\n  json: {\n    status: 'NEEDS_CLARIFICATION',\n    intent_summary: input.intent_text || input.raw_chat_input || '',\n    missing_fields: input.missing_fields || [],\n    field_labels: input.field_labels || {\n      operator_id: 'operator ID',\n      intent_text: 'task request',\n      reason: 'reason for the change'\n    },\n    operator_id: input.operator_id || null,\n    reason: input.reason || null,\n    context: input.context || {},\n    example: {\n      operator_id: 'op_001',\n      reason: 'urgent trauma set deadline'\n    },\n    debug: input.debug === true,\n    raw_backend_response: null\n  }\n}];"
       },
       "id": "78ee59b9-dadd-400f-b67e-31df5daf734a",
       "name": "Build Canonical Clarification Payload",
@@ -99,7 +99,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const current = $input.first().json;\nconst previous = current.previous_context ?? current.context ?? {};\nconst ids = current.ids ?? {};\nconst payload = current.payload ?? {};\nfunction firstNonNull(...values) { return values.find(v => v !== undefined && v !== null && v !== ''); }\nconst source = $('Normalize Parsed Chat Turn').first().json;\nconst sessionId = source.context?.session_id || source.session_id || source.raw_chat_input || 'default';\nconst staticData = $getWorkflowStaticData('global');\nstaticData.pending_intents = staticData.pending_intents || {};\nif (current.status === 'REVIEWED') {\n  delete staticData.pending_intents[sessionId];\n} else if (source.intent_text && source.operator_id && source.reason) {\n  staticData.pending_intents[sessionId] = {\n    session_id: sessionId,\n    pending_intent: true,\n    intent_text: source.intent_text,\n    operator_id: source.operator_id,\n    reason: source.reason,\n    status: current.status || 'NEEDS_CLARIFICATION',\n    missing_or_unclear_fields: current.errors || current.payload?.rejection_reasons || current.rejection_reasons || [],\n    candidate_resolution: null\n  };\n}\n\nreturn [{ json: { status: current.status, context: { ...previous, ...(current.context ?? {}), ...Object.fromEntries(Object.entries(ids).filter(([_, v]) => v !== null && v !== undefined && v !== '')), release_id: firstNonNull(current.context?.release_id, ids.release_id, previous.release_id), audit_id: firstNonNull(current.context?.audit_id, ids.audit_id, previous.audit_id), trt_id: firstNonNull(current.context?.trt_id, ids.trt_id, payload.plan?.trt_id, previous.trt_id), trt_version: firstNonNull(current.context?.trt_version, ids.trt_version, payload.plan?.trt_version, previous.trt_version), reconciliation_plan_id: firstNonNull(current.context?.reconciliation_plan_id, ids.reconciliation_plan_id, payload.plan?.plan_id, previous.reconciliation_plan_id), scenario_batch_id: firstNonNull(current.context?.scenario_batch_id, ids.scenario_batch_id, previous.scenario_batch_id), scenario_spec_ids: firstNonNull(current.context?.scenario_spec_ids, ids.scenario_spec_ids, previous.scenario_spec_ids, []), session_id: sessionId }, payload, errors: current.errors ?? [] } }];"
+        "jsCode": "const current = $input.first().json;\nconst previous = current.previous_context ?? current.context ?? {};\nconst ids = current.ids ?? {};\nconst payload = current.payload ?? {};\nfunction firstNonNull(...values) { return values.find(v => v !== undefined && v !== null && v !== ''); }\nconst source = $('Normalize Parsed Chat Turn').first().json;\nconst sessionId = source.context?.session_id || source.session_id || source.raw_chat_input || 'default';\nreturn [{ json: { status: current.status, context: { ...previous, ...(current.context ?? {}), ...Object.fromEntries(Object.entries(ids).filter(([_, v]) => v !== null && v !== undefined && v !== '')), release_id: firstNonNull(current.context?.release_id, ids.release_id, previous.release_id), audit_id: firstNonNull(current.context?.audit_id, ids.audit_id, previous.audit_id), trt_id: firstNonNull(current.context?.trt_id, ids.trt_id, payload.plan?.trt_id, previous.trt_id), trt_version: firstNonNull(current.context?.trt_version, ids.trt_version, payload.plan?.trt_version, previous.trt_version), reconciliation_plan_id: firstNonNull(current.context?.reconciliation_plan_id, ids.reconciliation_plan_id, payload.plan?.plan_id, previous.reconciliation_plan_id), scenario_batch_id: firstNonNull(current.context?.scenario_batch_id, ids.scenario_batch_id, previous.scenario_batch_id), scenario_spec_ids: firstNonNull(current.context?.scenario_spec_ids, ids.scenario_spec_ids, previous.scenario_spec_ids, []), session_id: sessionId, operator_id: firstNonNull(source.operator_id, current.context?.operator_id, previous.operator_id), reason: firstNonNull(source.reason, current.context?.reason, previous.reason), intent_text: firstNonNull(source.intent_text, current.context?.intent_text, previous.intent_text), pending_intent: source.context?.pending_intent || previous.pending_intent || null }, payload, errors: current.errors ?? [] } }];"
       },
       "id": "ec701c3a-cd8a-467d-8953-988e9982e722",
       "name": "Normalize Context After Intent Review",
@@ -587,7 +587,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst payload = input.payload || {};\nconst context = input.context || {};\nconst errors = Array.isArray(input.errors) ? input.errors : (input.errors ? [input.errors] : []);\nconst cleanErrors = errors.map(value => String(value || '').trim()).filter(value => value && !value.startsWith('Missing required chat field:'));\nconst status = input.status || 'ERROR';\nconst missingFields = Array.isArray(input.missing_fields) ? input.missing_fields : [];\nconst fieldLabels = input.field_labels || {\n  operator_id: 'operator ID',\n  intent_text: 'task request',\n  reason: 'reason for the change'\n};\nconst example = input.example || {\n  operator_id: 'op_001',\n  reason: 'urgent trauma set deadline'\n};\nconst intentSummary = input.intent_summary || payload.intent_text || payload.raw_chat_input || payload.message || '';\nconst ids = { ...(input.ids || {}), ...context };\nconst debug = input.debug === true || context.debug === true || payload.debug === true;\nlet nextAction = 'WAIT';\nif (status === 'NEEDS_CLARIFICATION') nextAction = 'PROVIDE_MISSING_FIELDS';\nelse if (status === 'REVIEWED') nextAction = 'CONFIRM_PATCH';\nelse if (['REJECTED', 'REJECTED_BY_OPERATOR', 'NEEDS_REVISION', 'REQUIRES_OPERATOR_RESOLUTION'].includes(status)) nextAction = 'REVISE_REQUEST';\nelse if (status === 'GENERATED') nextAction = 'DONE';\nelse if (status === 'ERROR') nextAction = 'ERROR';\n\nconst canonical = {\n  status,\n  next_action: nextAction,\n  intent_summary: intentSummary,\n  missing_fields: missingFields,\n  field_labels: fieldLabels,\n  example,\n  ids,\n  payload,\n  errors: cleanErrors,\n  debug\n};\n\nconst schema = {\n  type: 'object',\n  additionalProperties: false,\n  required: ['user_message', 'suggested_reply'],\n  properties: {\n    user_message: { type: 'string' },\n    suggested_reply: { type: 'string' }\n  }\n};\n\nconst NL = String.fromCharCode(10);\nconst formatterExamples = [\n  {\n    input_status: 'NEEDS_CLARIFICATION',\n    output: {\n      user_message: 'I understood your request as: Line 1 should prioritize Trauma Set. Before I can submit this for review, I still need operator ID and reason for the change.',\n      suggested_reply: 'operator_id: op_001' + NL + 'reason: urgent trauma set deadline'\n    }\n  },\n  {\n    input_status: 'REVIEWED',\n    output: {\n      user_message: 'Candidate patch reviewed successfully. Please approve, reject, or request revision.',\n      suggested_reply: 'APPROVE: urgent trauma set deadline'\n    }\n  },\n  {\n    input_status: 'GENERATED',\n    output: {\n      user_message: 'ScenarioSpec generated at outputs/scenario_specs/example.json.',\n      suggested_reply: ''\n    }\n  },\n  {\n    input_status: 'WAITING',\n    output: {\n      user_message: 'The patch was released successfully, but the strategy cannot be switched immediately. Line 1 currently has active WIP, so the Supervisor requires the TRAY_COMPLETE checkpoint before switching. Line 2 requires no action because the released TRT does not change that line.',\n      suggested_reply: ''\n    }\n  }\n];\n\nconst userPrompt = [\n  'Format this backend result into a concise user-facing chat message.',\n  'Do not show raw JSON.',\n  'Do not invent IDs or fields.',\n  'Do not change workflow status, required fields, IDs, validation results, or rejection reasons.',\n  '',\n  'Status-specific instructions:',\n  'NEEDS_CLARIFICATION: Summarize what was understood from intent_summary. List missing_fields using field_labels. Provide a suggested reply using example values. Ask only for missing fields.',\n  'REVIEWED: Summarize that the candidate patch passed validation. Ask the operator to approve, reject, or request revision. Do not claim it has been released.',\n  'RELEASED: State that release completed. Include release_id, trt_version, and audit_id only if present in ids. Mention the next step is reconciliation or simulation preparation.',\n  'READY / DEGRADED: Summarize reconciliation status. READY means ready for ScenarioSpec generation or simulation preparation. DEGRADED means proceed with the degraded strategy and mention any degraded details if present.',\n  'WAITING: Explain that the patch was released successfully, but the strategy cannot switch immediately. Mention the specific line checkpoint from payload.required_checkpoint or payload.required_checkpoints. If line decisions are available, explain unchanged lines require no action. Preferred style: The patch was released successfully, but the strategy cannot be switched immediately. Line 1 currently has active WIP, so the Supervisor requires the TRAY_COMPLETE checkpoint before switching. Line 2 requires no action because the released TRT does not change that line.',\n  'GENERATED: State that ScenarioSpec generation completed. Include scenario_spec_path or generated_scenario_spec_path if present.',\n  'REJECTED / NEEDS_REVISION: Explain errors or rejection reasons in plain language. Ask the operator to revise the request. Do not invent a successful release.',\n  '',\n  'Examples with valid JSON outputs matching the formatter schema:',\n  JSON.stringify(formatterExamples[0]),\n  JSON.stringify(formatterExamples[1]),\n  JSON.stringify(formatterExamples[2]),\n  JSON.stringify(formatterExamples[3]),\n  '',\n  'Backend canonical result:',\n  JSON.stringify(canonical)\n].join(NL);\n\nconst vllmBody = {\n  model: 'cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit',\n  messages: [\n    {\n      role: 'system',\n      content: [\n        'You format backend workflow results for an operator chat UI.',\n        'Return only JSON matching the schema.',\n        'You may only write user-facing wording.',\n        'Do not decide workflow state.',\n        'Do not change status, required fields, IDs, validation results, or rejection reasons.',\n        'Do not expose raw JSON.'\n      ].join(' ')\n    },\n    {\n      role: 'user',\n      content: userPrompt\n    }\n  ],\n  temperature: 0,\n  max_tokens: 320,\n  structured_outputs: {\n    json: schema\n  }\n};\n\nreturn [{\n  json: {\n    vllm_body: vllmBody,\n    formatter_canonical: canonical\n  }\n}];"
+        "jsCode": "const input = $input.first().json;\nconst payload = input.payload || {};\nconst context = input.context || {};\nconst errors = Array.isArray(input.errors) ? input.errors : (input.errors ? [input.errors] : []);\nconst cleanErrors = errors.map(value => String(value || '').trim()).filter(value => value && !value.startsWith('Missing required chat field:'));\nconst status = input.status || 'ERROR';\nconst missingFields = Array.isArray(input.missing_fields) ? input.missing_fields : [];\nconst fieldLabels = input.field_labels || {\n  operator_id: 'operator ID',\n  intent_text: 'task request',\n  reason: 'reason for the change'\n};\nconst example = input.example || {\n  operator_id: 'op_001',\n  reason: 'urgent trauma set deadline'\n};\nconst intentSummary = input.intent_summary || payload.intent_text || payload.raw_chat_input || payload.message || '';\nconst ids = { ...(input.ids || {}), ...context };\nconst debug = input.debug === true || context.debug === true || payload.debug === true;\nconst asksClarification = cleanErrors.some(value => value.includes('Do you mean') || value.toLowerCase().includes('please clarify')) || String(payload.message || '').toLowerCase().includes('please clarify');\nlet nextAction = 'WAIT';\nif (status === 'NEEDS_CLARIFICATION' && missingFields.length) nextAction = 'PROVIDE_MISSING_FIELDS';\nelse if (status === 'NEEDS_CLARIFICATION' || (status === 'NEEDS_REVISION' && asksClarification)) nextAction = 'PROVIDE_CLARIFICATION';\nelse if (status === 'REVIEWED') nextAction = 'CONFIRM_PATCH';\nelse if (['REJECTED', 'REJECTED_BY_OPERATOR', 'NEEDS_REVISION', 'REQUIRES_OPERATOR_RESOLUTION'].includes(status)) nextAction = 'REVISE_REQUEST';\nelse if (status === 'GENERATED') nextAction = 'DONE';\nelse if (status === 'ERROR') nextAction = 'ERROR';\n\nconst canonical = {\n  status,\n  next_action: nextAction,\n  intent_summary: intentSummary,\n  missing_fields: missingFields,\n  field_labels: fieldLabels,\n  example,\n  ids,\n  payload,\n  errors: cleanErrors,\n  debug\n};\n\nconst schema = {\n  type: 'object',\n  additionalProperties: false,\n  required: ['user_message', 'suggested_reply'],\n  properties: {\n    user_message: { type: 'string' },\n    suggested_reply: { type: 'string' }\n  }\n};\n\nconst NL = String.fromCharCode(10);\nconst formatterExamples = [\n  {\n    input_status: 'NEEDS_CLARIFICATION',\n    output: {\n      user_message: 'I understood your request as: Line 1 should prioritize Trauma Set. Before I can submit this for review, I still need operator ID and reason for the change.',\n      suggested_reply: 'operator_id: op_001' + NL + 'reason: urgent trauma set deadline'\n    }\n  },\n  {\n    input_status: 'REVIEWED',\n    output: {\n      user_message: 'Candidate patch reviewed successfully. Please approve, reject, or request revision.',\n      suggested_reply: 'APPROVE: urgent trauma set deadline'\n    }\n  },\n  {\n    input_status: 'GENERATED',\n    output: {\n      user_message: 'ScenarioSpec generated at outputs/scenario_specs/example.json.',\n      suggested_reply: ''\n    }\n  },\n  {\n    input_status: 'WAITING',\n    output: {\n      user_message: 'The patch was released successfully, but the strategy cannot be switched immediately. Line 1 currently has active WIP, so the Supervisor requires the TRAY_COMPLETE checkpoint before switching. Line 2 requires no action because the released TRT does not change that line.',\n      suggested_reply: ''\n    }\n  }\n];\n\nconst userPrompt = [\n  'Format this backend result into a concise user-facing chat message.',\n  'Do not show raw JSON.',\n  'Do not invent IDs or fields.',\n  'Do not change workflow status, required fields, IDs, validation results, or rejection reasons.',\n  '',\n  'Status-specific instructions:',\n  'NEEDS_CLARIFICATION: Summarize what was understood from intent_summary. List missing_fields using field_labels. Provide a suggested reply using example values. Ask only for missing fields.',\n  'REVIEWED: Summarize that the candidate patch passed validation. Ask the operator to approve, reject, or request revision. Do not claim it has been released.',\n  'RELEASED: State that release completed. Include release_id, trt_version, and audit_id only if present in ids. Mention the next step is reconciliation or simulation preparation.',\n  'READY / DEGRADED: Summarize reconciliation status. READY means ready for ScenarioSpec generation or simulation preparation. DEGRADED means proceed with the degraded strategy and mention any degraded details if present.',\n  'WAITING: Explain that the patch was released successfully, but the strategy cannot switch immediately. Mention the specific line checkpoint from payload.required_checkpoint or payload.required_checkpoints. If line decisions are available, explain unchanged lines require no action. Preferred style: The patch was released successfully, but the strategy cannot be switched immediately. Line 1 currently has active WIP, so the Supervisor requires the TRAY_COMPLETE checkpoint before switching. Line 2 requires no action because the released TRT does not change that line.',\n  'GENERATED: State that ScenarioSpec generation completed. Include scenario_spec_path or generated_scenario_spec_path if present.',\n  'REJECTED / NEEDS_REVISION: Explain errors or rejection reasons in plain language. Ask the operator to revise the request. Do not invent a successful release.',\n  '',\n  'Examples with valid JSON outputs matching the formatter schema:',\n  JSON.stringify(formatterExamples[0]),\n  JSON.stringify(formatterExamples[1]),\n  JSON.stringify(formatterExamples[2]),\n  JSON.stringify(formatterExamples[3]),\n  '',\n  'Backend canonical result:',\n  JSON.stringify(canonical)\n].join(NL);\n\nconst vllmBody = {\n  model: 'cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit',\n  messages: [\n    {\n      role: 'system',\n      content: [\n        'You format backend workflow results for an operator chat UI.',\n        'Return only JSON matching the schema.',\n        'You may only write user-facing wording.',\n        'Do not decide workflow state.',\n        'Do not change status, required fields, IDs, validation results, or rejection reasons.',\n        'Do not expose raw JSON.'\n      ].join(' ')\n    },\n    {\n      role: 'user',\n      content: userPrompt\n    }\n  ],\n  temperature: 0,\n  max_tokens: 320,\n  structured_outputs: {\n    json: schema\n  }\n};\n\nreturn [{\n  json: {\n    vllm_body: vllmBody,\n    formatter_canonical: canonical\n  }\n}];"
       },
       "id": "2e2f6678-26f6-48ef-9446-f35a211d8bf9",
       "name": "Build vLLM User Response Format Body",
@@ -653,11 +653,12 @@
           "conditions": [
             {
               "id": "ca611c64-66b5-4e1b-9d75-9741f7750475",
-              "leftValue": "={{ $json.next_action }}",
-              "rightValue": "PROVIDE_MISSING_FIELDS",
+              "leftValue": "={{ ['PROVIDE_MISSING_FIELDS', 'PROVIDE_CLARIFICATION'].includes($json.next_action) }}",
+              "rightValue": true,
               "operator": {
-                "type": "string",
-                "operation": "equals"
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
               }
             }
           ],
@@ -711,14 +712,14 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst rawMessage = input.chatInput || input.text || input.message || input.response || input.output || (input.body && input.body.message) || input.body || \"\";\nconst rawChatInput = typeof rawMessage === \"string\" ? rawMessage : JSON.stringify(rawMessage);\nconst sessionId = input.sessionId || input.session_id || input.chatSessionId || input.chatId || input.conversationId || input.body?.sessionId || input.body?.chatSessionId || \"default\";\nconst staticData = $getWorkflowStaticData(\"global\");\nstaticData.pending_intents = staticData.pending_intents || {};\nconst pendingIntent = staticData.pending_intents[sessionId] || null;\nlet previous = null;\nlet reviewed = null;\ntry {\n  previous = $('Check Required Chat Fields').first().json;\n} catch (error) {\n  previous = null;\n}\ntry {\n  reviewed = $('Chat Candidate Patch Summary').first().json;\n} catch (error) {\n  reviewed = null;\n}\nconst NL = String.fromCharCode(10);\n\nconst schema = {\n  type: \"object\",\n  additionalProperties: false,\n  required: [\"turn_type\", \"operator_id\", \"intent_text\", \"reason\", \"decision\", \"comment\", \"raw_chat_input\", \"debug\"],\n  properties: {\n    turn_type: {\n      type: \"string\",\n      enum: [\"SMALL_TALK\", \"CANCEL\", \"CONFUSED\", \"UNKNOWN\", \"TASK_REQUEST\", \"CLARIFICATION_VALUES\", \"APPROVAL_DECISION\"]\n    },\n    operator_id: { type: [\"string\", \"null\"] },\n    intent_text: { type: [\"string\", \"null\"] },\n    reason: { type: [\"string\", \"null\"] },\n    decision: { type: [\"string\", \"null\"], enum: [\"APPROVE\", \"REJECT\", \"REQUEST_REVISION\", \"UNKNOWN\", null] },\n    comment: { type: [\"string\", \"null\"] },\n    raw_chat_input: { type: \"string\" },\n    debug: { type: \"boolean\" }\n  }\n};\n\nconst examples = [\n  {\n    input: \"hi\",\n    output: { turn_type: \"SMALL_TALK\", operator_id: null, intent_text: null, reason: null, decision: null, comment: null, raw_chat_input: \"hi\", debug: false }\n  },\n  {\n    input: \"???\",\n    output: { turn_type: \"CONFUSED\", operator_id: null, intent_text: null, reason: null, decision: null, comment: null, raw_chat_input: \"???\", debug: false }\n  },\n  {\n    input: \"cancel\",\n    output: { turn_type: \"CANCEL\", operator_id: null, intent_text: null, reason: null, decision: null, comment: null, raw_chat_input: \"cancel\", debug: false }\n  },\n  {\n    input: \"operator_id: op_001 reason: urgent trauma set deadline Line 1 should prioritize Trauma Set and exclude forceps.\",\n    output: { turn_type: \"TASK_REQUEST\", operator_id: \"op_001\", intent_text: \"Line 1 should prioritize Trauma Set and exclude forceps.\", reason: \"urgent trauma set deadline\", decision: null, comment: null, raw_chat_input: \"operator_id: op_001 reason: urgent trauma set deadline Line 1 should prioritize Trauma Set and exclude forceps.\", debug: false }\n  },\n  {\n    input: \"operator_id: op_001 reason: urgent trauma set deadline\",\n    output: { turn_type: \"CLARIFICATION_VALUES\", operator_id: \"op_001\", intent_text: null, reason: \"urgent trauma set deadline\", decision: null, comment: null, raw_chat_input: \"operator_id: op_001 reason: urgent trauma set deadline\", debug: false }\n  },\n  {\n    input: \"APPROVE: urgent trauma set deadline\",\n    output: { turn_type: \"APPROVAL_DECISION\", operator_id: null, intent_text: null, reason: null, decision: \"APPROVE\", comment: \"urgent trauma set deadline\", raw_chat_input: \"APPROVE: urgent trauma set deadline\", debug: false }\n  },\n  {\n    input: \"no\",\n    output: { turn_type: \"CANCEL\", operator_id: null, intent_text: null, reason: null, decision: null, comment: null, raw_chat_input: \"no\", debug: false }\n  }\n];\n\nconst userPrompt = [\n  \"Classify this chat turn before any workflow validation or branching.\",\n  \"User chat input:\",\n  rawChatInput,\n  \"\",\n  \"Previous required-field context, if any:\",\n  JSON.stringify(previous),\n  \"Reviewed patch context, if any:\",\n  JSON.stringify(reviewed),\n  \"Pending unresolved intent for this session, if any:\",\n  JSON.stringify(pendingIntent),\n  \"\",\n  \"Classification rules:\",\n  \"SMALL_TALK is for greetings or conversational filler such as hi, hello, thanks, ok, or casual chatter without task content.\",\n  \"CANCEL is for explicit cancellation or stopping the workflow, including no, cancel, stop, never mind, or abort.\",\n  \"CONFUSED is for unclear messages such as ???, gibberish, or expressions of confusion.\",\n  \"UNKNOWN is for anything that does not fit the other classes.\",\n  \"TASK_REQUEST is a new operator task allocation request. Extract operator_id only from explicit operator markers. Extract reason only from explicit markers: reason:, because, justification:, or purpose:. Put only the task request in intent_text and remove operator_id/reason metadata.\",\n  \"CLARIFICATION_VALUES provides missing required chat fields or resolves an unresolved pending intent, without replacing the original request. If pending intent exists and the new message clarifies add_reference_number or simulation arguments, classify as CLARIFICATION_VALUES and keep intent_text focused on the clarification.\",\n  \"APPROVAL_DECISION is approval, rejection, or revision of a reviewed patch only when the user explicitly says APPROVE, REJECT, or REQUEST_REVISION. Extract decision and comment. Use UNKNOWN decision only if unclear.\",\n  \"Preserve the complete input in raw_chat_input. Return only JSON matching the schema.\",\n  \"\",\n  \"Examples with valid JSON outputs:\",\n  JSON.stringify(examples[0]),\n  JSON.stringify(examples[1]),\n  JSON.stringify(examples[2]),\n  JSON.stringify(examples[3]),\n  JSON.stringify(examples[4]),\n  JSON.stringify(examples[5]),\n  JSON.stringify(examples[6])\n].join(NL);\n\nconst vllmBody = {\n  model: \"cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit\",\n  messages: [\n    {\n      role: \"system\",\n      content: [\n        \"You classify operator chat turns for a task-allocation workflow.\",\n        \"Return only JSON matching the schema.\",\n        \"Do not generate patches.\",\n        \"Do not validate production policy.\",\n        \"Do not decide deterministic workflow state beyond the requested chat turn class.\"\n      ].join(\" \")\n    },\n    { role: \"user\", content: userPrompt }\n  ],\n  temperature: 0,\n  max_tokens: 260,\n  structured_outputs: { json: schema }\n};\n\nreturn [{\n  json: {\n    vllm_body: vllmBody,\n    raw_chat_input: rawChatInput,\n    original_input: input,\n    previous_context: previous,\n    reviewed_context: reviewed,\n    session_id: sessionId,\n    pending_intent: pendingIntent\n  }\n}];"
+        "jsCode": "const loadedSession = $input.first().json || {};\nconst input = $('Extract Session ID').first().json;\nconst rawChatInput = input.raw_chat_input || \"\";\nconst sessionId = input.session_id || \"default\";\nconst pendingIntent = loadedSession.pending_intent || null;\nconst chatSessionState = loadedSession.state || \"IDLE\";\nlet previous = null;\nlet reviewed = null;\ntry {\n  previous = $('Check Required Chat Fields').first().json;\n} catch (error) {\n  previous = null;\n}\ntry {\n  reviewed = $('Chat Candidate Patch Summary').first().json;\n} catch (error) {\n  reviewed = null;\n}\nconst NL = String.fromCharCode(10);\n\nconst schema = {\n  type: \"object\",\n  additionalProperties: false,\n  required: [\"turn_type\", \"operator_id\", \"intent_text\", \"reason\", \"decision\", \"comment\", \"raw_chat_input\", \"debug\"],\n  properties: {\n    turn_type: {\n      type: \"string\",\n      enum: [\"SMALL_TALK\", \"CANCEL\", \"CONFUSED\", \"UNKNOWN\", \"TASK_REQUEST\", \"CLARIFICATION_VALUES\", \"APPROVAL_DECISION\"]\n    },\n    operator_id: { type: [\"string\", \"null\"] },\n    intent_text: { type: [\"string\", \"null\"] },\n    reason: { type: [\"string\", \"null\"] },\n    decision: { type: [\"string\", \"null\"], enum: [\"APPROVE\", \"REJECT\", \"REQUEST_REVISION\", \"UNKNOWN\", null] },\n    comment: { type: [\"string\", \"null\"] },\n    raw_chat_input: { type: \"string\" },\n    debug: { type: \"boolean\" }\n  }\n};\n\nconst examples = [\n  {\n    input: \"hi\",\n    output: { turn_type: \"SMALL_TALK\", operator_id: null, intent_text: null, reason: null, decision: null, comment: null, raw_chat_input: \"hi\", debug: false }\n  },\n  {\n    input: \"???\",\n    output: { turn_type: \"CONFUSED\", operator_id: null, intent_text: null, reason: null, decision: null, comment: null, raw_chat_input: \"???\", debug: false }\n  },\n  {\n    input: \"cancel\",\n    output: { turn_type: \"CANCEL\", operator_id: null, intent_text: null, reason: null, decision: null, comment: null, raw_chat_input: \"cancel\", debug: false }\n  },\n  {\n    input: \"operator_id: op_001 reason: urgent trauma set deadline Line 1 should prioritize Trauma Set and exclude forceps.\",\n    output: { turn_type: \"TASK_REQUEST\", operator_id: \"op_001\", intent_text: \"Line 1 should prioritize Trauma Set and exclude forceps.\", reason: \"urgent trauma set deadline\", decision: null, comment: null, raw_chat_input: \"operator_id: op_001 reason: urgent trauma set deadline Line 1 should prioritize Trauma Set and exclude forceps.\", debug: false }\n  },\n  {\n    input: \"operator_id: op_001 reason: urgent trauma set deadline\",\n    output: { turn_type: \"CLARIFICATION_VALUES\", operator_id: \"op_001\", intent_text: null, reason: \"urgent trauma set deadline\", decision: null, comment: null, raw_chat_input: \"operator_id: op_001 reason: urgent trauma set deadline\", debug: false }\n  },\n  {\n    input: \"APPROVE: urgent trauma set deadline\",\n    output: { turn_type: \"APPROVAL_DECISION\", operator_id: null, intent_text: null, reason: null, decision: \"APPROVE\", comment: \"urgent trauma set deadline\", raw_chat_input: \"APPROVE: urgent trauma set deadline\", debug: false }\n  },\n  {\n    input: \"no\",\n    output: { turn_type: \"CANCEL\", operator_id: null, intent_text: null, reason: null, decision: null, comment: null, raw_chat_input: \"no\", debug: false }\n  }\n];\n\nconst userPrompt = [\n  \"Classify this chat turn before any workflow validation or branching.\",\n  \"User chat input:\",\n  rawChatInput,\n  \"\",\n  \"Previous required-field context, if any:\",\n  JSON.stringify(previous),\n  \"Reviewed patch context, if any:\",\n  JSON.stringify(reviewed),\n  \"Pending unresolved intent for this session, if any:\",\n  JSON.stringify({ state: chatSessionState, pending_intent: pendingIntent }),\n  \"\",\n  \"Classification rules:\",\n  \"SMALL_TALK is for greetings or conversational filler such as hi, hello, thanks, ok, or casual chatter without task content.\",\n  \"CANCEL is for explicit cancellation or stopping the workflow, including no, cancel, stop, never mind, or abort.\",\n  \"CONFUSED is for unclear messages such as ???, gibberish, or expressions of confusion.\",\n  \"UNKNOWN is for anything that does not fit the other classes.\",\n  \"TASK_REQUEST is a new operator task allocation request. Extract operator_id only from explicit operator markers. Extract reason only from explicit markers: reason:, because, justification:, or purpose:. Put only the task request in intent_text and remove operator_id/reason metadata.\",\n  \"CLARIFICATION_VALUES provides missing required chat fields or resolves an unresolved pending intent, without replacing the original request. If pending intent exists, classify the next user message as CLARIFICATION_VALUES unless it is cancel/stop, approve/reject/request_revision, or explicitly starts a new request with phrases like ignore that or new request. Keep intent_text focused on the clarification.\",\n  \"APPROVAL_DECISION is approval, rejection, or revision of a reviewed patch only when the user explicitly says APPROVE, REJECT, or REQUEST_REVISION. Extract decision and comment. Use UNKNOWN decision only if unclear.\",\n  \"Preserve the complete input in raw_chat_input. Return only JSON matching the schema.\",\n  \"\",\n  \"Examples with valid JSON outputs:\",\n  JSON.stringify(examples[0]),\n  JSON.stringify(examples[1]),\n  JSON.stringify(examples[2]),\n  JSON.stringify(examples[3]),\n  JSON.stringify(examples[4]),\n  JSON.stringify(examples[5]),\n  JSON.stringify(examples[6])\n].join(NL);\n\nconst vllmBody = {\n  model: \"cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit\",\n  messages: [\n    {\n      role: \"system\",\n      content: [\n        \"You classify operator chat turns for a task-allocation workflow.\",\n        \"Return only JSON matching the schema.\",\n        \"Do not generate patches.\",\n        \"Do not validate production policy.\",\n        \"Do not decide deterministic workflow state beyond the requested chat turn class.\"\n      ].join(\" \")\n    },\n    { role: \"user\", content: userPrompt }\n  ],\n  temperature: 0,\n  max_tokens: 260,\n  structured_outputs: { json: schema }\n};\n\nreturn [{\n  json: {\n    vllm_body: vllmBody,\n    raw_chat_input: rawChatInput,\n    original_input: input,\n    previous_context: previous,\n    reviewed_context: reviewed,\n    session_id: sessionId,\n    chat_session_state: chatSessionState,\n    pending_intent: pendingIntent\n  }\n}];"
       },
       "id": "b10adbbb-77dd-4d29-9d16-19db404ec85c",
       "name": "Build vLLM Chat Turn Parse Body",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        260,
+        780,
         0
       ],
       "notes": "Builds the vLLM request that classifies every user chat turn before workflow branching."
@@ -746,21 +747,21 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        520,
+        1040,
         0
       ],
       "notes": "Classifies the chat turn and extracts structured fields only."
     },
     {
       "parameters": {
-        "jsCode": "const llmResponse = $input.first().json;\nconst source = $('Build vLLM Chat Turn Parse Body').first().json;\nconst previous = source.previous_context || null;\nconst reviewed = source.reviewed_context || null;\nconst original = source.original_input || {};\nconst pendingIntent = source.pending_intent || null;\nconst sessionId = source.session_id || original.sessionId || original.session_id || \"default\";\n\nlet content = null;\nif (llmResponse.choices?.[0]?.message?.content) {\n  content = llmResponse.choices[0].message.content;\n} else if (llmResponse.turn_type !== undefined) {\n  content = llmResponse;\n} else {\n  content = llmResponse;\n}\n\nlet parsed = {};\nif (typeof content === \"string\") {\n  try {\n    parsed = JSON.parse(content);\n  } catch (error) {\n    parsed = {};\n  }\n} else if (typeof content === \"object\" && content !== null) {\n  parsed = content;\n}\n\nconst allowedTurns = [\"SMALL_TALK\", \"CANCEL\", \"CONFUSED\", \"UNKNOWN\", \"TASK_REQUEST\", \"CLARIFICATION_VALUES\", \"APPROVAL_DECISION\"];\nlet turnType = allowedTurns.includes(parsed.turn_type) ? parsed.turn_type : \"UNKNOWN\";\nconst rawLower = String(parsed.raw_chat_input || source.raw_chat_input || \"\").toLowerCase();\nconst pendingClarifiesSimulationArg = !!pendingIntent && (rawLower.includes(\"add_reference_number\") || rawLower.includes(\"add reference number\"));\nif (pendingClarifiesSimulationArg) {\n  turnType = \"CLARIFICATION_VALUES\";\n}\nconst previousContext = previous?.context || original.context || {};\nconst operatorId = parsed.operator_id || (turnType === \"CLARIFICATION_VALUES\" ? (pendingIntent?.operator_id || previous?.operator_id) : null) || null;\nconst clarificationText = parsed.intent_text || parsed.raw_chat_input || source.raw_chat_input || \"\";\nconst intentText = pendingIntent ? `${pendingIntent.intent_text} Clarification: ${clarificationText}` : (parsed.intent_text || previous?.intent_text || parsed.raw_chat_input || source.raw_chat_input || \"\");\nconst reason = parsed.reason || (turnType === \"CLARIFICATION_VALUES\" ? (pendingIntent?.reason || previous?.reason) : null) || null;\nconst debug = parsed.debug === true || previous?.debug === true || original.debug === true;\nconst reviewedPatchExists = !!(reviewed && reviewed.status === \"REVIEWED\");\n\nreturn [{\n  json: {\n    turn_type: turnType,\n    operator_id: operatorId,\n    intent_text: intentText,\n    reason,\n    decision: parsed.decision || null,\n    comment: parsed.comment || null,\n    raw_chat_input: parsed.raw_chat_input || source.raw_chat_input || \"\",\n    debug,\n    reviewed_patch_exists: reviewedPatchExists,\n    reviewed_context: reviewed,\n    confirmations: previous?.confirmations || original.confirmations || {},\n    context: {\n      ...previousContext,\n      operator_id: operatorId || previousContext.operator_id || null,\n      session_id: sessionId,\n      pending_intent: pendingIntent,\n      debug\n    },\n    body: {\n      operator_id: operatorId,\n      intent_text: intentText,\n      reason\n    },\n    errors: []\n  }\n}];"
+        "jsCode": "const llmResponse = $input.first().json;\nconst source = $('Build vLLM Chat Turn Parse Body').first().json;\nconst previous = source.previous_context || null;\nconst reviewed = source.reviewed_context || null;\nconst original = source.original_input || {};\nconst pendingIntent = source.pending_intent || null;\nconst chatSessionState = source.chat_session_state || \"IDLE\";\nconst sessionId = source.session_id || original.sessionId || original.session_id || \"default\";\n\nlet content = null;\nif (llmResponse.choices?.[0]?.message?.content) {\n  content = llmResponse.choices[0].message.content;\n} else if (llmResponse.turn_type !== undefined) {\n  content = llmResponse;\n} else {\n  content = llmResponse;\n}\n\nlet parsed = {};\nif (typeof content === \"string\") {\n  try {\n    parsed = JSON.parse(content);\n  } catch (error) {\n    parsed = {};\n  }\n} else if (typeof content === \"object\" && content !== null) {\n  parsed = content;\n}\n\nconst allowedTurns = [\"SMALL_TALK\", \"CANCEL\", \"CONFUSED\", \"UNKNOWN\", \"TASK_REQUEST\", \"CLARIFICATION_VALUES\", \"APPROVAL_DECISION\"];\nlet turnType = allowedTurns.includes(parsed.turn_type) ? parsed.turn_type : \"UNKNOWN\";\nconst rawLower = String(parsed.raw_chat_input || source.raw_chat_input || \"\").toLowerCase();\nconst explicitNewRequest = /^(ignore that|new request|start over|instead[, ]|actually[, ]? new request)/.test(rawLower);\nconst explicitCancel = /^(cancel|stop|never mind|abort|no)$/.test(rawLower.trim());\nconst explicitApproval = /^(approve|reject|request_revision|request revision)\\b/.test(rawLower.trim());\nif (pendingIntent && !explicitNewRequest && !explicitCancel && !explicitApproval) {\n  turnType = \"CLARIFICATION_VALUES\";\n}\nconst previousContext = previous?.context || original.context || {};\nconst operatorId = parsed.operator_id || (turnType === \"CLARIFICATION_VALUES\" ? (pendingIntent?.operator_id || previous?.operator_id) : null) || null;\nconst clarificationText = parsed.intent_text || parsed.raw_chat_input || source.raw_chat_input || \"\";\nconst originalPendingText = pendingIntent?.original_intent_text || pendingIntent?.intent_text;\nconst intentText = pendingIntent && turnType === \"CLARIFICATION_VALUES\" ? `${originalPendingText} Clarification: ${clarificationText}` : (parsed.intent_text || previous?.intent_text || parsed.raw_chat_input || source.raw_chat_input || \"\");\nconst reason = parsed.reason || (turnType === \"CLARIFICATION_VALUES\" ? (pendingIntent?.reason || previous?.reason) : null) || null;\nconst debug = parsed.debug === true || previous?.debug === true || original.debug === true;\nconst reviewedPatchExists = !!(reviewed && reviewed.status === \"REVIEWED\");\n\nreturn [{\n  json: {\n    turn_type: turnType,\n    operator_id: operatorId,\n    intent_text: intentText,\n    reason,\n    decision: parsed.decision || null,\n    comment: parsed.comment || null,\n    raw_chat_input: parsed.raw_chat_input || source.raw_chat_input || \"\",\n    debug,\n    reviewed_patch_exists: reviewedPatchExists,\n    reviewed_context: reviewed,\n    confirmations: previous?.confirmations || original.confirmations || {},\n    chat_session_state: chatSessionState,\n    pending_intent: pendingIntent,\n    context: {\n      ...previousContext,\n      operator_id: operatorId || previousContext.operator_id || null,\n      session_id: sessionId,\n      chat_session_state: chatSessionState,\n      pending_intent: pendingIntent,\n      debug\n    },\n    body: {\n      operator_id: operatorId,\n      intent_text: intentText,\n      reason\n    },\n    errors: []\n  }\n}];"
       },
       "id": "084cda5d-e6cf-4f79-b7b4-4a68794455ba",
       "name": "Normalize Parsed Chat Turn",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        780,
+        1300,
         0
       ],
       "notes": "Normalizes structured vLLM chat-turn output. Does not parse raw user dialogue."
@@ -774,7 +775,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1040,
+        1560,
         0
       ],
       "notes": "Single routing point after vLLM chat-turn classification. Downstream IF nodes branch by turn_type."
@@ -844,7 +845,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1560,
+        1820,
         -180
       ],
       "notes": "Routes explicit cancellation to a terminal cancelled response."
@@ -969,14 +970,14 @@
     },
     {
       "parameters": {
-        "jsCode": "return [{ json: { user_message: \"Cancelled. No task allocation workflow was submitted.\", next_action: 'WAIT', required_fields: [], suggested_reply: '', debug_json: null, status: $json.turn_type, context: $json.context || {}, payload: {}, errors: [] } }];"
+        "jsCode": "return [{ json: { user_message: \"Cancelled. No task allocation workflow was submitted.\", next_action: 'WAIT', required_fields: [], suggested_reply: '', debug_json: null, status: $json.turn_type || 'CANCEL', context: $json.context || {}, payload: {}, errors: [] } }];"
       },
       "id": "0342aeac-0bb1-47c8-bb71-62f333000002",
       "name": "Return Cancelled Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1820,
+        2080,
         -260
       ]
     },
@@ -1019,6 +1020,277 @@
         -180
       ],
       "notes": "Normalizes structured classifier output for release approval. Does not parse raw user dialogue."
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst rawMessage = input.chatInput || input.text || input.message || input.response || input.output || (input.body && input.body.message) || input.body || \"\";\nconst rawChatInput = typeof rawMessage === \"string\" ? rawMessage : JSON.stringify(rawMessage);\nconst sessionId = input.sessionId || input.session_id || input.chatSessionId || input.chatId || input.conversationId || input.body?.sessionId || input.body?.chatSessionId || \"default\";\nreturn [{ json: { ...input, session_id: sessionId, raw_chat_input: rawChatInput } }];"
+      },
+      "id": "ec65ef3e-aa38-42ea-8cdf-9fb7069d008c",
+      "name": "Extract Session ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=http://trt-api:8000/chat/session/{{$json.session_id}}",
+        "options": {}
+      },
+      "id": "d1ae1323-371e-4607-8f5c-0c25381b7432",
+      "name": "Load Chat Session State",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "26771736-2361-407c-b051-461d7d529e58",
+              "leftValue": "={{ $json.chat_session_state === 'WAITING_FOR_CLARIFICATION' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cdc45076-077a-41b8-b150-e5a8e09f232e",
+      "name": "Pending Clarification?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2340,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://trt-api:8000/chat/session/{{$json.context.session_id}}/merge-clarification",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { clarification_text: $json.raw_chat_input } }}",
+        "options": {}
+      },
+      "id": "32e0039f-6ca9-48cf-9bb5-2c6566459be8",
+      "name": "Merge Pending Clarification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2600,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const merge = $input.first().json;\nconst parsed = $('Normalize Parsed Chat Turn').first().json;\nconst candidatePatch = merge.candidate_patch || merge.intent_patch || null;\nreturn [{\n  json: {\n    status: merge.resolved === false ? 'NEEDS_REVISION' : 'REVIEWED',\n    context: {\n      ...(parsed.context || {}),\n      session_id: parsed.context?.session_id || merge.session_id || 'default',\n      operator_id: merge.operator_id || parsed.operator_id || null,\n      target_lines: merge.target_lines || [],\n      affected_lines: merge.target_lines || [],\n      target_set_id: merge.target_set_id || null,\n      request_types: merge.request_types || [],\n      simulation_config_updates: merge.simulation_config_updates || {},\n      manipulator_priority: merge.manipulator_priority || null,\n      patch_id: candidatePatch?.patch_id || null,\n      trt_id: candidatePatch?.trt_id || null,\n      trt_version: candidatePatch?.base_version || null\n    },\n    payload: {\n      candidate_patch: candidatePatch,\n      affected_lines: merge.target_lines || [],\n      simulation_config_updates: merge.simulation_config_updates || {},\n      message: candidatePatch?.message || null,\n      merge_result: merge\n    },\n    errors: merge.resolved === false ? [merge.error || 'Clarification could not be resolved.'] : []\n  }\n}];"
+      },
+      "id": "f3a3f900-280f-4a07-86c1-60edd8c5aa81",
+      "name": "Normalize Merged Clarification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://trt-api:8000/chat/session/{{$json.context.session_id || $json.session_id || \"default\"}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  session_id: $json.context?.session_id || $json.session_id || 'default',\n  state: 'WAITING_FOR_REQUIRED_FIELDS',\n  pending_intent: {\n    original_intent_text: $json.intent_summary || $json.intent_text || $json.raw_chat_input || '',\n    intent_text: $json.intent_summary || $json.intent_text || $json.raw_chat_input || '',\n    operator_id: $json.operator_id || null,\n    reason: $json.reason || null,\n    missing_fields: $json.missing_fields || [],\n    pending_status: 'WAITING_FOR_REQUIRED_FIELDS'\n  }\n} }}",
+        "options": {}
+      },
+      "id": "62ff1ace-8596-4d3d-ad55-1b52e49c87d5",
+      "name": "Save Required Field Session State",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Build Canonical Clarification Payload').first().json }];"
+      },
+      "id": "7cd09022-b1c9-4472-b4ee-565f1f2115e0",
+      "name": "Restore Canonical Clarification After Session Save",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://trt-api:8000/chat/session/{{$json.context.session_id || \"default\"}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  session_id: $json.context?.session_id || 'default',\n  state: 'WAITING_FOR_CLARIFICATION',\n  pending_intent: {\n    original_intent_text: $json.context?.pending_intent?.original_intent_text || $json.payload?.summary?.candidate_patch?.intent_text || $json.payload?.candidate_patch?.intent_text || $json.context?.intent_text || $json.payload?.summary?.candidate_patch_summary?.intent_text || $json.payload?.candidate_patch_summary?.intent_text || '',\n    intent_text: $json.context?.pending_intent?.original_intent_text || $json.payload?.summary?.candidate_patch?.intent_text || $json.payload?.candidate_patch?.intent_text || $json.context?.intent_text || $json.payload?.summary?.candidate_patch_summary?.intent_text || $json.payload?.candidate_patch_summary?.intent_text || '',\n    operator_id: $json.context?.operator_id || $json.payload?.summary?.candidate_patch?.operator_id || $json.payload?.candidate_patch?.operator_id || null,\n    reason: $json.payload?.summary?.candidate_patch?.reason || $json.payload?.candidate_patch?.reason || $json.context?.reason || null,\n    pending_question: ($json.errors || $json.payload?.rejection_reasons || [])[0] || $json.payload?.summary?.message || $json.payload?.message || 'Please clarify the pending request.',\n    pending_status: 'WAITING_FOR_CLARIFICATION',\n    missing_or_unclear_fields: $json.errors || [],\n    partial_resolution: {\n      target_lines: $json.context?.affected_lines || $json.payload?.summary?.affected_lines || $json.payload?.affected_lines || [],\n      simulation_config_updates: $json.context?.simulation_config_updates || $json.payload?.summary?.candidate_patch?.simulation_config_updates || $json.payload?.candidate_patch?.simulation_config_updates || null\n    }\n  }\n} }}",
+        "options": {}
+      },
+      "id": "4612ec19-a028-4fa7-b793-bfec600555dc",
+      "name": "Save Pending Clarification Session State",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2080,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Chat Stop Summary').first().json }];"
+      },
+      "id": "50d18deb-dfc4-4d41-a736-0ab8df322ecf",
+      "name": "Restore Chat Stop Summary After Session Save",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2340,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=http://trt-api:8000/chat/session/{{$json.context?.session_id || $json.session_id || \"default\"}}",
+        "options": {}
+      },
+      "id": "9a081042-7961-4a0d-902f-38d02c4b25ef",
+      "name": "Clear Chat Session State",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1820,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=http://trt-api:8000/chat/session/{{$json.context?.session_id || $json.session_id || \"default\"}}",
+        "options": {}
+      },
+      "id": "a1a34256-d597-4f7d-9c31-9afcbc5da11b",
+      "name": "Clear Completed Chat Session State",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4940,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Chat Final Summary').first().json }];"
+      },
+      "id": "4c501b70-22bb-49b6-9deb-ea7c2c94ecb7",
+      "name": "Restore Chat Final Summary After Session Clear",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5200,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3741f97f-9402-4736-bc24-5b027215359b",
+              "leftValue": "={{ $json.chat_session_state === 'WAITING_FOR_REQUIRED_FIELDS' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "08a69bd6-dc8f-43da-b16d-df59f708795a",
+      "name": "Pending Required Fields?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2340,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst pending = input.pending_intent || input.context?.pending_intent || {};\nconst sessionId = input.session_id || input.context?.session_id || 'default';\nconst originalIntent = pending.original_intent_text || pending.intent_text || input.intent_text || '';\nconst operatorId = input.operator_id || pending.operator_id || null;\nconst reason = input.reason || pending.reason || null;\nconst mergedContext = {\n  ...(input.context || {}),\n  session_id: sessionId,\n  chat_session_state: input.chat_session_state || 'WAITING_FOR_REQUIRED_FIELDS',\n  pending_intent: pending,\n  operator_id: operatorId,\n  reason\n};\nreturn [{\n  json: {\n    ...input,\n    operator_id: operatorId,\n    reason,\n    intent_text: originalIntent,\n    raw_chat_input: input.raw_chat_input || '',\n    context: mergedContext,\n    body: {\n      operator_id: operatorId,\n      reason,\n      intent_text: originalIntent\n    },\n    errors: []\n  }\n}];"
+      },
+      "id": "b7904676-6e05-4c95-8d2b-9f62f458b414",
+      "name": "Merge Pending Required Fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2600,
+        80
+      ]
     }
   ],
   "connections": {
@@ -1212,7 +1484,7 @@
       "main": [
         [
           {
-            "node": "Build vLLM User Response Format Body",
+            "node": "Save Pending Clarification Session State",
             "type": "main",
             "index": 0
           }
@@ -1223,7 +1495,7 @@
       "main": [
         [
           {
-            "node": "Build vLLM User Response Format Body",
+            "node": "Clear Completed Chat Session State",
             "type": "main",
             "index": 0
           }
@@ -1234,7 +1506,7 @@
       "main": [
         [
           {
-            "node": "Build vLLM Chat Turn Parse Body",
+            "node": "Extract Session ID",
             "type": "main",
             "index": 0
           }
@@ -1274,7 +1546,7 @@
       "main": [
         [
           {
-            "node": "Build vLLM User Response Format Body",
+            "node": "Save Required Field Session State",
             "type": "main",
             "index": 0
           }
@@ -1285,7 +1557,7 @@
       "main": [
         [
           {
-            "node": "Build vLLM Chat Turn Parse Body",
+            "node": "Extract Session ID",
             "type": "main",
             "index": 0
           }
@@ -1296,7 +1568,7 @@
       "main": [
         [
           {
-            "node": "Build vLLM Chat Turn Parse Body",
+            "node": "Extract Session ID",
             "type": "main",
             "index": 0
           }
@@ -1438,7 +1710,7 @@
       "main": [
         [
           {
-            "node": "Return Cancelled Message",
+            "node": "Clear Chat Session State",
             "type": "main",
             "index": 0
           }
@@ -1481,7 +1753,7 @@
         ],
         [
           {
-            "node": "Check Required Chat Fields",
+            "node": "Pending Required Fields?",
             "type": "main",
             "index": 0
           }
@@ -1555,6 +1827,174 @@
         [
           {
             "node": "Send Chat Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Session ID": {
+      "main": [
+        [
+          {
+            "node": "Load Chat Session State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Chat Session State": {
+      "main": [
+        [
+          {
+            "node": "Build vLLM Chat Turn Parse Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pending Clarification?": {
+      "main": [
+        [
+          {
+            "node": "Merge Pending Clarification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Required Chat Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Pending Clarification": {
+      "main": [
+        [
+          {
+            "node": "Normalize Merged Clarification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Merged Clarification": {
+      "main": [
+        [
+          {
+            "node": "Normalize Context After Intent Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Required Field Session State": {
+      "main": [
+        [
+          {
+            "node": "Restore Canonical Clarification After Session Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Canonical Clarification After Session Save": {
+      "main": [
+        [
+          {
+            "node": "Build vLLM User Response Format Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Pending Clarification Session State": {
+      "main": [
+        [
+          {
+            "node": "Restore Chat Stop Summary After Session Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Chat Stop Summary After Session Save": {
+      "main": [
+        [
+          {
+            "node": "Build vLLM User Response Format Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Chat Session State": {
+      "main": [
+        [
+          {
+            "node": "Return Cancelled Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Completed Chat Session State": {
+      "main": [
+        [
+          {
+            "node": "Restore Chat Final Summary After Session Clear",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Chat Final Summary After Session Clear": {
+      "main": [
+        [
+          {
+            "node": "Build vLLM User Response Format Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pending Required Fields?": {
+      "main": [
+        [
+          {
+            "node": "Merge Pending Required Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pending Clarification?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Pending Required Fields": {
+      "main": [
+        [
+          {
+            "node": "Check Required Chat Fields",
             "type": "main",
             "index": 0
           }

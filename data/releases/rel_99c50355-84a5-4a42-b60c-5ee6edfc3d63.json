@@ -1,0 +1,58 @@
+{
+  "audit_id": "audit-247dd931-bd14-41a6-8430-aab1d423bcda",
+  "base_version": "v36",
+  "candidate_patch": {
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "base_version": "v36",
+    "intent_text": "prioritize the adjustment of production lines 1 and 2 to focus on the ent surgical tooling set, and adjust the number of tooling on the production line so that only 6 remain",
+    "message": "The candidate simulation configuration update is valid. It will set add_reference_number to 6 for the full-system simulation.",
+    "operations": [],
+    "operator_id": "op_001",
+    "patch_id": "patch-1782013063542",
+    "reason": "test for milestone 9",
+    "request_types": [
+      "TOOLING_POLICY_UPDATE",
+      "SIMULATION_CONFIG_UPDATE"
+    ],
+    "simulation_config_updates": {
+      "add_reference_number": 6
+    },
+    "status": "REVIEWED",
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [],
+    "affected_lines": [],
+    "intent_text": "prioritize the adjustment of production lines 1 and 2 to focus on the ent surgical tooling set, and adjust the number of tooling on the production line so that only 6 remain",
+    "reason": "test for milestone 9"
+  },
+  "created_at_utc": "2026-06-21T03:37:54.972553Z",
+  "current_trt_path": "/app/data/trt/current_trt.json",
+  "operator_decision": {
+    "comment": "Test for the Milestone 9",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-06-21T03:37:55.059276Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1782013063542",
+  "previous_trt_version": "v36",
+  "release_id": "rel_99c50355-84a5-4a42-b60c-5ee6edfc3d63",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "trt_version": "v37",
+  "updated_at_utc": "2026-06-21T03:37:55.059276Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  },
+  "version_path": "/app/data/trt_versions/trt-demo_v37.json"
+}

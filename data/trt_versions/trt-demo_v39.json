@@ -1,5 +1,5 @@
 {
-  "audit_id": "audit-9e236b31-4c30-46fd-9fbd-9b34bcaf9391",
+  "audit_id": "audit-e13f12fa-53f1-4a03-88fa-f429da3e8952",
   "experiment_id": "ent_surgical_tooling_sorting_demo",
   "lines": {
     "line_1": {
@@ -27,13 +27,6 @@
         "deadline_minutes": null,
         "max_downtime_seconds": null,
         "min_throughput_per_hour": 120
-      },
-      "manipulator_priority": {
-        "enabled": true,
-        "ordered_normalized_types": [],
-        "ordered_tool_ids": [],
-        "policy": "REQUIRED_FIRST",
-        "tie_breaker": "FCFS"
       },
       "priority": 3,
       "required_tool_ids": [],
@@ -107,13 +100,6 @@
         "max_downtime_seconds": null,
         "min_throughput_per_hour": 120
       },
-      "manipulator_priority": {
-        "enabled": true,
-        "ordered_normalized_types": [],
-        "ordered_tool_ids": [],
-        "policy": "REQUIRED_FIRST",
-        "tie_breaker": "FCFS"
-      },
       "priority": 3,
       "required_tool_ids": [],
       "selected_tool_ids": [],
@@ -161,9 +147,9 @@
       }
     }
   },
-  "previous_version": "v43",
-  "release_id": "rel_1a144e7e-a305-414a-bbe6-9e73fd74629d",
-  "released_at": "2026-06-21T13:25:39.707083Z",
+  "previous_version": "v38",
+  "release_id": "rel_e018f03b-0719-4fb7-a8f0-0dd80d45735b",
+  "released_at": "2026-06-21T10:59:59.243023Z",
   "tool_catalog": {
     "tool_01": {
       "belongs_to_ent_set": false,
@@ -446,5 +432,5 @@
     }
   },
   "trt_id": "trt-demo",
-  "version": "v44"
+  "version": "v39"
 }

@@ -30,6 +30,20 @@ KPI_TERMS = [
 PRIORITY_TERMS = ["highest priority", "lowest priority", "priority", "highest level"]
 TOOLING_POLICY_TERMS = ["tooling", "tool", "tools", "instrument", "instruments"]
 INSTRUMENT_SCOPE_TERMS = ["allow", "allowed", "select", "selected", "exclude", "excluded", "required", "mandatory"]
+MANIPULATOR_PRIORITY_TERMS = [
+    "pick",
+    "pick up",
+    "pickup",
+    "grasp",
+    "grasp order",
+    "picking order",
+    "required tools first",
+    "unwanted tools first",
+    "ent required tools first",
+    "ent-required tools first",
+    "focus on the ent surgical tooling set",
+    "focus on ent surgical tooling set",
+]
 SIMULATION_CONFIG_TERMS = [
     "add_reference_number",
     "add reference number",
@@ -75,9 +89,11 @@ def _normalize_text(text: str) -> str:
 
 def _line_mentions(text: str) -> list[int]:
     normalized = _normalize_text(text)
-    mentions = [int(match) for match in re.findall(r"\bline\s+(\d+)\b", normalized)]
+    mentions = []
+    for match in re.finditer(r"\b(?:line|lines|production line|production lines)\s+((?:\d+\s*(?:,|and)?\s*)+)", normalized):
+        mentions.extend(int(number) for number in re.findall(r"\d+", match.group(1)))
     for word, number in SPELLED_LINES.items():
-        if re.search(rf"\bline\s+{word}\b", normalized):
+        if re.search(rf"\b(?:line|lines|production line|production lines)\s+{word}\b", normalized):
             mentions.append(number)
     return sorted(set(mentions))
 
@@ -118,6 +134,35 @@ def _mentions_simulation_config_update(text: str) -> bool:
     return any(term in normalized for term in SIMULATION_CONFIG_TERMS)
 
 
+def _mentions_manipulator_priority_update(text: str) -> bool:
+    normalized = _normalize_text(text)
+    if "prioritize" in normalized and "focus" in normalized and "ent" in normalized:
+        return True
+    has_pick_language = any(term in normalized for term in MANIPULATOR_PRIORITY_TERMS)
+    has_order_language = any(term in normalized for term in ("first", "last", "before", "after", "order", "prioritize"))
+    return has_pick_language and has_order_language
+
+
+def _ambiguous_priority_adjustment(text: str) -> bool:
+    normalized = _normalize_text(text)
+    if "prioritize" not in normalized:
+        return False
+    if not any(term in normalized for term in ("adjustment", "adjustments", "adjust")):
+        return False
+    disambiguating_terms = (
+        "pick",
+        "grasp",
+        "required",
+        "wanted",
+        "unwanted",
+        "focus on",
+        "ent surgical tooling set",
+        "ent tooling set",
+        "ent set",
+    )
+    return not any(term in normalized for term in disambiguating_terms)
+
+
 def deterministic_intent_precheck(intent_text: str, current_trt: dict[str, Any]) -> dict[str, Any]:
     normalized = _normalize_text(intent_text)
     current_lines = set(current_trt.get("lines", {}))
@@ -137,12 +182,23 @@ def deterministic_intent_precheck(intent_text: str, current_trt: dict[str, Any])
             restricted_messages.append(message)
 
     is_simulation_config_update = _mentions_simulation_config_update(intent_text)
+    is_manipulator_priority_update = _mentions_manipulator_priority_update(intent_text)
+    is_ambiguous_priority_adjustment = _ambiguous_priority_adjustment(intent_text)
 
-    if not is_simulation_config_update and (any(term in normalized for term in ALL_LINE_TERMS) or len(line_numbers) > 1):
+    if is_ambiguous_priority_adjustment:
+        detected_request_types.append("ambiguous_priority_request")
+        clarification_questions.append(
+            "Do you mean production-line priority, or should the robots on lines 1 and 3 pick ENT-required tools first?"
+        )
+
+    if not (is_simulation_config_update or is_manipulator_priority_update or is_ambiguous_priority_adjustment) and (any(term in normalized for term in ALL_LINE_TERMS) or len(line_numbers) > 1):
         detected_request_types.append("multi_line_request")
         clarification_questions.append("Please specify exactly one production line.")
 
-    if not is_simulation_config_update and not line_numbers:
+    if is_manipulator_priority_update and not line_numbers and not any(term in normalized for term in ALL_LINE_TERMS):
+        detected_request_types.append("missing_line_or_scope")
+        clarification_questions.append("Which production line should use this grasp order, or should it apply to all lines?")
+    elif not (is_simulation_config_update or is_ambiguous_priority_adjustment) and not line_numbers:
         detected_request_types.append("missing_line")
         clarification_questions.append("Which line should be changed?")
     elif any(number not in valid_line_numbers for number in line_numbers) or any(line_id not in current_lines for line_id in line_ids):
@@ -154,6 +210,7 @@ def deterministic_intent_precheck(intent_text: str, current_trt: dict[str, Any])
         or _mentions_priority_update(intent_text)
         or _mentions_tooling_or_instrument_update(intent_text)
         or is_simulation_config_update
+        or is_manipulator_priority_update
     )
     if _mentions_kpi_update(intent_text):
         detected_request_types.append("KPI_LIMIT_UPDATE")
@@ -163,8 +220,10 @@ def deterministic_intent_precheck(intent_text: str, current_trt: dict[str, Any])
         detected_request_types.append("INSTRUMENT_SCOPE_UPDATE")
     if is_simulation_config_update:
         detected_request_types.append("SIMULATION_CONFIG_UPDATE")
+    if is_manipulator_priority_update:
+        detected_request_types.append("MANIPULATOR_PRIORITY_UPDATE")
 
-    if not goals and not non_goal_update:
+    if not goals and not non_goal_update and not is_ambiguous_priority_adjustment:
         detected_request_types.append("missing_goal")
         clarification_questions.append("Which goal should be applied?")
     elif len(goals) > 1:
@@ -189,10 +248,12 @@ def deterministic_intent_precheck(intent_text: str, current_trt: dict[str, Any])
         "invalid_line",
         "missing_goal",
         "missing_line",
+        "missing_line_or_scope",
         "multi_line_request",
         "read_only_state_request",
         "restricted_simulation_setting",
         "unsupported_instrument",
+        "ambiguous_priority_request",
     }
 
     action = "PROPOSE_PATCH"

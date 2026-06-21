@@ -131,26 +131,80 @@ def test_chat_operator_workflow_classifies_every_chat_turn_with_vllm():
 
 def test_chat_workflow_preserves_pending_intent_for_clarification_turns():
     workflow = load_workflow("chat_operator_task_allocation.workflow.json")
+    workflow_text = json.dumps(workflow)
     builder = node_by_name(workflow, "Build vLLM Chat Turn Parse Body")
     normalizer = node_by_name(workflow, "Normalize Parsed Chat Turn")
-    context_normalizer = node_by_name(workflow, "Normalize Context After Intent Review")
+    load_session = node_by_name(workflow, "Load Chat Session State")
+    pending_gate = node_by_name(workflow, "Pending Clarification?")
+    required_gate = node_by_name(workflow, "Pending Required Fields?")
+    required_merge = node_by_name(workflow, "Merge Pending Required Fields")
+    merge_session = node_by_name(workflow, "Merge Pending Clarification")
+    merged_normalizer = node_by_name(workflow, "Normalize Merged Clarification")
+    save_pending = node_by_name(workflow, "Save Pending Clarification Session State")
     builder_code = builder["parameters"]["jsCode"]
     normalizer_code = normalizer["parameters"]["jsCode"]
-    context_code = context_normalizer["parameters"]["jsCode"]
 
-    assert "$getWorkflowStaticData(\"global\")" in builder_code
-    assert "pending_intents" in builder_code
+    assert "$getWorkflowStaticData" not in workflow_text
+    assert "pending_intents" not in workflow_text
+    assert load_session["type"] == "n8n-nodes-base.httpRequest"
+    assert "/chat/session/{{$json.session_id}}" in load_session["parameters"]["url"]
+    assert pending_gate["type"] == "n8n-nodes-base.if"
+    assert "WAITING_FOR_CLARIFICATION" in json.dumps(pending_gate["parameters"])
+    assert merge_session["type"] == "n8n-nodes-base.httpRequest"
+    assert "/chat/session/{{$json.context.session_id}}/merge-clarification" in merge_session["parameters"]["url"]
+    assert save_pending["type"] == "n8n-nodes-base.httpRequest"
+    assert "WAITING_FOR_CLARIFICATION" in save_pending["parameters"]["jsonBody"]
     assert "pending_intent" in builder_code
+    assert "loadedSession.pending_intent" in builder_code
+    assert "chat_session_state" in builder_code
+    assert "chat_session_state: chatSessionState" in normalizer_code
+    assert "pending_intent: pendingIntent" in normalizer_code
+    assert required_gate["type"] == "n8n-nodes-base.if"
+    assert "WAITING_FOR_REQUIRED_FIELDS" in json.dumps(required_gate["parameters"])
+    assert "original_intent_text" in required_merge["parameters"]["jsCode"]
+    assert "intent_text: originalIntent" in required_merge["parameters"]["jsCode"]
+    assert "operator_id: operatorId" in required_merge["parameters"]["jsCode"]
     assert "resolves an unresolved pending intent" in builder_code
     assert "without replacing the original request" in builder_code
-    assert "add_reference_number" in builder_code
+    assert "If pending intent exists" in builder_code
     assert "CLARIFICATION_VALUES" in builder_code
+    assert "explicitNewRequest" in normalizer_code
+    assert "explicitCancel" in normalizer_code
+    assert "pendingIntent && !explicitNewRequest && !explicitCancel && !explicitApproval" in normalizer_code
+    assert "originalPendingText" in normalizer_code
     assert "pendingIntent?.operator_id" in normalizer_code
     assert "pendingIntent?.reason" in normalizer_code
     assert "Clarification:" in normalizer_code
-    assert "$getWorkflowStaticData('global')" in context_code
-    assert "delete staticData.pending_intents[sessionId]" in context_code
-    assert "staticData.pending_intents[sessionId]" in context_code
+    assert "candidate_patch" in merged_normalizer["parameters"]["jsCode"]
+    assert "simulation_config_updates" in merged_normalizer["parameters"]["jsCode"]
+    assert "$json.chat_session_state === 'WAITING_FOR_CLARIFICATION'" in json.dumps(pending_gate["parameters"])
+
+
+def test_chat_operator_workflow_saves_required_field_state_and_clears_cancel():
+    workflow = load_workflow("chat_operator_task_allocation.workflow.json")
+    save_required = node_by_name(workflow, "Save Required Field Session State")
+    clear_session = node_by_name(workflow, "Clear Chat Session State")
+    clear_completed = node_by_name(workflow, "Clear Completed Chat Session State")
+    formatted_reply_gate = node_by_name(workflow, "Formatted Response Needs Reply?")
+    cancel_code = node_by_name(workflow, "Return Cancelled Message")["parameters"]["jsCode"]
+
+    assert save_required["type"] == "n8n-nodes-base.httpRequest"
+    assert save_required["parameters"]["method"] == "PUT"
+    assert "/chat/session/" in save_required["parameters"]["url"]
+    assert "WAITING_FOR_REQUIRED_FIELDS" in save_required["parameters"]["jsonBody"]
+    assert "original_intent_text" in save_required["parameters"]["jsonBody"]
+    assert clear_session["type"] == "n8n-nodes-base.httpRequest"
+    assert clear_session["parameters"]["method"] == "DELETE"
+    assert "/chat/session/" in clear_session["parameters"]["url"]
+    assert clear_completed["type"] == "n8n-nodes-base.httpRequest"
+    assert clear_completed["parameters"]["method"] == "DELETE"
+    assert "/chat/session/" in clear_completed["parameters"]["url"]
+    assert "PROVIDE_CLARIFICATION" in json.dumps(formatted_reply_gate["parameters"])
+    clarification_edges = workflow["connections"]["Ask Clarification Reply"]["main"][0]
+    approval_edges = workflow["connections"]["Ask Release Decision"]["main"][0]
+    assert any(edge["node"] == "Extract Session ID" for edge in clarification_edges)
+    assert any(edge["node"] == "Extract Session ID" for edge in approval_edges)
+    assert "$getWorkflowStaticData" not in cancel_code
 
 
 def test_intent_workflow_supports_simulation_config_update_candidate():
@@ -163,11 +217,15 @@ def test_intent_workflow_supports_simulation_config_update_candidate():
 
     for prompt in [body, retry_body]:
         assert "SIMULATION_CONFIG_UPDATE" in prompt
+        assert "MANIPULATOR_PRIORITY_UPDATE" in prompt
+        assert "manipulator_priority" in prompt
         assert "add_reference_number" in prompt
         assert "simulation_config_updates" in prompt
         assert "Do not ask which five tools unless the user names specific tools to keep." in prompt
     assert "simulation_config_updates: extracted.simulation_config_updates || null" in normalizer_code
     assert "simulation_config_updates: extracted.simulation_config_updates || null" in retry_normalizer_code
+    assert "manipulator_priority: extracted.manipulator_priority ?? null" in normalizer_code
+    assert "manipulator_priority: extracted.manipulator_priority ?? null" in retry_normalizer_code
     assert "const simulationConfigUpdates = candidatePatch.simulation_config_updates || null;" in reviewed_code
     assert "simulation_config_updates: simulationConfigUpdates" in reviewed_code
     assert "The candidate simulation configuration update is valid" in reviewed_code

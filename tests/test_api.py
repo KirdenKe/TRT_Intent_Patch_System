@@ -94,6 +94,57 @@ def test_get_current_trt_returns_current_trt(tmp_path, fixture_loader):
     assert response.json()["version"] == "v1"
 
 
+def test_chat_session_merge_clarification_returns_reviewable_manipulator_priority_candidate(tmp_path):
+    client = make_ent_scenario_client(tmp_path)
+    session_id = "milestone-10-clarification"
+    original = (
+        "prioritize the adjustment of production lines 1 and 3 to focus on the ent surgical tooling set, "
+        "and adjust the number of tooling on the production line so that only 6 remain"
+    )
+    saved = client.put(
+        f"/chat/session/{session_id}",
+        json={
+            "session_id": session_id,
+            "state": "WAITING_FOR_CLARIFICATION",
+            "pending_intent": {
+                "original_intent_text": original,
+                "intent_text": original,
+                "operator_id": "op_001",
+                "reason": "test for milestone 10",
+                "pending_question": (
+                    "Do you mean production-line priority, or should the robots on lines 1 and 3 pick "
+                    "ENT-required tools first?"
+                ),
+                "pending_status": "WAITING_FOR_CLARIFICATION",
+            },
+        },
+    )
+    assert saved.status_code == 200
+
+    response = client.post(
+        f"/chat/session/{session_id}/merge-clarification",
+        json={"clarification_text": "i mean the robots on lines 1 and 3 pick ENT-required tools first"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["resolved"] is True
+    assert body["operator_id"] == "op_001"
+    assert body["reason"] == "test for milestone 10"
+    assert body["target_lines"] == ["line_1", "line_3"]
+    assert body["target_set_id"] == "ENT_SURGICAL_TOOLING_SET"
+    assert set(body["request_types"]) >= {
+        "TOOLING_POLICY_UPDATE",
+        "MANIPULATOR_PRIORITY_UPDATE",
+        "SIMULATION_CONFIG_UPDATE",
+    }
+    assert body["manipulator_priority"]["policy"] == "REQUIRED_FIRST"
+    assert body["simulation_config_updates"] == {"add_reference_number": 6}
+    operations = body["candidate_patch"]["operations"]
+    assert "/lines/line_1/manipulator_priority" in {operation["path"] for operation in operations}
+    assert "/lines/line_3/manipulator_priority" in {operation["path"] for operation in operations}
+
+
 def test_health_endpoint_returns_ok(tmp_path, fixture_loader):
     client = make_client(tmp_path, fixture_loader)
 
