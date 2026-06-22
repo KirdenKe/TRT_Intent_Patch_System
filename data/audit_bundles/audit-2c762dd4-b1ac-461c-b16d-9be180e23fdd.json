@@ -1,0 +1,138 @@
+{
+  "audit_id": "audit-2c762dd4-b1ac-461c-b16d-9be180e23fdd",
+  "intent_text": "Set line_1, line_2, line_3, line_4 to target the ENT surgical tooling set. Make the robots on line_1, line_2, line_3, line_4 pick ENT-required tooling first. Set the simulated tooling count to 5.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "REQUIRED_FIRST",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/excluded_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/excluded_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "REQUIRED_FIRST",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/excluded_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/excluded_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "REQUIRED_FIRST",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/excluded_tool_ids",
+      "value": [
+        "tool_16",
+        "tool_17",
+        "tool_18"
+      ]
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/excluded_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "REQUIRED_FIRST",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/excluded_tool_ids",
+      "value": [
+        "tool_16",
+        "tool_17",
+        "tool_18"
+      ]
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/excluded_instruments",
+      "value": []
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch_d2de8a5e-f070-4dd4-8c54-6b401cc30170",
+  "reason": "test for milestone 11",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-22T15:50:16.969712Z",
+  "trt_after_hash": "0e607e383bc21d56c77f69813e3fcea91c6de31fc5db21b17bc71ec1e3d981fe",
+  "trt_after_version": "v59",
+  "trt_before_hash": "a6079a52411c32aff9f6fbe5ff0d2f036c9b1d8a2b14977c1f2f3ff3e7a88366",
+  "trt_before_version": "v58",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

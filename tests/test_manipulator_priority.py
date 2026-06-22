@@ -10,6 +10,7 @@ from scenario_generation.models import ScenarioGenerationRequest
 from trt_core.digital_twin_adapter.result_reader import read_simulation_results
 from trt_core.intent_precheck import deterministic_intent_precheck
 from trt_core.intent_normalizer import normalize_domain_candidate
+from trt_core.intent_normalizer import parse_tooling_count_request
 
 
 def current_trt() -> dict:
@@ -179,7 +180,8 @@ def test_combined_adjustment_focus_request_still_creates_manipulator_priority():
     priority_ops = [operation for operation in patch["operations"] if operation["path"].endswith("/manipulator_priority")]
     assert len(priority_ops) == 2
     assert all(operation["value"]["policy"] == "REQUIRED_FIRST" for operation in priority_ops)
-    assert "add_reference_number to 6" in patch["message"]
+    assert "simulated tooling count to 6" in patch["message"]
+    assert "add_reference_number" not in patch["message"]
 
 
 def test_ambiguous_prioritize_adjustment_requires_clarification():
@@ -188,6 +190,13 @@ def test_ambiguous_prioritize_adjustment_requires_clarification():
             candidate("prioritize the adjustment of production lines 1 and 3 operator_id: op_001 reason: milestone 10 test"),
             current_trt(),
         )
+
+
+def test_tooling_count_request_maps_to_simulation_config_without_operator_arg_name():
+    assert parse_tooling_count_request("adjust the number of tooling on the production line so that only 5 remain") == {
+        "add_reference_number": 5
+    }
+    assert parse_tooling_count_request("limit the line to 6 tools") == {"add_reference_number": 6}
 
 
 def test_precheck_allows_ent_focus_priority_and_clarifies_ambiguous_adjustment():
@@ -206,8 +215,22 @@ def test_precheck_allows_ent_focus_priority_and_clarifies_ambiguous_adjustment()
     assert focus["clarification_questions"] == []
     assert ambiguous["action"] == "NEEDS_CLARIFICATION"
     assert ambiguous["clarification_questions"] == [
-        "Do you mean production-line priority, or should the robots on lines 1 and 3 pick ENT-required tools first?"
+        "Do you mean production-line priority, or should the robots on lines 1 and 3 pick ENT-required tooling first?"
     ]
+
+
+def test_ambiguous_all_lines_priority_clarification_preserves_scope():
+    trt = current_trt()
+    ambiguous = deterministic_intent_precheck(
+        "prioritize the adjustment of all production lines to focus on the ENT surgical tooling set",
+        trt,
+    )
+
+    assert ambiguous["action"] == "NEEDS_CLARIFICATION"
+    assert ambiguous["clarification_questions"] == [
+        "Do you mean production-line priority, or should the robots on all production lines pick ENT-required tooling first?"
+    ]
+    assert "lines 1 and 3" not in ambiguous["clarification_questions"][0]
 
 
 @pytest.mark.parametrize(

@@ -1,0 +1,90 @@
+{
+  "audit_id": "audit-88b1bf62-cb41-4731-8a6c-cf66701ebb4f",
+  "intent_text": "Set line_1, line_4 to target the ENT surgical tooling set and make their robots pick ENT-required tooling first. Set add_reference_number to 5.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "REQUIRED_FIRST",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "REQUIRED_FIRST",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "REQUIRED_FIRST",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "REQUIRED_FIRST",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch_9238ff42-aa8c-406e-83b4-0704b8525978",
+  "reason": "test for milestone 11",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-21T16:38:42.192548Z",
+  "trt_after_hash": "0edbc8b625dd2548045f451a204c666c1bcf4a660fc37dfbe18e27355aaa01e6",
+  "trt_after_version": "v47",
+  "trt_before_hash": "01fb66983ccd9e2324df9091665e95c5655dca078f4a17ea552e1177657ef893",
+  "trt_before_version": "v46",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

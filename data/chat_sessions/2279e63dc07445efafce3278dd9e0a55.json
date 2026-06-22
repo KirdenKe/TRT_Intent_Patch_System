@@ -1,0 +1,165 @@
+{
+  "candidate_patch_summary": {
+    "affected_lines": [
+      "line_3",
+      "line_4"
+    ],
+    "base_version": "v56",
+    "intent_text": "Set line_3, line_4 to target the ENT surgical tooling set. Make the robots on line_3, line_4 pick ENT-required tooling first. Set the simulated tooling count to 5.",
+    "message": "The candidate patch passed validation. It will set lines 3 and 4 to target the ENT_SURGICAL_TOOLING_SET, make their robots pick ENT-required tooling first, and set the simulated tooling count to 5 for the full-system simulation. Please approve, reject, or request revision.",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_3/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [],
+          "ordered_tool_ids": [],
+          "policy": "REQUIRED_FIRST",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/excluded_tool_ids",
+        "value": [
+          "tool_16",
+          "tool_17",
+          "tool_18"
+        ]
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/excluded_instruments",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [],
+          "ordered_tool_ids": [],
+          "policy": "REQUIRED_FIRST",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/excluded_tool_ids",
+        "value": [
+          "tool_16",
+          "tool_17",
+          "tool_18"
+        ]
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/excluded_instruments",
+        "value": []
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "patch_a71119ca-de5e-4d87-8d7a-64c17694b002",
+    "reason": "test for milestone 11",
+    "request_types": [
+      "MANIPULATOR_PRIORITY_UPDATE",
+      "SIMULATION_CONFIG_UPDATE",
+      "TOOLING_POLICY_UPDATE"
+    ],
+    "simulation_config_updates": {
+      "add_reference_number": 5
+    },
+    "status": "REVIEWED",
+    "trt_id": "trt-demo"
+  },
+  "conversation": [
+    {
+      "content": "prioritize the adjustment of production lines 3 and 4 to focus on the ent surgical tooling set, and adjust the number of tooling on the production line so that only 5 remain",
+      "role": "user"
+    },
+    {
+      "content": "Please provide your operator_id and the reason for this request.",
+      "role": "assistant"
+    },
+    {
+      "content": "operator_id: op_001\nreason: test for milestone 11",
+      "role": "user"
+    },
+    {
+      "content": "DEPLOY NOW",
+      "role": "user"
+    }
+  ],
+  "latest_dialogue_decision": {
+    "approval_decision": "APPROVE",
+    "deployment_decision": "DEPLOY",
+    "dialogue_state": "READY_FOR_REVIEW",
+    "missing_or_unclear_items": [],
+    "normalized_request": {
+      "intent_text": "prioritize the adjustment of production lines 3 and 4 to focus on the ent surgical tooling set, and adjust the number of tooling on the production line so that only 5 remain",
+      "manipulator_priority": {
+        "policy": "REQUIRED_FIRST",
+        "scope": "TABLE_BATCH"
+      },
+      "operator_id": "op_001",
+      "reason": "test for milestone 11",
+      "request_types": [
+        "MANIPULATOR_PRIORITY_UPDATE",
+        "SIMULATION_CONFIG_UPDATE",
+        "TOOLING_POLICY_UPDATE"
+      ],
+      "simulation_config_updates": {
+        "add_reference_number": 5
+      },
+      "target_lines": [
+        "line_3",
+        "line_4"
+      ],
+      "target_scope": "ALL_LINES",
+      "target_set_id": "ENT_SURGICAL_TOOLING_SET"
+    },
+    "operator_message": "The request is ready for review. \n\n**Request Details:**\n- **Operator ID:** op_001\n- **Reason:** test for milestone 11\n- **Target Lines:** line_3, line_4\n- **Request Types:** MANIPULATOR_PRIORITY_UPDATE, SIMULATION_CONFIG_UPDATE, TOOLING_POLICY_UPDATE\n- **Normalized Request:** Set line_3 and line_4 to target ENT_SURGICAL_TOOLING_SET, configure robots to pick ENT-required tooling first (REQUIRED_FIRST), and set simulated tooling count to 5."
+  },
+  "normalized_request": {
+    "intent_text": "prioritize the adjustment of production lines 3 and 4 to focus on the ent surgical tooling set, and adjust the number of tooling on the production line so that only 5 remain",
+    "manipulator_priority": {
+      "enabled": true,
+      "ordered_normalized_types": [],
+      "ordered_tool_ids": [],
+      "policy": "REQUIRED_FIRST",
+      "tie_breaker": "FCFS"
+    },
+    "operator_id": "op_001",
+    "reason": "test for milestone 11",
+    "request_types": [
+      "MANIPULATOR_PRIORITY_UPDATE",
+      "SIMULATION_CONFIG_UPDATE",
+      "TOOLING_POLICY_UPDATE"
+    ],
+    "simulation_config_updates": {
+      "add_reference_number": 5
+    },
+    "target_lines": [
+      "line_3",
+      "line_4"
+    ],
+    "target_scope": "MULTIPLE_LINES",
+    "target_set_id": "ENT_SURGICAL_TOOLING_SET"
+  },
+  "pending_intent": null,
+  "review_status": "REVIEWED",
+  "session_id": "2279e63dc07445efafce3278dd9e0a55",
+  "state": "WAITING_FOR_APPROVAL_DECISION",
+  "updated_at": "2026-06-22T14:12:09.254261Z"
+}

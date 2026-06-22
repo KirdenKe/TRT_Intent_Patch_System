@@ -1,0 +1,52 @@
+{
+  "id": "DeploymentApprovalDemo",
+  "name": "Deployment Approval Demo",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "receive-deployment-decision",
+      "name": "Receive Deployment Decision",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://trt-api:8000/deployment/simulated-deploy",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { run_id: $json.run_id || $json.pending_deployment?.run_id, scenario_spec_id: $json.scenario_spec_id || $json.pending_deployment?.scenario_spec_id, trt_id: $json.trt_id || $json.pending_deployment?.trt_id || 'trt-demo', trt_version: $json.trt_version || $json.pending_deployment?.trt_version, operator_id: $json.operator_id, deployment_comment: $json.deployment_comment || 'operator approved after evidence summary' } }}",
+        "options": {}
+      },
+      "id": "post-simulated-deploy",
+      "name": "Simulated Physical Deployment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        300,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Receive Deployment Decision": {
+      "main": [
+        [
+          {
+            "node": "Simulated Physical Deployment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "staticData": null,
+  "pinData": {}
+}

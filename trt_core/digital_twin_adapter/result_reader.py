@@ -8,7 +8,15 @@ from typing import Any
 
 
 REQUIRED_TABLES = {"simulation_runs", "line_kpis", "tool_events"}
-OPTIONAL_PRIORITY_TABLES = {"priority_config", "priority_events", "container_completion_events", "line_completion_kpis"}
+OPTIONAL_PRIORITY_TABLES = {
+    "priority_config",
+    "priority_events",
+    "container_completion_events",
+    "line_completion_kpis",
+    "table_batch_events",
+    "batch_pick_events",
+    "batch_completion_kpis",
+}
 
 
 def _rows(cursor: sqlite3.Cursor) -> list[dict[str, Any]]:
@@ -33,6 +41,9 @@ def _error(code: str, message: str, *, run_id: str, db_path: str | Path) -> dict
         "priority_events": [],
         "container_completion_events": [],
         "line_completion_kpis": [],
+        "table_batch_events": [],
+        "batch_pick_events": [],
+        "batch_completion_kpis": [],
         "priority_summary": {},
         "summary": {
             "total_completed": 0,
@@ -115,6 +126,36 @@ def read_simulation_results(db_path: str | Path, run_id: str) -> dict[str, Any]:
                 if "line_completion_kpis" in tables
                 else []
             )
+            table_batch_events = (
+                _rows(
+                    connection.execute(
+                        "SELECT * FROM table_batch_events WHERE run_id = ? ORDER BY line_id, batch_index, event_time_seconds",
+                        (run_id,),
+                    )
+                )
+                if "table_batch_events" in tables
+                else []
+            )
+            batch_pick_events = (
+                _rows(
+                    connection.execute(
+                        "SELECT * FROM batch_pick_events WHERE run_id = ? ORDER BY line_id, batch_index, actual_pick_index_in_batch",
+                        (run_id,),
+                    )
+                )
+                if "batch_pick_events" in tables
+                else []
+            )
+            batch_completion_kpis = (
+                _rows(
+                    connection.execute(
+                        "SELECT * FROM batch_completion_kpis WHERE run_id = ? ORDER BY line_id, batch_index",
+                        (run_id,),
+                    )
+                )
+                if "batch_completion_kpis" in tables
+                else []
+            )
     except sqlite3.Error as exc:
         return _error("SIMULATION_DB_SCHEMA_INVALID", f"Could not read simulation SQLite database: {exc}", run_id=run_id, db_path=path)
 
@@ -149,6 +190,9 @@ def read_simulation_results(db_path: str | Path, run_id: str) -> dict[str, Any]:
             "priority_events": priority_events,
             "container_completion_events": container_completion_events,
             "line_completion_kpis": line_completion_kpis,
+            "table_batch_events": table_batch_events,
+            "batch_pick_events": batch_pick_events,
+            "batch_completion_kpis": batch_completion_kpis,
             "priority_summary": priority_summary,
             "summary": summary,
         }
@@ -194,6 +238,9 @@ def read_simulation_results(db_path: str | Path, run_id: str) -> dict[str, Any]:
                 "priority_events": priority_events,
                 "container_completion_events": container_completion_events,
                 "line_completion_kpis": line_completion_kpis,
+                "table_batch_events": table_batch_events,
+                "batch_pick_events": batch_pick_events,
+                "batch_completion_kpis": batch_completion_kpis,
                 "priority_summary": priority_summary,
                 "summary": summary,
             }
@@ -208,11 +255,17 @@ def read_simulation_results(db_path: str | Path, run_id: str) -> dict[str, Any]:
         "priority_events": priority_events,
         "container_completion_events": container_completion_events,
         "line_completion_kpis": line_completion_kpis,
+        "table_batch_events": table_batch_events,
+        "batch_pick_events": batch_pick_events,
+        "batch_completion_kpis": batch_completion_kpis,
         "priority_summary": priority_summary,
         "priority_events_count": len(priority_events),
         "priority_config_count": len(priority_config),
         "container_completion_events_count": len(container_completion_events),
         "line_completion_kpis_count": len(line_completion_kpis),
+        "table_batch_events_count": len(table_batch_events),
+        "batch_pick_events_count": len(batch_pick_events),
+        "batch_completion_kpis_count": len(batch_completion_kpis),
         "summary": summary,
     }
 

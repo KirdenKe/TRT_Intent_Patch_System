@@ -1,0 +1,20 @@
+{
+  "pending_intent": {
+    "intent_text": "prioritize the adjustment of production lines 2 and 4 to focus on the ent surgical tooling set, and adjust the number of tooling on the production line so that only 5 remain",
+    "missing_or_unclear_fields": [
+      "Do you mean production-line priority, or should the robots on lines 2 and 4 pick ENT-required tooling first?"
+    ],
+    "operator_id": "op_001",
+    "original_intent_text": "prioritize the adjustment of production lines 2 and 4 to focus on the ent surgical tooling set, and adjust the number of tooling on the production line so that only 5 remain",
+    "partial_resolution": {
+      "simulation_config_updates": {},
+      "target_lines": []
+    },
+    "pending_question": "Do you mean production-line priority, or should the robots on lines 2 and 4 pick ENT-required tooling first?",
+    "pending_status": "WAITING_FOR_CLARIFICATION",
+    "reason": "test for milestone 11"
+  },
+  "session_id": "fc957d414fef41a1a9e370234d8ca2eb",
+  "state": "WAITING_FOR_CLARIFICATION",
+  "updated_at": "2026-06-21T16:23:52.314430Z"
+}

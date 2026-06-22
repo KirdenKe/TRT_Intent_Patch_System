@@ -1,0 +1,454 @@
+{
+  "acknowledged_risks": [
+    "RECOVERED_BATCH_GATING_WARNING"
+  ],
+  "created_at": "2026-06-22T16:00:13.140643Z",
+  "decision": "DEPLOY",
+  "deployment_comment": "DEPLOY NOW",
+  "deployment_id": "deploy_17842a06-4680-4f4e-9173-38e0760a37df",
+  "deployment_type": "SIMULATED_PHYSICAL_DEPLOYMENT",
+  "evidence_summary": {
+    "acknowledged_risks": [
+      "RECOVERED_BATCH_GATING_WARNING"
+    ],
+    "deployment_allowed": true,
+    "deployment_recommended": true,
+    "failed_checks": [],
+    "failed_lines": [],
+    "failure_summary": null,
+    "inconclusive_lines": [
+      "line_4"
+    ],
+    "kpi_evaluation_scope": "FULL_ENVIRONMENT_SCOPE",
+    "kpi_table": [
+      {
+        "batch_gating": {
+          "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+          "status": "PASS"
+        },
+        "deployment_blocking": false,
+        "downtime_pass": true,
+        "downtime_seconds": 0.0,
+        "failed_check_ids": [],
+        "failed_checks": [],
+        "failure_reason": null,
+        "line_id": "line_1",
+        "max_downtime_seconds": null,
+        "operator_reason": "line_1 sorted all 5 tools shown in the simulation. The completed set contained 3 required ENT tools and 2 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "placement": {
+          "reason": "No misplaced tools or placement validation warnings were recorded.",
+          "status": "PASS"
+        },
+        "priority_deviation_count": 6,
+        "priority_pass": true,
+        "priority_policy": "REQUIRED_FIRST",
+        "priority_required_first": {
+          "reason": "All wanted table tools were picked before unwanted table tools in each evaluated batch.",
+          "status": "PASS"
+        },
+        "simulated_tools_completed": 5,
+        "status": "PASS",
+        "target_min_throughput_per_hour": 120.0,
+        "throughput_pass": true,
+        "throughput_per_hour": 18000.0,
+        "unwanted_completed_count": 2,
+        "unwanted_completion_time_seconds": 1.0,
+        "wanted_completed_count": 3,
+        "wanted_completion_time_seconds": 1.0,
+        "warning_check_ids": [],
+        "warnings": []
+      },
+      {
+        "batch_gating": {
+          "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+          "status": "PASS"
+        },
+        "deployment_blocking": false,
+        "downtime_pass": true,
+        "downtime_seconds": 0.0,
+        "failed_check_ids": [],
+        "failed_checks": [],
+        "failure_reason": null,
+        "line_id": "line_2",
+        "max_downtime_seconds": null,
+        "operator_reason": "line_2 sorted all 5 tools shown in the simulation. The completed set contained 5 required ENT tools and 0 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "placement": {
+          "reason": "No misplaced tools or placement validation warnings were recorded.",
+          "status": "PASS"
+        },
+        "priority_deviation_count": 0,
+        "priority_pass": true,
+        "priority_policy": "REQUIRED_FIRST",
+        "priority_required_first": {
+          "reason": "All wanted table tools were picked before unwanted table tools in each evaluated batch.",
+          "status": "PASS"
+        },
+        "simulated_tools_completed": 5,
+        "status": "PASS",
+        "target_min_throughput_per_hour": 120.0,
+        "throughput_pass": true,
+        "throughput_per_hour": 18000.0,
+        "unwanted_completed_count": 0,
+        "unwanted_completion_time_seconds": 1.0,
+        "wanted_completed_count": 5,
+        "wanted_completion_time_seconds": 1.0,
+        "warning_check_ids": [],
+        "warnings": []
+      },
+      {
+        "batch_gating": {
+          "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+          "status": "PASS"
+        },
+        "deployment_blocking": false,
+        "downtime_pass": true,
+        "downtime_seconds": 0.0,
+        "failed_check_ids": [],
+        "failed_checks": [],
+        "failure_reason": null,
+        "line_id": "line_3",
+        "max_downtime_seconds": null,
+        "operator_reason": "line_3 sorted all 5 tools shown in the simulation. The completed set contained 1 required ENT tool and 4 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "placement": {
+          "reason": "No misplaced tools or placement validation warnings were recorded.",
+          "status": "PASS"
+        },
+        "priority_deviation_count": 10,
+        "priority_pass": true,
+        "priority_policy": "REQUIRED_FIRST",
+        "priority_required_first": {
+          "reason": "All wanted table tools were picked before unwanted table tools in each evaluated batch.",
+          "status": "PASS"
+        },
+        "simulated_tools_completed": 5,
+        "status": "PASS",
+        "target_min_throughput_per_hour": 120.0,
+        "throughput_pass": true,
+        "throughput_per_hour": 18000.0,
+        "unwanted_completed_count": 4,
+        "unwanted_completion_time_seconds": 1.0,
+        "wanted_completed_count": 1,
+        "wanted_completion_time_seconds": 1.0,
+        "warning_check_ids": [],
+        "warnings": []
+      },
+      {
+        "batch_gating": {
+          "reason": "line_4 warning: a next-batch request was blocked for line_4_batch_0, then the table was cleared (4/4 tools picked) before the next group was loaded.",
+          "status": "RECOVERED_WARNING"
+        },
+        "deployment_blocking": false,
+        "downtime_pass": true,
+        "downtime_seconds": 0.0,
+        "failed_check_ids": [],
+        "failed_checks": [],
+        "failure_reason": "",
+        "line_id": "line_4",
+        "max_downtime_seconds": null,
+        "operator_reason": "line_4 sorted all 5 tools shown in the simulation. The completed set contained 3 required ENT tools and 2 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. line_4 warning: a next-batch request was blocked for line_4_batch_0, then the table was cleared (4/4 tools picked) before the next group was loaded. No misplaced tools or entanglements were recorded.",
+        "placement": {
+          "reason": "No misplaced tools or placement validation warnings were recorded.",
+          "status": "PASS"
+        },
+        "priority_deviation_count": 6,
+        "priority_pass": true,
+        "priority_policy": "REQUIRED_FIRST",
+        "priority_required_first": {
+          "reason": "All wanted table tools were picked before unwanted table tools in each evaluated batch.",
+          "status": "PASS"
+        },
+        "simulated_tools_completed": 5,
+        "status": "WARNING",
+        "target_min_throughput_per_hour": 120.0,
+        "throughput_pass": true,
+        "throughput_per_hour": 18000.0,
+        "unwanted_completed_count": 2,
+        "unwanted_completion_time_seconds": 1.0,
+        "wanted_completed_count": 3,
+        "wanted_completion_time_seconds": 1.0,
+        "warning_check_ids": [
+          "batch_gating.recovered_blocked_next_batch_request"
+        ],
+        "warnings": [
+          {
+            "actual": "An early request was recorded but blocked/recovered before the next batch loaded.",
+            "actual_value": "line_4_batch_0",
+            "check_id": "batch_gating.recovered_blocked_next_batch_request",
+            "deployment_blocking": false,
+            "evidence_row_id": 0,
+            "evidence_source": "batch_completion_kpis.batch_gating_violation",
+            "expected": "No next-batch request should be attempted while table tools remain.",
+            "expected_value": "request only after table clear",
+            "line_id": "line_4",
+            "operator_explanation": "line_4 warning: a next-batch request was blocked for line_4_batch_0, then the table was cleared (4/4 tools picked) before the next group was loaded.",
+            "operator_impact": "This is a recovered warning, not a table-crowding failure.",
+            "operator_label": "Next-batch request was blocked until the table cleared",
+            "recommended_action": "Keep the batch gate enabled and review why the early request was attempted.",
+            "severity": "WARNING",
+            "technical_check_id": "batch_gating.recovered_blocked_next_batch_request"
+          }
+        ]
+      }
+    ],
+    "likely_root_cause": null,
+    "line_findings": [
+      {
+        "deployment_blocking": false,
+        "line_id": "line_1",
+        "operator_text": "line_1 sorted all 5 tools shown in the simulation. The completed set contained 3 required ENT tools and 2 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "severity": "INFO"
+      },
+      {
+        "deployment_blocking": false,
+        "line_id": "line_2",
+        "operator_text": "line_2 sorted all 5 tools shown in the simulation. The completed set contained 5 required ENT tools and 0 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "severity": "INFO"
+      },
+      {
+        "deployment_blocking": false,
+        "line_id": "line_3",
+        "operator_text": "line_3 sorted all 5 tools shown in the simulation. The completed set contained 1 required ENT tool and 4 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "severity": "INFO"
+      },
+      {
+        "deployment_blocking": false,
+        "line_id": "line_4",
+        "operator_text": "line_4 sorted all 5 tools shown in the simulation. The completed set contained 3 required ENT tools and 2 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. line_4 warning: a next-batch request was blocked for line_4_batch_0, then the table was cleared (4/4 tools picked) before the next group was loaded. No misplaced tools or entanglements were recorded.",
+        "severity": "ATTENTION"
+      }
+    ],
+    "line_results": [
+      {
+        "batch_gating": {
+          "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+          "status": "PASS"
+        },
+        "deployment_blocking": false,
+        "downtime_pass": true,
+        "downtime_seconds": 0.0,
+        "failed_check_ids": [],
+        "failed_checks": [],
+        "failure_reason": null,
+        "line_id": "line_1",
+        "max_downtime_seconds": null,
+        "operator_reason": "line_1 sorted all 5 tools shown in the simulation. The completed set contained 3 required ENT tools and 2 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "placement": {
+          "reason": "No misplaced tools or placement validation warnings were recorded.",
+          "status": "PASS"
+        },
+        "priority_deviation_count": 6,
+        "priority_pass": true,
+        "priority_policy": "REQUIRED_FIRST",
+        "priority_required_first": {
+          "reason": "All wanted table tools were picked before unwanted table tools in each evaluated batch.",
+          "status": "PASS"
+        },
+        "simulated_tools_completed": 5,
+        "status": "PASS",
+        "target_min_throughput_per_hour": 120.0,
+        "throughput_pass": true,
+        "throughput_per_hour": 18000.0,
+        "unwanted_completed_count": 2,
+        "unwanted_completion_time_seconds": 1.0,
+        "wanted_completed_count": 3,
+        "wanted_completion_time_seconds": 1.0,
+        "warning_check_ids": [],
+        "warnings": []
+      },
+      {
+        "batch_gating": {
+          "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+          "status": "PASS"
+        },
+        "deployment_blocking": false,
+        "downtime_pass": true,
+        "downtime_seconds": 0.0,
+        "failed_check_ids": [],
+        "failed_checks": [],
+        "failure_reason": null,
+        "line_id": "line_2",
+        "max_downtime_seconds": null,
+        "operator_reason": "line_2 sorted all 5 tools shown in the simulation. The completed set contained 5 required ENT tools and 0 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "placement": {
+          "reason": "No misplaced tools or placement validation warnings were recorded.",
+          "status": "PASS"
+        },
+        "priority_deviation_count": 0,
+        "priority_pass": true,
+        "priority_policy": "REQUIRED_FIRST",
+        "priority_required_first": {
+          "reason": "All wanted table tools were picked before unwanted table tools in each evaluated batch.",
+          "status": "PASS"
+        },
+        "simulated_tools_completed": 5,
+        "status": "PASS",
+        "target_min_throughput_per_hour": 120.0,
+        "throughput_pass": true,
+        "throughput_per_hour": 18000.0,
+        "unwanted_completed_count": 0,
+        "unwanted_completion_time_seconds": 1.0,
+        "wanted_completed_count": 5,
+        "wanted_completion_time_seconds": 1.0,
+        "warning_check_ids": [],
+        "warnings": []
+      },
+      {
+        "batch_gating": {
+          "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+          "status": "PASS"
+        },
+        "deployment_blocking": false,
+        "downtime_pass": true,
+        "downtime_seconds": 0.0,
+        "failed_check_ids": [],
+        "failed_checks": [],
+        "failure_reason": null,
+        "line_id": "line_3",
+        "max_downtime_seconds": null,
+        "operator_reason": "line_3 sorted all 5 tools shown in the simulation. The completed set contained 1 required ENT tool and 4 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "placement": {
+          "reason": "No misplaced tools or placement validation warnings were recorded.",
+          "status": "PASS"
+        },
+        "priority_deviation_count": 10,
+        "priority_pass": true,
+        "priority_policy": "REQUIRED_FIRST",
+        "priority_required_first": {
+          "reason": "All wanted table tools were picked before unwanted table tools in each evaluated batch.",
+          "status": "PASS"
+        },
+        "simulated_tools_completed": 5,
+        "status": "PASS",
+        "target_min_throughput_per_hour": 120.0,
+        "throughput_pass": true,
+        "throughput_per_hour": 18000.0,
+        "unwanted_completed_count": 4,
+        "unwanted_completion_time_seconds": 1.0,
+        "wanted_completed_count": 1,
+        "wanted_completion_time_seconds": 1.0,
+        "warning_check_ids": [],
+        "warnings": []
+      },
+      {
+        "batch_gating": {
+          "reason": "line_4 warning: a next-batch request was blocked for line_4_batch_0, then the table was cleared (4/4 tools picked) before the next group was loaded.",
+          "status": "RECOVERED_WARNING"
+        },
+        "deployment_blocking": false,
+        "downtime_pass": true,
+        "downtime_seconds": 0.0,
+        "failed_check_ids": [],
+        "failed_checks": [],
+        "failure_reason": "",
+        "line_id": "line_4",
+        "max_downtime_seconds": null,
+        "operator_reason": "line_4 sorted all 5 tools shown in the simulation. The completed set contained 3 required ENT tools and 2 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. line_4 warning: a next-batch request was blocked for line_4_batch_0, then the table was cleared (4/4 tools picked) before the next group was loaded. No misplaced tools or entanglements were recorded.",
+        "placement": {
+          "reason": "No misplaced tools or placement validation warnings were recorded.",
+          "status": "PASS"
+        },
+        "priority_deviation_count": 6,
+        "priority_pass": true,
+        "priority_policy": "REQUIRED_FIRST",
+        "priority_required_first": {
+          "reason": "All wanted table tools were picked before unwanted table tools in each evaluated batch.",
+          "status": "PASS"
+        },
+        "simulated_tools_completed": 5,
+        "status": "WARNING",
+        "target_min_throughput_per_hour": 120.0,
+        "throughput_pass": true,
+        "throughput_per_hour": 18000.0,
+        "unwanted_completed_count": 2,
+        "unwanted_completion_time_seconds": 1.0,
+        "wanted_completed_count": 3,
+        "wanted_completion_time_seconds": 1.0,
+        "warning_check_ids": [
+          "batch_gating.recovered_blocked_next_batch_request"
+        ],
+        "warnings": [
+          {
+            "actual": "An early request was recorded but blocked/recovered before the next batch loaded.",
+            "actual_value": "line_4_batch_0",
+            "check_id": "batch_gating.recovered_blocked_next_batch_request",
+            "deployment_blocking": false,
+            "evidence_row_id": 0,
+            "evidence_source": "batch_completion_kpis.batch_gating_violation",
+            "expected": "No next-batch request should be attempted while table tools remain.",
+            "expected_value": "request only after table clear",
+            "line_id": "line_4",
+            "operator_explanation": "line_4 warning: a next-batch request was blocked for line_4_batch_0, then the table was cleared (4/4 tools picked) before the next group was loaded.",
+            "operator_impact": "This is a recovered warning, not a table-crowding failure.",
+            "operator_label": "Next-batch request was blocked until the table cleared",
+            "recommended_action": "Keep the batch gate enabled and review why the early request was attempted.",
+            "severity": "WARNING",
+            "technical_check_id": "batch_gating.recovered_blocked_next_batch_request"
+          }
+        ]
+      }
+    ],
+    "next_action": "ASK_DEPLOY_APPROVAL",
+    "operator_next_action": "DEPLOY, DO_NOT_DEPLOY, REQUEST_REVISION, RERUN_SIMULATION",
+    "operator_options": [
+      "DEPLOY",
+      "DO_NOT_DEPLOY",
+      "REQUEST_REVISION",
+      "RERUN_SIMULATION"
+    ],
+    "operator_summary": "Simulation completed, but KPI evidence does not support deployment yet. Lines needing attention: line_4.",
+    "overall_result": "WARNING",
+    "passed_lines": [
+      "line_1",
+      "line_2",
+      "line_3"
+    ],
+    "requires_operator_acknowledgement": false,
+    "risk_summary": "Evidence supports deployment with minor attention-level observations.",
+    "risk_tier": "ATTENTION",
+    "simulation_config": {
+      "full_environment_tooling_count": null,
+      "simulated_tooling_count": 5
+    },
+    "summary_message": "All deterministic KPI checks passed.",
+    "technical_findings": [
+      {
+        "code": "RECOVERED_BATCH_GATING_WARNING",
+        "line_id": "line_4",
+        "operator_text": "line_4 warning: a next-batch request was blocked for line_4_batch_0, then the table was cleared (4/4 tools picked) before the next group was loaded.",
+        "severity": "ATTENTION"
+      }
+    ],
+    "warning_checks": [
+      {
+        "actual": "An early request was recorded but blocked/recovered before the next batch loaded.",
+        "actual_value": "line_4_batch_0",
+        "check_id": "batch_gating.recovered_blocked_next_batch_request",
+        "deployment_blocking": false,
+        "evidence_row_id": 0,
+        "evidence_source": "batch_completion_kpis.batch_gating_violation",
+        "expected": "No next-batch request should be attempted while table tools remain.",
+        "expected_value": "request only after table clear",
+        "line_id": "line_4",
+        "operator_explanation": "line_4 warning: a next-batch request was blocked for line_4_batch_0, then the table was cleared (4/4 tools picked) before the next group was loaded.",
+        "operator_impact": "This is a recovered warning, not a table-crowding failure.",
+        "operator_label": "Next-batch request was blocked until the table cleared",
+        "recommended_action": "Keep the batch gate enabled and review why the early request was attempted.",
+        "severity": "WARNING",
+        "technical_check_id": "batch_gating.recovered_blocked_next_batch_request"
+      }
+    ],
+    "warnings": [
+      "line_4 warning: a next-batch request was blocked for line_4_batch_0, then the table was cleared (4/4 tools picked) before the next group was loaded."
+    ]
+  },
+  "operator_acknowledged": true,
+  "operator_acknowledgement_required": false,
+  "operator_id": "op_001",
+  "run_id": "sim_85d487c0-08ef-4389-b333-08b8fce99eaa",
+  "scenario_spec_id": "scn_616e284b-5b6c-49c7-9821-ab6dff1331aa",
+  "status": "DEPLOYED",
+  "trt_id": "trt-demo",
+  "trt_version": "v59",
+  "updated_digital_twin_defaults_path": "data/digital_twin/default_simulation_config.json",
+  "updated_state_record_path": "data/state_records/current_state.json"
+}

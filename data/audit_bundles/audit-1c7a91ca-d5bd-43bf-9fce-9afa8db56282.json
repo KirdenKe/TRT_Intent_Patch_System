@@ -1,0 +1,58 @@
+{
+  "audit_id": "audit-1c7a91ca-d5bd-43bf-9fce-9afa8db56282",
+  "intent_text": "Set line_3, line_4 to target the ENT surgical tooling set and make their robots pick ENT-required tooling first. Set the simulated tooling count to 5.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_3/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "REQUIRED_FIRST",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "REQUIRED_FIRST",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch_e49f027b-a24c-443a-8e98-c3d72f09ab90",
+  "reason": "test for milestone 11",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-22T12:23:38.586007Z",
+  "trt_after_hash": "d4d411d37a758e5ced4cef8ffd0698255fc5da907dad9e1cf48adaaf88a615e3",
+  "trt_after_version": "v52",
+  "trt_before_hash": "2040c5c83c0f6966a93db73d32a64e060c3d3dd311af09306683a626cf45de7f",
+  "trt_before_version": "v51",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

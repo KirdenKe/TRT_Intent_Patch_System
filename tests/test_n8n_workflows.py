@@ -17,6 +17,10 @@ def load_workflow(name: str) -> dict:
     return json.loads((WORKFLOW_DIR / name).read_text(encoding="utf-8"))
 
 
+def workflow_connection_target(workflow: dict, source: str) -> str:
+    return workflow["connections"][source]["main"][0][0]["node"]
+
+
 def test_child_workflows_start_with_execute_workflow_trigger():
     for workflow_name in CHILD_WORKFLOWS:
         workflow = load_workflow(workflow_name)
@@ -478,27 +482,27 @@ def test_chat_workflow_waits_inline_for_clarification_and_release_decision():
     assert release["parameters"]["message"].startswith("={{$json.user_message")
     assert workflow["connections"]["Candidate Reviewed?"]["main"][0][0]["node"] == "Build vLLM User Response Format Body"
     assert workflow["connections"]["Formatted Response Needs Release Decision?"]["main"][0][0]["node"] == "Ask Release Decision"
-    assert workflow["connections"]["Ask Release Decision"]["main"][0][0]["node"] == "Build vLLM Chat Turn Parse Body"
+    assert workflow["connections"]["Ask Release Decision"]["main"][0][0]["node"] == "Extract Session ID"
     assert workflow["connections"]["Approval Has Reviewed Patch?"]["main"][0][0]["node"] == "Normalize Classified Approval Decision"
-    assert workflow["connections"]["Normalize Classified Approval Decision"]["main"][0][0]["node"] == "Execute Release Approval Sub-workflow"
+    assert workflow["connections"]["Normalize Classified Approval Decision"]["main"][0][0]["node"] == "Canonicalize Candidate Patch For Approval"
+    assert workflow["connections"]["Canonicalize Candidate Patch For Approval"]["main"][0][0]["node"] == "Execute Release Approval Sub-workflow"
 
 
 def test_chat_approval_decision_uses_classifier_output_not_code_dialogue_parser():
     workflow = load_workflow("chat_operator_task_allocation.workflow.json")
     node_names = {node["name"] for node in workflow["nodes"]}
-    builder = node_by_name(workflow, "Build vLLM Chat Turn Parse Body")
-    llm = node_by_name(workflow, "vLLM Parse Chat Turn")
+    builder = node_by_name(workflow, "Build vLLM Dialogue Decision Body")
+    llm = node_by_name(workflow, "Call vLLM Dialogue Decision")
     normalizer = node_by_name(workflow, "Normalize Classified Approval Decision")
 
     assert "Parse Release Decision" not in node_names
     assert "Build vLLM Release Decision Parse Body" not in node_names
     assert builder["type"] == "n8n-nodes-base.code"
-    assert "vllm_body" in builder["parameters"]["jsCode"]
-    assert "decision" in builder["parameters"]["jsCode"]
-    assert "APPROVAL_DECISION" in builder["parameters"]["jsCode"]
-    assert "JSON.stringify(examples[0])" in builder["parameters"]["jsCode"]
+    assert "latest_user_message" in builder["parameters"]["jsCode"]
+    assert "active_request" in builder["parameters"]["jsCode"]
     assert llm["type"] == "n8n-nodes-base.httpRequest"
-    assert llm["parameters"]["jsonBody"] == "={{ $json.vllm_body }}"
+    assert llm["parameters"]["url"] == "http://trt-api:8000/chat/dialogue-decision"
+    assert llm["parameters"]["jsonBody"] == "={{ $json }}"
     assert normalizer["type"] == "n8n-nodes-base.code"
     code = normalizer["parameters"]["jsCode"]
     assert "operator_decision: operatorDecision" in code
@@ -507,23 +511,62 @@ def test_chat_approval_decision_uses_classifier_output_not_code_dialogue_parser(
     assert "indexOf(':')" not in code
 
 
+def test_chat_approval_canonicalizes_candidate_patch_before_release():
+    workflow = load_workflow("chat_operator_task_allocation.workflow.json")
+    canonical = node_by_name(workflow, "Canonicalize Candidate Patch For Approval")
+
+    assert canonical["type"] == "n8n-nodes-base.code"
+    code = canonical["parameters"]["jsCode"]
+    assert "affectedLinesFromOperations" in code
+    assert "input.payload?.candidate_patch" in code
+    assert "input.body?.candidate_patch" in code
+    assert "input.candidate_patch" in code
+    assert "input.patch_id && Array.isArray(input.operations)" in code
+    assert "candidate_patch: reconstructedCandidate" in code
+    assert "simulation_config_updates: simulationConfigUpdates" in code
+    assert "Approval path invariant failed: candidate_patch is missing after canonicalization" in code
+    assert workflow["connections"]["Normalize Classified Approval Decision"]["main"][0][0]["node"] == (
+        "Canonicalize Candidate Patch For Approval"
+    )
+    assert workflow["connections"]["Canonicalize Candidate Patch For Approval"]["main"][0][0]["node"] == (
+        "Execute Release Approval Sub-workflow"
+    )
+
+
 def test_chat_clarification_reply_uses_turn_classifier_not_regex_parser():
     workflow = load_workflow("chat_operator_task_allocation.workflow.json")
-    llm = node_by_name(workflow, "vLLM Parse Chat Turn")
-    normalizer = node_by_name(workflow, "Normalize Parsed Chat Turn")
+    llm = node_by_name(workflow, "Call vLLM Dialogue Decision")
+    normalizer = node_by_name(workflow, "Normalize Dialogue Decision")
 
     assert "Parse Clarification Reply" not in {node["name"] for node in workflow["nodes"]}
     assert "Build vLLM Clarification Parse Body" not in {node["name"] for node in workflow["nodes"]}
     assert llm["type"] == "n8n-nodes-base.httpRequest"
     assert llm["parameters"]["method"] == "POST"
-    assert llm["parameters"]["url"] == "http://192.168.50.168:29987/v1/chat/completions"
-    body = node_by_name(workflow, "Build vLLM Chat Turn Parse Body")["parameters"]["jsCode"]
-    assert "structured_outputs" in body
-    assert "operator_id" in body
-    assert "CLARIFICATION_VALUES" in body
+    assert llm["parameters"]["url"] == "http://trt-api:8000/chat/dialogue-decision"
+    body = node_by_name(workflow, "Build vLLM Dialogue Decision Body")["parameters"]["jsCode"]
+    assert "loaded_session" in body
+    assert "prior_clarification_questions" in body
     code = normalizer["parameters"]["jsCode"]
-    assert "JSON.parse(content)" in code
+    assert "dialogue_state" in code
     assert ".match(" not in code
+    assert '"DEPLOYMENT_DECISION"' in code
+    assert 'turnType = "CLARIFICATION_VALUES"' in code
+
+
+def test_chat_workflow_marks_merged_clarification_and_hides_internal_sim_arg():
+    workflow = load_workflow("chat_operator_task_allocation.workflow.json")
+    merged = node_by_name(workflow, "Normalize Merged Clarification")["parameters"]["jsCode"]
+    formatter = node_by_name(workflow, "Build vLLM User Response Format Body")["parameters"]["jsCode"]
+    save_pending = node_by_name(workflow, "Save Pending Clarification Session State")["parameters"]["jsonBody"]
+
+    assert "merge_clarification_called: true" in merged
+    assert "merge_clarification_resolved: merge.resolved === true" in merged
+    assert "merge_clarification_selected_option" in merged
+    assert "merge_clarification_target_lines" in merged
+    assert "Resolved clarification did not continue to REVIEWED candidate path" in merged
+    assert "simulated tooling count" in formatter
+    assert "operatorFacing" in formatter
+    assert "simulated tooling count" in save_pending
 
 
 def test_user_response_formatter_prompt_has_status_specific_instructions():
@@ -749,10 +792,114 @@ def test_chat_scenario_summary_does_not_claim_generated_spec_missing_on_simulati
     payload_expr = assignment_value(summary_node, "payload")
 
     assert "ScenarioSpec was generated, but simulation result processing failed" in payload_expr
+    assert "$json.payload?.user_message || $json.payload?.message" in payload_expr
     assert "ScenarioSpec was generated and simulation completed" in payload_expr
     assert "SIMULATION_COMPLETED" not in payload_expr
     assert "ScenarioSpec was not generated" in payload_expr
     assert "scenario_spec_id" in payload_expr
+
+
+def test_generate_scenario_spec_summarizes_evidence_after_simulation():
+    workflow = load_workflow("generate_scenario_spec.workflow.json")
+    evidence_node = node_by_name(workflow, "Summarize RunArtifact Evidence")
+    build_node = node_by_name(workflow, "Build Evidence Summary Response")
+    return_node = node_by_name(workflow, "Return Evidence Summary")
+
+    assert evidence_node["parameters"]["url"] == "http://trt-api:8000/evidence/summarize"
+    assert workflow["connections"]["Return Simulation Run Result"]["main"][0][0]["node"] == "Summarize RunArtifact Evidence"
+    assert workflow["connections"]["Summarize RunArtifact Evidence"]["main"][0][0]["node"] == "Build Evidence Summary Response"
+    assert workflow["connections"]["Build Evidence Summary Response"]["main"][0][0]["node"] == "Return Evidence Summary"
+    assert "user_message" in build_node["parameters"]["jsCode"]
+    assert "operator_explanation" in build_node["parameters"]["jsCode"]
+    assert assignment_value(return_node, "status") == "={{ $json.status }}"
+    payload_expr = assignment_value(return_node, "payload")
+    assert payload_expr == "={{ $json.payload || {} }}"
+    assert "=>" not in payload_expr
+    assert "`" not in payload_expr
+
+
+def test_milestone11_subworkflows_call_evidence_and_deployment_endpoints():
+    evidence_workflow = load_workflow("run_artifact_to_evidence_summary.workflow.json")
+    deploy_workflow = load_workflow("deployment_approval_demo.workflow.json")
+
+    assert node_by_name(evidence_workflow, "Summarize RunArtifact Evidence")["parameters"]["url"] == "http://trt-api:8000/evidence/summarize"
+    assert workflow_connection_target(evidence_workflow, "Summarize RunArtifact Evidence") == "Build Evidence Summary Response"
+    assert workflow_connection_target(evidence_workflow, "Build Evidence Summary Response") == "Return Evidence Summary"
+    assert assignment_value(node_by_name(evidence_workflow, "Return Evidence Summary"), "payload") == "={{ $json.payload || {} }}"
+    assert node_by_name(deploy_workflow, "Simulated Physical Deployment")["parameters"]["url"] == "http://trt-api:8000/deployment/simulated-deploy"
+
+
+def test_chat_classifier_supports_deployment_decision_turns():
+    workflow = load_workflow("chat_operator_task_allocation.workflow.json")
+    builder = node_by_name(workflow, "Build vLLM Dialogue Decision Body")
+    normalizer = node_by_name(workflow, "Normalize Dialogue Decision")
+    parser = node_by_name(workflow, "Parse Deployment Decision")
+    code = builder["parameters"]["jsCode"] + normalizer["parameters"]["jsCode"] + parser["parameters"]["jsCode"]
+
+    assert "DEPLOYMENT_DECISION" in code
+    assert "WAITING_FOR_DEPLOYMENT_DECISION" in code
+    assert "deploy now" in code
+    assert "DO_NOT_DEPLOY" in code
+    assert "RERUN_SIMULATION" in code
+
+
+def test_chat_deployment_decision_routes_before_patch_review():
+    workflow = load_workflow("chat_operator_task_allocation.workflow.json")
+    loaded_gate = node_by_name(workflow, "Loaded Deployment Decision Pending?")
+    direct_turn = node_by_name(workflow, "Build Direct Deployment Decision Turn")
+    deployment_gate = node_by_name(workflow, "Deployment Decision Pending?")
+    parser = node_by_name(workflow, "Parse Deployment Decision")
+    deploy_call = node_by_name(workflow, "Call Simulated Deployment")
+    deployment_context = node_by_name(workflow, "Validate Deployment Context")
+    prompt_builder = node_by_name(workflow, "Build Pending Deployment Session State")
+    save_pending = node_by_name(workflow, "Save Pending Deployment Session State")
+    deployment_reply = node_by_name(workflow, "Ask Deployment Decision Reply")
+
+    assert workflow["connections"]["Load Chat Session State"]["main"][0][0]["node"] == "Loaded Deployment Decision Pending?"
+    assert workflow["connections"]["Loaded Deployment Decision Pending?"]["main"][0][0]["node"] == "Build Direct Deployment Decision Turn"
+    assert workflow["connections"]["Loaded Deployment Decision Pending?"]["main"][1][0]["node"] == "Build vLLM Dialogue Decision Body"
+    assert workflow["connections"]["Build Direct Deployment Decision Turn"]["main"][0][0]["node"] == "Parse Deployment Decision"
+    assert workflow["connections"]["Normalize Dialogue Decision"]["main"][0][0]["node"] == "Deployment Decision Pending?"
+    assert workflow["connections"]["Deployment Decision Pending?"]["main"][0][0]["node"] == "Parse Deployment Decision"
+    assert workflow["connections"]["Deployment Decision Pending?"]["main"][1][0]["node"] == "Route Chat Turn"
+    assert workflow["connections"]["Parse Deployment Decision"]["main"][0][0]["node"] == "Deployment Decision Is Deploy?"
+    assert workflow["connections"]["Deployment Decision Is Deploy?"]["main"][0][0]["node"] == "Validate Deployment Context"
+    assert workflow["connections"]["Validate Deployment Context"]["main"][0][0]["node"] == "Deployment Context Valid?"
+    assert workflow["connections"]["Deployment Context Valid?"]["main"][0][0]["node"] == "Call Simulated Deployment"
+    assert workflow["connections"]["Call Simulated Deployment"]["main"][0][0]["node"] == "Return Deployment Success"
+    assert workflow["connections"]["Return Deployment Success"]["main"][0][0]["node"] == "Clear Deployment Session State"
+    assert workflow["connections"]["Clear Deployment Session State"]["main"][0][0]["node"] == "Restore Deployment Success After Clear"
+    assert workflow["connections"]["Restore Deployment Success After Clear"]["main"][0][0]["node"] == "Send Chat Response"
+    assert workflow["connections"]["Evidence Requests Deployment Approval?"]["main"][0][0]["node"] == "Build Pending Deployment Session State"
+    assert workflow["connections"]["Build Pending Deployment Session State"]["main"][0][0]["node"] == "Save Pending Deployment Session State"
+    assert workflow["connections"]["Normalize Formatted User Response"]["main"][0][0]["node"] == "Formatted Response Needs Deployment Decision?"
+    assert workflow["connections"]["Formatted Response Needs Deployment Decision?"]["main"][0][0]["node"] == "Ask Deployment Decision Reply"
+
+    assert "WAITING_FOR_DEPLOYMENT_DECISION" in json.dumps(loaded_gate["parameters"])
+    assert "DEPLOYMENT_DECISION" in direct_turn["parameters"]["jsCode"]
+    assert "WAITING_FOR_DEPLOYMENT_DECISION" in json.dumps(deployment_gate["parameters"])
+    assert "deployment_pending === true" in json.dumps(deployment_gate["parameters"])
+    assert "TASK_REQUEST" not in parser["parameters"]["jsCode"]
+    assert "deploy now" in parser["parameters"]["jsCode"]
+    assert "Deployment cannot proceed because the pending deployment context is missing" in deployment_context["parameters"]["jsCode"]
+    assert deploy_call["parameters"]["url"] == "http://trt-api:8000/deployment/simulated-deploy"
+    assert "pending_deployment?.run_id" in deploy_call["parameters"]["jsonBody"]
+    assert "Cannot save pending deployment state without real chat session_id" in prompt_builder["parameters"]["jsCode"]
+    assert "WAITING_FOR_DEPLOYMENT_DECISION" in prompt_builder["parameters"]["jsCode"]
+    assert "pending_deployment" in prompt_builder["parameters"]["jsCode"]
+    assert save_pending["parameters"]["method"] == "PUT"
+    assert save_pending["parameters"]["url"] == "=http://trt-api:8000/chat/session/{{$json.session_id}}"
+    assert save_pending["parameters"]["jsonBody"] == "={{ $json.session_save_payload }}"
+    assert deployment_reply["parameters"]["waitUserReply"] is True
+
+
+def test_intent_prompt_does_not_hardcode_priority_clarification_scope():
+    workflow = load_workflow("intent_to_patch_review.workflow.json")
+    serialized = json.dumps(workflow)
+
+    assert "robots on lines 1 and 3 pick ENT-required tools first" not in serialized
+    assert "requested production-line scope" in serialized
+    assert "Preserve ALL_LINES as all production lines" in serialized
 
 
 def test_generate_scenario_spec_has_defensive_context_validation():

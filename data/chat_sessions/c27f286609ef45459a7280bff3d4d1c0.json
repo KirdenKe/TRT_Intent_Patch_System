@@ -1,0 +1,28 @@
+{
+  "pending_intent": {
+    "clarification_ask_count": 2,
+    "clarification_type": "PRODUCTION_PRIORITY_VS_ROBOT_REQUIRED_FIRST",
+    "intent_text": "prioritize the adjustment of production lines 1 and 4 to focus on the ent surgical tooling set, and adjust the number of tooling on the production line so that only 5 remain",
+    "missing_or_unclear_fields": [
+      "Do you mean production-line priority, or should the robots on lines 1 and 4 pick ENT-required tooling first?"
+    ],
+    "operator_id": "op_001",
+    "original_intent_text": "prioritize the adjustment of production lines 1 and 4 to focus on the ent surgical tooling set, and adjust the number of tooling on the production line so that only 5 remain",
+    "partial_resolution": {
+      "simulation_config_updates": {},
+      "target_lines": [],
+      "target_scope": null,
+      "target_set_id": null
+    },
+    "pending_question": "Do you mean production-line priority, or should the robots on lines 1 and 4 pick ENT-required tooling first?",
+    "pending_status": "WAITING_FOR_CLARIFICATION",
+    "reason": "test for milestone 11",
+    "simulation_config_updates": {},
+    "target_lines": [],
+    "target_scope": null,
+    "target_set_id": null
+  },
+  "session_id": "c27f286609ef45459a7280bff3d4d1c0",
+  "state": "WAITING_FOR_CLARIFICATION",
+  "updated_at": "2026-06-21T16:37:50.438197Z"
+}

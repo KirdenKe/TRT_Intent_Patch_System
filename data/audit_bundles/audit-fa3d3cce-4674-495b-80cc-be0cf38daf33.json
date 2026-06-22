@@ -1,0 +1,78 @@
+{
+  "audit_id": "audit-fa3d3cce-4674-495b-80cc-be0cf38daf33",
+  "intent_text": "Set line_1, line_2 to target the ENT surgical tooling set. Make the robots on line_1, line_2 pick ENT-required tooling first. Set the simulated tooling count to 5.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "REQUIRED_FIRST",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/excluded_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/excluded_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "REQUIRED_FIRST",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/excluded_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/excluded_instruments",
+      "value": []
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch_17dc0e0b-773d-4d1f-8784-12f2e1000b1f",
+  "reason": "test for milestone 11",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-22T13:39:57.272640Z",
+  "trt_after_hash": "cdb33b192196729207013bd6b98fc279929a672bec273212edfd849c6332d1a5",
+  "trt_after_version": "v55",
+  "trt_before_hash": "291ee230d3ab5c47e31ea2bcc940dbde0010a121295290161720aea36599ed98",
+  "trt_before_version": "v54",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

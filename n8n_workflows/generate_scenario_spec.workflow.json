@@ -480,6 +480,86 @@
         -200
       ],
       "notes": "Routes terminal simulation results to the response envelope; RUNNING loops back to the wait/poll path."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://trt-api:8000/evidence/summarize",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { run_id: $json.payload?.simulation_run_id || $json.run_id, scenario_spec_id: $json.payload?.scenario_spec_id || $json.scenario_spec_id, trt_id: $json.ids?.trt_id || $json.context?.trt_id || 'trt-demo', trt_version: $json.ids?.trt_version || $json.context?.trt_version, scenario_spec_path: $json.payload?.scenario_spec_path, output_db_path: $json.payload?.output_db_path, host_runner: $json.payload?.simulation?.host_runner || null, session_id: $json.context?.session_id || null } }}",
+        "options": {}
+      },
+      "id": "milestone11-evidence-summary",
+      "name": "Summarize RunArtifact Evidence",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3300,
+        -260
+      ],
+      "notes": "Milestone 11: builds deterministic KPI/failure evidence after simulation completes."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "status",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "context",
+              "name": "context",
+              "value": "={{ $json.context || {} }}",
+              "type": "object"
+            },
+            {
+              "id": "ids",
+              "name": "ids",
+              "value": "={{ $json.ids || {} }}",
+              "type": "object"
+            },
+            {
+              "id": "payload",
+              "name": "payload",
+              "value": "={{ $json.payload || {} }}",
+              "type": "object"
+            },
+            {
+              "id": "errors",
+              "name": "errors",
+              "value": "={{ $json.errors || [] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "milestone11-return-evidence-summary",
+      "name": "Return Evidence Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3580,
+        -260
+      ],
+      "notes": "Returns evidence summary and optional deployment prompt instead of raw ScenarioSpec generation text."
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst evidence = input.evidence_summary || input.payload?.evidence_summary || {};\nconst failedChecks = Array.isArray(input.failed_checks)\n  ? input.failed_checks\n  : (Array.isArray(evidence.failed_checks) ? evidence.failed_checks : []);\nconst failedLines = Array.isArray(input.failed_lines)\n  ? input.failed_lines\n  : (Array.isArray(evidence.failed_lines) ? evidence.failed_lines : []);\nconst operatorSummary =\n  evidence.operator_summary ||\n  input.payload?.message ||\n  input.summary_message ||\n  'Evidence summary was generated, but no operator summary was provided.';\n\nconst userMessageParts = [operatorSummary];\nconst options = Array.isArray(evidence.operator_options) ? evidence.operator_options : [];\nconst operatorExplanations = failedChecks.map(check => check.operator_explanation || check.operator_label || check.check_id).filter(Boolean);\nconst asksDeploymentDecision = evidence.deployment_recommended === true || evidence.deployment_allowed === true;\n\nif (evidence.deployment_recommended === true) {\n  userMessageParts.push('');\n  userMessageParts.push('Do you want to deploy this strategy to the simulated physical production line?');\n  userMessageParts.push('Reply DEPLOY, DO_NOT_DEPLOY, or REQUEST_REVISION.');\n} else if (evidence.deployment_allowed === true && evidence.requires_operator_acknowledgement === true) {\n  userMessageParts.push('');\n  userMessageParts.push('Deployment is allowed with operator acknowledgement, but it is not automatically recommended.');\n  userMessageParts.push('Reply DEPLOY_WITH_ACK to deploy anyway, DO_NOT_DEPLOY to stop, REQUEST_REVISION to revise the strategy, or RERUN_SIMULATION to rerun the same ScenarioSpec.');\n} else {\n  userMessageParts.push('');\n  userMessageParts.push('Deployment is not allowed for this evidence. Reply REQUEST_REVISION to revise the request, or RERUN_SIMULATION to rerun the same ScenarioSpec.');\n}\n\nconst userMessage = userMessageParts.join('\\n');\nconst deploymentQuestion = asksDeploymentDecision\n  ? (evidence.requires_operator_acknowledgement === true\n      ? 'Reply DEPLOY_WITH_ACK to deploy anyway, DO_NOT_DEPLOY, REQUEST_REVISION, or RERUN_SIMULATION.'\n      : 'Do you want to deploy this to the simulated physical production line? Reply DEPLOY, DO_NOT_DEPLOY, or REQUEST_REVISION.')\n  : null;\nconst nextStatus = asksDeploymentDecision ? 'WAITING_FOR_DEPLOYMENT_DECISION' : (input.status || evidence.status || 'EVIDENCE_READY');\n\nconst base = {\n  status: nextStatus,\n  payload: {\n    ...(input.payload || {}),\n    evidence_summary: evidence,\n    raw_evidence: input.raw_evidence,\n    failed_checks: failedChecks,\n    failed_lines: failedLines,\n    line_results: input.line_results || evidence.line_results || [],\n    operator_options: options,\n    operator_explanations: operatorExplanations,\n    acknowledged_risks: evidence.acknowledged_risks || [],\n    user_message: userMessage,\n    message: userMessage,\n    deployment_question: deploymentQuestion\n  },\n  errors: input.errors || []\n};\n\ntry {\n  const previous = $('Return Simulation Run Result').first().json;\n  base.context = previous.context || {};\n  base.ids = { ...(previous.ids || {}), run_id: input.run_id, scenario_spec_id: input.scenario_spec_id };\n  base.payload = { ...(previous.payload || {}), ...base.payload };\n} catch (error) {\n  base.context = input.context || {};\n}\n\nreturn [{ json: base }];"
+      },
+      "id": "02a70ee7-aca6-4adf-be87-babfd649e198",
+      "name": "Build Evidence Summary Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3360,
+        -260
+      ]
     }
   ],
   "connections": {
@@ -644,6 +724,39 @@
         [
           {
             "node": "Wait Before Simulation Poll",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return Simulation Run Result": {
+      "main": [
+        [
+          {
+            "node": "Summarize RunArtifact Evidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize RunArtifact Evidence": {
+      "main": [
+        [
+          {
+            "node": "Build Evidence Summary Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Evidence Summary Response": {
+      "main": [
+        [
+          {
+            "node": "Return Evidence Summary",
             "type": "main",
             "index": 0
           }

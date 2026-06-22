@@ -1,0 +1,82 @@
+{
+  "audit_id": "audit-ffaad2a5-3400-4972-86e9-9a19d7fbfee5",
+  "intent_text": "Set line_1, line_4 to target the ENT surgical tooling set. Make the robots on line_1, line_4 pick ENT-required tooling first. Set the simulated tooling count to 5.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "REQUIRED_FIRST",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/excluded_tool_ids",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/excluded_instruments",
+      "value": []
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "REQUIRED_FIRST",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/excluded_tool_ids",
+      "value": [
+        "tool_16",
+        "tool_17",
+        "tool_18"
+      ]
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/excluded_instruments",
+      "value": []
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch_777336c3-412c-4930-81e4-a410be3c55d8",
+  "reason": "test for milestone 11",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-22T14:29:18.091848Z",
+  "trt_after_hash": "e22de96be685d0ba57da33fed49b83c2834099e5a8448972d0c499d2880f77d2",
+  "trt_after_version": "v57",
+  "trt_before_hash": "251aebfc26331b0601e5749500632ac7a066a90632ed427e75a0d5390b65d486",
+  "trt_before_version": "v56",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

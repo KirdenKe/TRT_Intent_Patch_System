@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 import logging
 import json
+import urllib.error
+import urllib.request
 from typing import Any
 from uuid import uuid4
 
@@ -32,10 +34,16 @@ from trt_core.digital_twin_adapter import (
     read_simulation_results,
 )
 from trt_core.ent_demo import build_current_state, state_object_to_records
+from trt_core.evidence_extractor import build_evidence_summary, simulated_deploy
 from trt_core.chat_sessions import (
+    DEFAULT_VLLM_CHAT_COMPLETIONS_URL,
+    DEFAULT_VLLM_MODEL,
     clear_chat_session,
     load_chat_session,
     merge_pending_clarification,
+    resolve_priority_clarification_with_vllm,
+    resolve_pending_priority_clarification,
+    safe_session_id,
     save_chat_session,
 )
 from trt_core.intent_normalizer import (
@@ -500,6 +508,411 @@ def delete_chat_session(session_id: str) -> dict[str, Any]:
     return clear_chat_session(session_id, repository)
 
 
+def _operator_facing_text(value: str | None) -> str:
+    text = str(value or "")
+    replacements = [
+        ("add_reference_number", "simulated tooling count"),
+        ("add reference number", "simulated tooling count"),
+    ]
+    for old, new in replacements:
+        text = text.replace(old, new)
+        text = text.replace(old.upper(), new)
+    return text
+
+
+def _post_json(url: str, body: dict[str, Any], timeout_seconds: float = 30.0) -> dict[str, Any]:
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def _session_conversation(session: dict[str, Any], latest_user_message: str) -> list[dict[str, str]]:
+    conversation = [
+        {"role": str(turn.get("role") or ""), "content": str(turn.get("content") or "")}
+        for turn in session.get("conversation", [])
+        if isinstance(turn, dict) and turn.get("role") and turn.get("content")
+    ]
+    pending = session.get("pending_intent") or {}
+    if not conversation and pending:
+        original = pending.get("original_intent_text") or pending.get("intent_text")
+        if original:
+            conversation.append({"role": "user", "content": str(original)})
+        if pending.get("operator_id") or pending.get("reason"):
+            fields = []
+            if pending.get("operator_id"):
+                fields.append(f"operator_id: {pending['operator_id']}")
+            if pending.get("reason"):
+                fields.append(f"reason: {pending['reason']}")
+            conversation.append({"role": "user", "content": " ".join(fields)})
+        if pending.get("pending_question"):
+            conversation.append({"role": "assistant", "content": _operator_facing_text(str(pending["pending_question"]))})
+    if latest_user_message and (not conversation or conversation[-1] != {"role": "user", "content": latest_user_message}):
+        conversation.append({"role": "user", "content": latest_user_message})
+    return conversation
+
+
+def _dialogue_decision_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": [
+            "dialogue_state",
+            "operator_message",
+            "normalized_request",
+            "missing_or_unclear_items",
+            "approval_decision",
+            "deployment_decision",
+        ],
+        "properties": {
+            "dialogue_state": {
+                "type": "string",
+                "enum": [
+                    "READY_FOR_REVIEW",
+                    "NEEDS_CLARIFICATION",
+                    "APPROVAL_DECISION",
+                    "DEPLOYMENT_DECISION",
+                    "CANCELLED",
+                    "UNKNOWN",
+                ],
+            },
+            "operator_message": {"type": "string"},
+            "normalized_request": {
+                "type": ["object", "null"],
+                "required": [
+                    "operator_id",
+                    "reason",
+                    "intent_text",
+                    "target_scope",
+                    "target_lines",
+                    "target_set_id",
+                    "request_types",
+                    "manipulator_priority",
+                    "simulation_config_updates",
+                ],
+                "properties": {
+                    "operator_id": {"type": ["string", "null"]},
+                    "reason": {"type": ["string", "null"]},
+                    "intent_text": {"type": ["string", "null"]},
+                    "target_scope": {"type": ["string", "null"], "enum": ["ALL_LINES", "MULTIPLE_LINES", "SINGLE_LINE", None]},
+                    "target_lines": {"type": "array", "items": {"type": "string"}},
+                    "target_set_id": {"type": ["string", "null"], "enum": ["ENT_SURGICAL_TOOLING_SET", None]},
+                    "request_types": {"type": "array", "items": {"type": "string"}},
+                    "manipulator_priority": {
+                        "type": ["object", "null"],
+                        "properties": {
+                            "enabled": {"type": "boolean"},
+                            "policy": {"type": "string", "enum": ["REQUIRED_FIRST", "FCFS", "UNWANTED_FIRST", "EXPLICIT_TOOL_ORDER", "EXPLICIT_TYPE_ORDER"]},
+                            "scope": {"type": ["string", "null"], "enum": ["TABLE_BATCH", None]},
+                        },
+                        "additionalProperties": False,
+                    },
+                    "simulation_config_updates": {
+                        "type": ["object", "null"],
+                        "properties": {"add_reference_number": {"type": ["integer", "null"]}},
+                        "additionalProperties": False,
+                    },
+                },
+                "additionalProperties": False,
+            },
+            "missing_or_unclear_items": {"type": "array", "items": {"type": "string"}},
+            "approval_decision": {"type": ["string", "null"], "enum": ["APPROVE", "REJECT", "REQUEST_REVISION", None]},
+            "deployment_decision": {
+                "type": ["string", "null"],
+                "enum": ["DEPLOY", "DEPLOY_WITH_ACK", "DO_NOT_DEPLOY", "RERUN_SIMULATION", "REQUEST_REVISION", None],
+            },
+        },
+    }
+
+
+def _build_dialogue_decision_prompt(payload: dict[str, Any], session: dict[str, Any]) -> tuple[list[dict[str, str]], dict[str, Any]]:
+    latest = str(payload.get("latest_user_message") or payload.get("raw_chat_input") or "")
+    conversation = _session_conversation(session, latest)
+    current_trt = repository.get_current_trt()
+    active_request = {
+        "original_user_request": next((turn["content"] for turn in conversation if turn["role"] == "user"), ""),
+        "operator_id": (session.get("normalized_request") or {}).get("operator_id"),
+        "reason": (session.get("normalized_request") or {}).get("reason"),
+        "prior_clarification_questions": [turn["content"] for turn in conversation if turn["role"] == "assistant"],
+        "prior_clarification_answers": [
+            turn["content"]
+            for index, turn in enumerate(conversation)
+            if turn["role"] == "user" and index > 0
+        ],
+        "candidate_patch_summary": session.get("candidate_patch_summary"),
+        "review_status": session.get("review_status"),
+        "approval_status": session.get("approval_status"),
+        "scenario_spec_id": session.get("scenario_spec_id"),
+        "run_id": session.get("run_id"),
+    }
+    domain_context = {
+        "valid_lines": sorted((current_trt.get("lines") or {}).keys()) or ["line_1", "line_2", "line_3", "line_4"],
+        "known_tool_sets": sorted((current_trt.get("tool_sets") or {}).keys()) or ["ENT_SURGICAL_TOOLING_SET"],
+        "supported_request_types": [
+            "TOOLING_POLICY_UPDATE",
+            "MANIPULATOR_PRIORITY_UPDATE",
+            "SIMULATION_CONFIG_UPDATE",
+            "KPI_UPDATE",
+        ],
+    }
+    decision_input = {
+        "latest_user_message": latest,
+        "conversation": conversation,
+        "active_request": active_request,
+        "domain_context": domain_context,
+    }
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are the single dialogue-state decision maker for an operator task-allocation chat. "
+                "Read the full conversation and decide whether the request is ready for review, needs one clarification, "
+                "is an approval/deployment decision, is cancelled, or is unknown. "
+                "Do not ask the same clarification twice if the user answered it semantically. "
+                "Map 'number of tooling so only N remain' to simulation_config_updates.add_reference_number=N, "
+                "but never mention add_reference_number to the operator; say simulated tooling count. "
+                "If the user says robots pick ENT surgical tooling/tools/set first, that means MANIPULATOR_PRIORITY_UPDATE "
+                "with REQUIRED_FIRST and scope TABLE_BATCH. Preserve target lines from the conversation unless the user explicitly says all lines. "
+                "READY_FOR_REVIEW requires operator_id, reason, target lines or ALL_LINES, request_types, and a complete normalized_request. "
+                "If operator_id or reason is missing, return NEEDS_CLARIFICATION and ask only for the missing fields. "
+                "If the previous assistant asked whether this is production-line priority or robot ENT-required-first picking, and the latest user says "
+                "robots pick ENT surgical tooling set first, return READY_FOR_REVIEW, not another clarification. "
+                "Return only JSON matching the schema."
+            ),
+        },
+        {"role": "user", "content": json.dumps(decision_input, sort_keys=True)},
+    ]
+    return messages, decision_input
+
+
+def _resolved_dialogue_intent_text(normalized_request: dict[str, Any], fallback: str) -> str:
+    priority = normalized_request.get("manipulator_priority") or {}
+    lines = list(normalized_request.get("target_lines") or [])
+    if normalized_request.get("target_scope") == "ALL_LINES":
+        target_phrase = "all production lines"
+    elif lines:
+        target_phrase = ", ".join(lines)
+    else:
+        target_phrase = "the selected production lines"
+    parts: list[str] = []
+    if normalized_request.get("target_set_id"):
+        parts.append(f"Set {target_phrase} to target the ENT surgical tooling set.")
+    if priority.get("policy") == "REQUIRED_FIRST":
+        parts.append(f"Make the robots on {target_phrase} pick ENT-required tooling first.")
+    updates = normalized_request.get("simulation_config_updates") or {}
+    if updates.get("add_reference_number") is not None:
+        parts.append(f"Set the simulated tooling count to {updates['add_reference_number']}.")
+    return " ".join(parts) or str(normalized_request.get("intent_text") or fallback or "")
+
+
+@app.post("/chat/dialogue-decision")
+def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
+    session_id = str(payload.get("session_id") or payload.get("sessionId") or "default")
+    latest = str(payload.get("latest_user_message") or payload.get("raw_chat_input") or "")
+    session = load_chat_session(session_id, repository)
+    messages, decision_input = _build_dialogue_decision_prompt(payload, session)
+    body = {
+        "model": os.getenv("VLLM_MODEL", DEFAULT_VLLM_MODEL),
+        "messages": messages,
+        "temperature": 0,
+        "max_tokens": 700,
+        "structured_outputs": {"json": _dialogue_decision_schema()},
+    }
+    url = os.getenv("VLLM_CHAT_COMPLETIONS_URL", DEFAULT_VLLM_CHAT_COMPLETIONS_URL)
+    try:
+        raw = _post_json(url, body, float(os.getenv("VLLM_DIALOGUE_DECISION_TIMEOUT_SECONDS", "30")))
+        content = raw.get("choices", [{}])[0].get("message", {}).get("content", raw)
+        decision = json.loads(content) if isinstance(content, str) else content
+    except (OSError, TimeoutError, urllib.error.URLError, ValueError, KeyError, TypeError) as exc:
+        decision = {
+            "dialogue_state": "UNKNOWN",
+            "operator_message": f"I could not evaluate the dialogue state: {exc}",
+            "normalized_request": None,
+            "missing_or_unclear_items": ["dialogue_state"],
+            "approval_decision": None,
+            "deployment_decision": None,
+        }
+
+    dialogue_state = str(decision.get("dialogue_state") or "UNKNOWN")
+    operator_message = _operator_facing_text(decision.get("operator_message") or "")
+    normalized_request = decision.get("normalized_request") if isinstance(decision.get("normalized_request"), dict) else {}
+    normalized_request = dict(normalized_request or {})
+    if normalized_request.get("manipulator_priority"):
+        priority = dict(normalized_request["manipulator_priority"])
+        priority.pop("scope", None)
+        normalized_request["manipulator_priority"] = {
+            "policy": priority.get("policy") or "REQUIRED_FIRST",
+            "enabled": bool(priority.get("enabled", True)),
+            "tie_breaker": "FCFS",
+            "ordered_tool_ids": [],
+            "ordered_normalized_types": [],
+        }
+    if normalized_request.get("target_scope") == "ALL_LINES" and normalized_request.get("target_lines"):
+        normalized_request["target_scope"] = (
+            "MULTIPLE_LINES" if len(normalized_request.get("target_lines") or []) > 1 else "SINGLE_LINE"
+        )
+    required_for_review = {
+        "operator_id": normalized_request.get("operator_id"),
+        "reason": normalized_request.get("reason"),
+        "intent_text": normalized_request.get("intent_text"),
+        "request_types": normalized_request.get("request_types"),
+    }
+    target_ready = normalized_request.get("target_scope") == "ALL_LINES" or bool(normalized_request.get("target_lines"))
+    if dialogue_state == "READY_FOR_REVIEW" and (
+        any(not value for value in required_for_review.values()) or not target_ready
+    ):
+        missing = [
+            name
+            for name, value in required_for_review.items()
+            if not value
+        ]
+        if not target_ready:
+            missing.append("target_lines")
+        dialogue_state = "NEEDS_CLARIFICATION"
+        decision["dialogue_state"] = dialogue_state
+        decision["missing_or_unclear_items"] = missing
+        operator_message = _operator_facing_text(
+            decision.get("operator_message")
+            or f"Before I can submit this for review, I still need: {', '.join(missing)}."
+        )
+    conversation = decision_input["conversation"]
+    response: dict[str, Any] = {
+        "dialogue_state": dialogue_state,
+        "operator_message": operator_message,
+        "normalized_request": normalized_request,
+        "missing_or_unclear_items": decision.get("missing_or_unclear_items") or [],
+        "approval_decision": decision.get("approval_decision"),
+        "deployment_decision": decision.get("deployment_decision"),
+        "session_id": safe_session_id(session_id) if "safe_session_id" in globals() else session_id,
+        "conversation": conversation,
+        "llm_decision_raw": decision,
+    }
+    if dialogue_state == "READY_FOR_REVIEW":
+        current_trt = repository.get_current_trt()
+        candidate = {
+            "patch_id": f"patch_{uuid4()}",
+            "trt_id": current_trt.get("trt_id"),
+            "base_version": current_trt.get("version"),
+            "operator_id": normalized_request.get("operator_id"),
+            "reason": normalized_request.get("reason"),
+            "intent_text": _resolved_dialogue_intent_text(
+                normalized_request,
+                operator_message or decision_input["active_request"]["original_user_request"],
+            ),
+            "excluded_instruments": [],
+            "status": "DRAFT",
+            "target_scope": normalized_request.get("target_scope"),
+            "target_lines": normalized_request.get("target_lines") or [],
+            "target_set_id": normalized_request.get("target_set_id"),
+            "request_types": normalized_request.get("request_types") or [],
+            "detected_request_types": normalized_request.get("request_types") or [],
+            "manipulator_priority": normalized_request.get("manipulator_priority"),
+            "simulation_config_updates": normalized_request.get("simulation_config_updates") or {},
+        }
+        try:
+            intent_patch = normalize_domain_candidate(candidate, current_trt)
+            validation = validate_intent_patch(intent_patch, repository)
+            status = "REVIEWED" if validation.get("status") == "ACCEPTED" else "NEEDS_REVISION"
+            errors = [] if status == "REVIEWED" else list(validation.get("rejection_reasons") or [])
+            response.update(
+                {
+                    "status": status,
+                    "payload": {
+                        "candidate_patch": intent_patch,
+                        "validation_results": validation.get("validation_results"),
+                        "rejection_reasons": validation.get("rejection_reasons") or [],
+                        "message": intent_patch.get("message"),
+                    },
+                    "context": {
+                        "session_id": safe_session_id(session_id) if "safe_session_id" in globals() else session_id,
+                        "operator_id": intent_patch.get("operator_id"),
+                        "reason": intent_patch.get("reason"),
+                        "intent_text": intent_patch.get("intent_text"),
+                        "affected_lines": intent_patch.get("affected_lines") or [],
+                        "simulation_config_updates": intent_patch.get("simulation_config_updates") or {},
+                    },
+                    "errors": errors,
+                }
+            )
+            save_chat_session(
+                session_id,
+                {
+                    "state": "WAITING_FOR_APPROVAL_DECISION" if status == "REVIEWED" else "WAITING_FOR_CLARIFICATION",
+                    "conversation": conversation,
+                    "latest_dialogue_decision": decision,
+                    "normalized_request": normalized_request,
+                    "candidate_patch_summary": intent_patch,
+                    "review_status": status,
+                    "pending_intent": None,
+                },
+                repository,
+            )
+        except (ValueError, RepositoryError) as exc:
+            operator_message = _operator_facing_text(str(exc))
+            if operator_message and (not conversation or conversation[-1] != {"role": "assistant", "content": operator_message}):
+                conversation.append({"role": "assistant", "content": operator_message})
+            save_chat_session(
+                session_id,
+                {
+                    "state": "WAITING_FOR_CLARIFICATION",
+                    "conversation": conversation,
+                    "latest_dialogue_decision": decision,
+                    "normalized_request": normalized_request,
+                    "pending_intent": None,
+                },
+                repository,
+            )
+            response.update(
+                {
+                    "dialogue_state": "NEEDS_CLARIFICATION",
+                    "status": "NEEDS_CLARIFICATION",
+                    "operator_message": operator_message,
+                    "payload": {"message": operator_message, "user_message": operator_message},
+                    "context": {"session_id": session_id},
+                    "errors": [operator_message],
+                }
+            )
+    elif dialogue_state == "NEEDS_CLARIFICATION":
+        if operator_message and (not conversation or conversation[-1] != {"role": "assistant", "content": operator_message}):
+            conversation.append({"role": "assistant", "content": operator_message})
+        save_chat_session(
+            session_id,
+            {
+                "state": "WAITING_FOR_CLARIFICATION",
+                "conversation": conversation,
+                "latest_dialogue_decision": decision,
+                "normalized_request": normalized_request,
+                "pending_intent": None,
+            },
+            repository,
+        )
+        response.update(
+            {
+                "status": "NEEDS_CLARIFICATION",
+                "payload": {"message": operator_message, "user_message": operator_message},
+                "context": {"session_id": session_id},
+                "errors": [],
+            }
+        )
+    elif dialogue_state == "CANCELLED":
+        clear_chat_session(session_id, repository)
+        response.update({"status": "CANCELLED", "payload": {"message": operator_message or "Cancelled."}, "errors": []})
+    else:
+        response.update(
+            {
+                "status": dialogue_state,
+                "payload": {"message": operator_message},
+                "context": {"session_id": session_id},
+                "errors": [] if dialogue_state in {"APPROVAL_DECISION", "DEPLOYMENT_DECISION"} else [operator_message or "Dialogue state is unknown."],
+            }
+        )
+    return response
+
+
 @app.post("/chat/session/{session_id}/merge-clarification")
 def post_chat_session_merge_clarification(session_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     session = load_chat_session(session_id, repository)
@@ -511,8 +924,108 @@ def post_chat_session_merge_clarification(session_id: str, payload: dict[str, An
         raise HTTPException(status_code=422, detail="clarification_text is required.")
     merged = merge_pending_clarification(pending, clarification_text)
     trt_id = payload.get("trt_id") or pending.get("trt_id") or "trt-demo"
+    merge_debug: dict[str, Any] = {
+        "session_id": session_id,
+        "pending_state": session.get("state"),
+        "clarification_type": pending.get("clarification_type"),
+        "operator_reply": clarification_text,
+        "deterministic_result": None,
+        "vllm_fallback_called": False,
+        "vllm_fallback_result": None,
+        "final_resolved": False,
+        "final_target_lines": None,
+    }
+
+    def log_merge_debug(result: dict[str, Any] | None = None) -> None:
+        if result is not None:
+            merge_debug["final_resolved"] = bool(result.get("resolved"))
+            merge_debug["final_target_lines"] = result.get("target_lines") or result.get("final_target_lines")
+        logger.warning("chat_session.merge_clarification %s", json.dumps(merge_debug, sort_keys=True, default=str))
+
     try:
         current_trt = repository.get_current_trt(trt_id)
+        closed_choice = resolve_pending_priority_clarification(pending, clarification_text, current_trt)
+        if closed_choice is not None:
+            merge_debug["deterministic_result"] = {
+                "resolved": closed_choice.get("resolved"),
+                "selected_option": closed_choice.get("selected_option"),
+                "error_code": closed_choice.get("error_code"),
+                "target_lines": closed_choice.get("target_lines"),
+            }
+        if closed_choice is None:
+            merge_debug["vllm_fallback_called"] = True
+            closed_choice = resolve_priority_clarification_with_vllm(pending, clarification_text, current_trt)
+            merge_debug["vllm_fallback_result"] = {
+                "resolved": closed_choice.get("resolved") if closed_choice else None,
+                "selected_option": closed_choice.get("selected_option") if closed_choice else None,
+                "confidence": closed_choice.get("confidence") if closed_choice else None,
+                "target_lines": closed_choice.get("target_lines") if closed_choice else None,
+                "reason": closed_choice.get("reason") if closed_choice else None,
+            }
+        if closed_choice and closed_choice.get("error_code") == "CLARIFICATION_LOOP_DETECTED":
+            result = {
+                "session_id": session["session_id"],
+                "state": session.get("state"),
+                "pending_intent": pending,
+                **closed_choice,
+            }
+            log_merge_debug(result)
+            return result
+        if closed_choice and closed_choice.get("selected_option") == "PRODUCTION_LINE_PRIORITY":
+            result = {
+                "session_id": session["session_id"],
+                "state": session.get("state"),
+                "pending_intent": pending,
+                **merged,
+                **closed_choice,
+            }
+            log_merge_debug(result)
+            return result
+        if closed_choice and closed_choice.get("selected_option") == "ROBOT_REQUIRED_FIRST":
+            candidate = {
+                "patch_id": str(pending.get("patch_id") or f"patch_{uuid4()}"),
+                "trt_id": current_trt["trt_id"],
+                "base_version": current_trt["version"],
+                "operator_id": str(closed_choice.get("operator_id") or pending.get("operator_id") or ""),
+                "intent_text": str(closed_choice["intent_text"]),
+                "reason": str(closed_choice.get("reason") or pending.get("reason") or ""),
+                "target_scope": closed_choice.get("target_scope"),
+                "target_lines": closed_choice.get("target_lines"),
+                "target_set_id": closed_choice.get("target_set_id"),
+                "request_types": closed_choice.get("request_types"),
+                "detected_request_types": closed_choice.get("detected_request_types"),
+                "manipulator_priority": closed_choice.get("manipulator_priority"),
+                "simulation_config_updates": closed_choice.get("simulation_config_updates") or {},
+                "excluded_instruments": None,
+                "status": "DRAFT",
+            }
+            intent_patch = normalize_domain_candidate(candidate, current_trt)
+            manipulator_priority = None
+            target_set_id = None
+            for operation in intent_patch.get("operations", []):
+                path = str(operation.get("path") or "")
+                if path.endswith("/manipulator_priority"):
+                    manipulator_priority = operation.get("value")
+                elif path.endswith("/target_set_id"):
+                    target_set_id = operation.get("value")
+            result = {
+                "session_id": session["session_id"],
+                "state": session.get("state"),
+                "pending_intent": pending,
+                **merged,
+                **closed_choice,
+                "resolved": True,
+                "intent_text": closed_choice["intent_text"],
+                "request_types": intent_patch.get("request_types") or [],
+                "target_lines": intent_patch.get("affected_lines") or closed_choice.get("target_lines") or [],
+                "target_set_id": target_set_id or closed_choice.get("target_set_id"),
+                "manipulator_priority": manipulator_priority or closed_choice.get("manipulator_priority"),
+                "simulation_config_updates": intent_patch.get("simulation_config_updates") or {},
+                "candidate_patch": intent_patch,
+                "intent_patch": intent_patch,
+            }
+            log_merge_debug(result)
+            return result
         candidate = {
             "patch_id": str(pending.get("patch_id") or f"patch_{uuid4()}"),
             "trt_id": current_trt["trt_id"],
@@ -527,7 +1040,7 @@ def post_chat_session_merge_clarification(session_id: str, payload: dict[str, An
     except RepositoryError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
-        return {
+        result = {
             "session_id": session["session_id"],
             "state": session.get("state"),
             "pending_intent": pending,
@@ -535,6 +1048,8 @@ def post_chat_session_merge_clarification(session_id: str, payload: dict[str, An
             "resolved": False,
             "error": str(exc),
         }
+        log_merge_debug(result)
+        return result
 
     manipulator_priority = None
     target_set_id = None
@@ -545,7 +1060,7 @@ def post_chat_session_merge_clarification(session_id: str, payload: dict[str, An
         elif path.endswith("/target_set_id"):
             target_set_id = operation.get("value")
 
-    return {
+    result = {
         "session_id": session["session_id"],
         "state": session.get("state"),
         "pending_intent": pending,
@@ -560,6 +1075,8 @@ def post_chat_session_merge_clarification(session_id: str, payload: dict[str, An
         "candidate_patch": intent_patch,
         "intent_patch": intent_patch,
     }
+    log_merge_debug(result)
+    return result
 
 
 @app.get("/debug/intent-schema")
@@ -1481,6 +1998,81 @@ def get_simulation_run_status(run_id: str) -> dict[str, Any]:
 @app.get("/simulation/result/{run_id}")
 def get_simulation_result(run_id: str) -> dict[str, Any]:
     return get_simulation_run_status(run_id)
+
+
+@app.post("/evidence/summarize")
+def post_evidence_summarize(payload: dict[str, Any]) -> dict[str, Any]:
+    run_id = str(payload.get("run_id") or "")
+    if not run_id:
+        raise HTTPException(status_code=422, detail="run_id is required")
+    scenario_spec_id = payload.get("scenario_spec_id")
+    trt_id = str(payload.get("trt_id") or "trt-demo")
+    trt_version = payload.get("trt_version")
+    host_runner = payload.get("host_runner") if isinstance(payload.get("host_runner"), dict) else None
+    evidence = build_evidence_summary(
+        repository=repository,
+        run_id=run_id,
+        scenario_spec_id=scenario_spec_id,
+        trt_id=trt_id,
+        trt_version=trt_version,
+        scenario_spec_path=payload.get("scenario_spec_path"),
+        output_db_path=payload.get("output_db_path"),
+        host_runner=host_runner,
+        source_seed_sweep_db_path=payload.get("source_seed_sweep_db_path"),
+    )
+    summary = evidence.get("evidence_summary") or {}
+    if payload.get("session_id") and summary.get("next_action") in {"ASK_DEPLOY_APPROVAL", "ASK_DEPLOY_ACKNOWLEDGEMENT"}:
+        raw_artifact = (evidence.get("raw_evidence") or {}).get("run_artifact") or {}
+        session_payload = {
+            "state": "WAITING_FOR_DEPLOYMENT_DECISION",
+            "pending_intent": None,
+            "pending_deployment": {
+                "run_id": run_id,
+                "scenario_spec_id": evidence.get("scenario_spec_id"),
+                "trt_id": raw_artifact.get("trt_id") or trt_id,
+                "trt_version": raw_artifact.get("trt_version") or trt_version,
+                "evidence_summary_id": f"evidence_{uuid4()}",
+                "deployment_recommended": bool(summary.get("deployment_recommended")),
+                "deployment_allowed": bool(summary.get("deployment_allowed")),
+                "requires_operator_acknowledgement": bool(summary.get("requires_operator_acknowledgement")),
+                "risk_tier": summary.get("risk_tier"),
+                "acknowledged_risks": summary.get("acknowledged_risks") or [],
+                "operator_options": summary.get("operator_options") or [],
+                "evidence_summary": summary,
+            },
+        }
+        save_chat_session(str(payload["session_id"]), session_payload, repository)
+    return evidence
+
+
+@app.post("/deployment/simulated-deploy")
+def post_deployment_simulated_deploy(payload: dict[str, Any]) -> dict[str, Any]:
+    required = ["run_id", "scenario_spec_id", "trt_id", "trt_version"]
+    missing = [field for field in required if not payload.get(field)]
+    if missing:
+        raise HTTPException(status_code=422, detail=f"Missing required deployment fields: {', '.join(missing)}")
+    try:
+        return simulated_deploy(
+            repository=repository,
+            run_id=str(payload["run_id"]),
+            scenario_spec_id=str(payload["scenario_spec_id"]),
+            trt_id=str(payload["trt_id"]),
+            trt_version=str(payload["trt_version"]),
+            operator_id=payload.get("operator_id"),
+            deployment_comment=payload.get("deployment_comment"),
+            decision=payload.get("decision"),
+            acknowledged_risks=payload.get("acknowledged_risks") if isinstance(payload.get("acknowledged_risks"), list) else None,
+            force=bool(payload.get("force", False)),
+        )
+    except (RepositoryError, ValueError) as exc:
+        return {
+            "status": "FAILED",
+            "deployment_id": None,
+            "trt_id": payload.get("trt_id"),
+            "trt_version": payload.get("trt_version"),
+            "message": str(exc),
+            "errors": [str(exc)],
+        }
 
 
 @app.get("/debug/runtime-config")

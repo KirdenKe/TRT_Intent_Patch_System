@@ -79,7 +79,17 @@ RESTRICTED_SIMULATION_SETTINGS = {
     "reuse_precomputed_layouts": "reuse_precomputed_layouts is an internal layout-cache setting and cannot be changed through normal operator requests.",
     "reuse precomputed layouts": "reuse_precomputed_layouts is an internal layout-cache setting and cannot be changed through normal operator requests.",
 }
-ALL_LINE_TERMS = ["every line", "all lines", "each line", "line 1 and line 2", "lines 1 and 2", "line one and line two"]
+ALL_LINE_TERMS = [
+    "every line",
+    "every production line",
+    "all lines",
+    "all production lines",
+    "each line",
+    "each production line",
+    "line 1 and line 2",
+    "lines 1 and 2",
+    "line one and line two",
+]
 SPELLED_LINES = {"one": 1, "two": 2, "three": 3, "four": 4, "nine": 9}
 
 
@@ -149,6 +159,8 @@ def _ambiguous_priority_adjustment(text: str) -> bool:
         return False
     if not any(term in normalized for term in ("adjustment", "adjustments", "adjust")):
         return False
+    if "focus" in normalized and "ent" in normalized:
+        return True
     disambiguating_terms = (
         "pick",
         "grasp",
@@ -161,6 +173,32 @@ def _ambiguous_priority_adjustment(text: str) -> bool:
         "ent set",
     )
     return not any(term in normalized for term in disambiguating_terms)
+
+
+def render_target_scope_for_operator(target_scope: str | None, target_lines: list[str] | None) -> str:
+    lines = list(target_lines or [])
+    if target_scope == "ALL_LINES":
+        return "all production lines"
+    if target_scope == "MULTIPLE_LINES" and lines:
+        numbers = [line.replace("line_", "") for line in lines]
+        if len(numbers) == 2:
+            return f"lines {numbers[0]} and {numbers[1]}"
+        return f"lines {', '.join(numbers[:-1])}, and {numbers[-1]}"
+    if target_scope == "SINGLE_LINE" and lines:
+        return lines[0].replace("line_", "line ")
+    return "the selected production lines"
+
+
+def _priority_clarification_question(intent_text: str) -> str:
+    normalized = _normalize_text(intent_text)
+    if any(term in normalized for term in ALL_LINE_TERMS):
+        target_scope = "ALL_LINES"
+        target_lines: list[str] = []
+    else:
+        target_lines = [f"line_{number}" for number in _line_mentions(intent_text)]
+        target_scope = "MULTIPLE_LINES" if len(target_lines) > 1 else ("SINGLE_LINE" if target_lines else None)
+    target_phrase = render_target_scope_for_operator(target_scope, target_lines)
+    return f"Do you mean production-line priority, or should the robots on {target_phrase} pick ENT-required tooling first?"
 
 
 def deterministic_intent_precheck(intent_text: str, current_trt: dict[str, Any]) -> dict[str, Any]:
@@ -187,9 +225,7 @@ def deterministic_intent_precheck(intent_text: str, current_trt: dict[str, Any])
 
     if is_ambiguous_priority_adjustment:
         detected_request_types.append("ambiguous_priority_request")
-        clarification_questions.append(
-            "Do you mean production-line priority, or should the robots on lines 1 and 3 pick ENT-required tools first?"
-        )
+        clarification_questions.append(_priority_clarification_question(intent_text))
 
     if not (is_simulation_config_update or is_manipulator_priority_update or is_ambiguous_priority_adjustment) and (any(term in normalized for term in ALL_LINE_TERMS) or len(line_numbers) > 1):
         detected_request_types.append("multi_line_request")

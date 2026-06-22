@@ -145,6 +145,163 @@ def test_chat_session_merge_clarification_returns_reviewable_manipulator_priorit
     assert "/lines/line_3/manipulator_priority" in {operation["path"] for operation in operations}
 
 
+def test_chat_session_merge_clarification_preserves_all_lines_scope(tmp_path):
+    client = make_ent_scenario_client(tmp_path)
+    session_id = "milestone-11-all-lines-clarification"
+    original = (
+        "prioritize the adjustment of all production lines to focus on the ent surgical tooling set, "
+        "and adjust the number of tooling on the production line so that only 5 remain"
+    )
+    saved = client.put(
+        f"/chat/session/{session_id}",
+        json={
+            "session_id": session_id,
+            "state": "WAITING_FOR_CLARIFICATION",
+            "pending_intent": {
+                "original_intent_text": original,
+                "intent_text": original,
+                "operator_id": "op_001",
+                "reason": "test for milestone 11",
+                "pending_question": (
+                    "Do you mean production-line priority, or should the robots on all production lines "
+                    "pick ENT-required tooling first?"
+                ),
+                "pending_status": "WAITING_FOR_CLARIFICATION",
+            },
+        },
+    )
+    assert saved.status_code == 200
+
+    response = client.post(
+        f"/chat/session/{session_id}/merge-clarification",
+        json={"clarification_text": "no i mean the robots on all lines pick ent-required tooling first"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["resolved"] is True
+    assert body["target_lines"] == ["line_1", "line_2", "line_3", "line_4"]
+    assert body["manipulator_priority"]["policy"] == "REQUIRED_FIRST"
+    assert body["simulation_config_updates"] == {"add_reference_number": 5}
+
+
+def test_chat_session_merge_clarification_resolves_robot_required_first_lines_2_and_4(tmp_path):
+    client = make_ent_scenario_client(tmp_path)
+    session_id = "milestone-11-lines-2-4-clarification"
+    original = (
+        "prioritize the adjustment of production lines 2 and 4 to focus on the ent surgical tooling set, "
+        "and adjust the number of tooling on the production line so that only 5 remain"
+    )
+    saved = client.put(
+        f"/chat/session/{session_id}",
+        json={
+            "session_id": session_id,
+            "state": "WAITING_FOR_CLARIFICATION",
+            "pending_intent": {
+                "original_intent_text": original,
+                "intent_text": original,
+                "operator_id": "op_001",
+                "reason": "test for milestone 11",
+                "pending_question": (
+                    "Do you mean production-line priority, or should the robots on lines 2 and 4 "
+                    "pick ENT-required tooling first?"
+                ),
+                "clarification_type": "PRODUCTION_PRIORITY_VS_ROBOT_REQUIRED_FIRST",
+                "clarification_ask_count": 1,
+                "target_scope": "MULTIPLE_LINES",
+                "target_lines": ["line_2", "line_4"],
+                "target_set_id": "ENT_SURGICAL_TOOLING_SET",
+                "simulation_config_updates": {"add_reference_number": 5},
+                "pending_status": "WAITING_FOR_CLARIFICATION",
+            },
+        },
+    )
+    assert saved.status_code == 200
+
+    response = client.post(
+        f"/chat/session/{session_id}/merge-clarification",
+        json={"clarification_text": "yeah i mean the robots on the line 2 and 4 pick ENT-required tooling first"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["resolved"] is True
+    assert body["clarification_resolved"] is True
+    assert body["selected_option"] == "ROBOT_REQUIRED_FIRST"
+    assert body["operator_id"] == "op_001"
+    assert body["reason"] == "test for milestone 11"
+    assert body["target_lines"] == ["line_2", "line_4"]
+    assert body["target_set_id"] == "ENT_SURGICAL_TOOLING_SET"
+    assert set(body["request_types"]) >= {
+        "TOOLING_POLICY_UPDATE",
+        "MANIPULATOR_PRIORITY_UPDATE",
+        "SIMULATION_CONFIG_UPDATE",
+    }
+    assert body["manipulator_priority"]["policy"] == "REQUIRED_FIRST"
+    assert body["simulation_config_updates"] == {"add_reference_number": 5}
+    operations = body["candidate_patch"]["operations"]
+    paths = {operation["path"]: operation for operation in operations}
+    assert paths["/lines/line_2/manipulator_priority"]["value"]["policy"] == "REQUIRED_FIRST"
+    assert paths["/lines/line_4/manipulator_priority"]["value"]["policy"] == "REQUIRED_FIRST"
+    assert "/lines/line_1/manipulator_priority" not in paths
+    assert "/lines/line_3/manipulator_priority" not in paths
+
+
+def test_chat_session_merge_clarification_accepts_ent_surgical_tooling_synonym_and_preserves_scope(tmp_path):
+    client = make_ent_scenario_client(tmp_path)
+    session_id = "milestone-11-lines-1-4-ent-surgical"
+    original = (
+        "prioritize the adjustment of production lines 1 and 4 to focus on the ent surgical tooling set, "
+        "and adjust the number of tooling on the production line so that only 5 remain"
+    )
+    saved = client.put(
+        f"/chat/session/{session_id}",
+        json={
+            "session_id": session_id,
+            "state": "WAITING_FOR_CLARIFICATION",
+            "pending_intent": {
+                "original_intent_text": original,
+                "intent_text": original,
+                "operator_id": "op_001",
+                "reason": "test for milestone 11",
+                "pending_question": (
+                    "Do you mean production-line priority, or should the robots on lines 1 and 4 "
+                    "pick ENT-required tooling first?"
+                ),
+                "clarification_type": "PRODUCTION_PRIORITY_VS_ROBOT_REQUIRED_FIRST",
+                "clarification_ask_count": 1,
+                "target_scope": "MULTIPLE_LINES",
+                "target_lines": ["line_1", "line_4"],
+                "target_set_id": "ENT_SURGICAL_TOOLING_SET",
+                "simulation_config_updates": {"add_reference_number": 5},
+                "partial_resolution": {
+                    "target_scope": "MULTIPLE_LINES",
+                    "target_lines": ["line_1", "line_4"],
+                    "target_set_id": "ENT_SURGICAL_TOOLING_SET",
+                    "simulation_config_updates": {"add_reference_number": 5},
+                },
+                "pending_status": "WAITING_FOR_CLARIFICATION",
+            },
+        },
+    )
+    assert saved.status_code == 200
+
+    response = client.post(
+        f"/chat/session/{session_id}/merge-clarification",
+        json={"clarification_text": "yes i mean the robots on the lines 1 and 4 pick ent-surgical tooling first"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["resolved"] is True
+    assert body["selected_option"] == "ROBOT_REQUIRED_FIRST"
+    assert body["target_lines"] == ["line_1", "line_4"]
+    assert body["target_lines"] != ["line_1", "line_2", "line_3", "line_4"]
+    assert body["target_set_id"] == "ENT_SURGICAL_TOOLING_SET"
+    assert body["manipulator_priority"]["policy"] == "REQUIRED_FIRST"
+    assert body["simulation_config_updates"] == {"add_reference_number": 5}
+
+
 def test_health_endpoint_returns_ok(tmp_path, fixture_loader):
     client = make_client(tmp_path, fixture_loader)
 

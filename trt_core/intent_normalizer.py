@@ -623,6 +623,56 @@ def _target_lines(candidate: dict[str, Any], current_trt: dict[str, Any]) -> lis
     raise ValueError("target_lines or line_id is required unless target_scope is ALL_LINES.")
 
 
+def render_target_scope_for_operator(target_scope: str | None, target_lines: list[str] | None) -> str:
+    lines = list(target_lines or [])
+    if target_scope == "ALL_LINES":
+        return "all production lines"
+    if target_scope == "MULTIPLE_LINES" and lines:
+        numbers = [line.replace("line_", "") for line in lines]
+        if len(numbers) == 2:
+            return f"lines {numbers[0]} and {numbers[1]}"
+        return f"lines {', '.join(numbers[:-1])}, and {numbers[-1]}"
+    if target_scope == "SINGLE_LINE" and lines:
+        return lines[0].replace("line_", "line ")
+    return "the selected production lines"
+
+
+def _target_scope_from_candidate_or_text(
+    candidate: dict[str, Any],
+    intent_text: str,
+    current_trt: dict[str, Any],
+) -> tuple[str | None, list[str]]:
+    if _is_all_lines_text(intent_text):
+        return "ALL_LINES", []
+    parsed_lines = _line_ids_from_text(intent_text, current_trt)
+    if parsed_lines:
+        return ("MULTIPLE_LINES" if len(parsed_lines) > 1 else "SINGLE_LINE"), parsed_lines
+    target_scope = candidate.get("target_scope")
+    target_lines = list(candidate.get("target_lines") or ([candidate["line_id"]] if candidate.get("line_id") else []))
+    return target_scope, target_lines
+
+
+def _priority_clarification_question(candidate: dict[str, Any], intent_text: str, current_trt: dict[str, Any]) -> str:
+    target_scope, target_lines = _target_scope_from_candidate_or_text(candidate, intent_text, current_trt)
+    target_phrase = render_target_scope_for_operator(target_scope, target_lines)
+    return f"Do you mean production-line priority, or should the robots on {target_phrase} pick ENT-required tooling first?"
+
+
+def _is_internal_tooling_count_question(question: str) -> bool:
+    normalized = question.lower()
+    return (
+        "add_reference_number" in normalized
+        or "add reference number" in normalized
+        or "simulation argument" in normalized
+        or ("number of tools" in normalized and "do you mean" in normalized)
+    )
+
+
+def _is_priority_clarification_question(question: str) -> bool:
+    normalized = question.lower()
+    return "production-line priority" in normalized or "production line priority" in normalized
+
+
 def _coerce_domain_candidate_v2(candidate: dict[str, Any], current_trt: dict[str, Any]) -> dict[str, Any]:
     coerced = dict(candidate)
     _coerce_simulation_config_intent(coerced)
@@ -671,6 +721,11 @@ def _coerce_domain_candidate_v2(candidate: dict[str, Any], current_trt: dict[str
         coerced["request_types"] = _infer_request_types(coerced)
     if coerced.get("detected_request_types") is None:
         coerced["detected_request_types"] = list(coerced.get("request_types") or [])
+    coerced["clarification_questions"] = [
+        question
+        for question in (coerced.get("clarification_questions") or [])
+        if not _is_internal_tooling_count_question(str(question))
+    ]
     return coerced
 
 
@@ -680,10 +735,16 @@ def _coerce_manipulator_priority_intent(candidate: dict[str, Any], current_trt: 
         return
     if _is_ambiguous_priority_adjustment(intent_text):
         candidate["action"] = "NEEDS_CLARIFICATION"
+        existing_questions = [
+            question
+            for question in (candidate.get("clarification_questions") or [])
+            if not _is_priority_clarification_question(str(question))
+            and not _is_internal_tooling_count_question(str(question))
+        ]
         candidate["clarification_questions"] = _dedupe_values(
             [
-                *(candidate.get("clarification_questions") or []),
-                "Do you mean production-line priority, or should the robots on lines 1 and 3 pick ENT-required tools first?",
+                *existing_questions,
+                _priority_clarification_question(candidate, intent_text, current_trt),
             ]
         )
         return
@@ -777,6 +838,8 @@ def _is_ambiguous_priority_adjustment(intent_text: str) -> bool:
         return False
     if not any(term in intent_text for term in ("adjustment", "adjustments", "adjust")):
         return False
+    if "focus" in intent_text and "ent" in intent_text:
+        return True
     disambiguating_terms = (
         "pick",
         "grasp",
@@ -860,26 +923,22 @@ def _manipulator_priority_review_message(candidate: dict[str, Any]) -> str:
     priority = _normalize_manipulator_priority(candidate.get("manipulator_priority") or {})
     policy = priority["policy"]
     lines = _dedupe_values(candidate.get("target_lines") or [])
-    if candidate.get("target_scope") == "ALL_LINES":
-        target = "all production lines"
-    elif lines:
-        target = ", ".join(lines)
-    elif candidate.get("line_id"):
-        target = candidate["line_id"]
-    else:
-        target = "the selected production lines"
+    target = render_target_scope_for_operator(
+        candidate.get("target_scope"),
+        lines or ([candidate["line_id"]] if candidate.get("line_id") else []),
+    )
     simulation_updates = candidate.get("simulation_config_updates") or {}
     if policy == "REQUIRED_FIRST" and candidate.get("target_set_id") and simulation_updates.get("add_reference_number") is not None:
         return (
             "The candidate patch passed validation. It will set "
-            f"{target} to target the {candidate['target_set_id']}, make their robots pick ENT-required tools first, "
-            f"and set add_reference_number to {simulation_updates['add_reference_number']} for the full-system simulation. "
+            f"{target} to target the {candidate['target_set_id']}, make their robots pick ENT-required tooling first, "
+            f"and set the simulated tooling count to {simulation_updates['add_reference_number']} for the full-system simulation. "
             "Please approve, reject, or request revision."
         )
     if policy == "REQUIRED_FIRST" and candidate.get("target_set_id"):
         return (
             "The candidate patch passed validation. It will set "
-            f"{target} to target the {candidate['target_set_id']} and make their robots pick ENT-required tools first. "
+            f"{target} to target the {candidate['target_set_id']} and make their robots pick ENT-required tooling first. "
             "Please approve, reject, or request revision."
         )
     if policy == "EXPLICIT_TYPE_ORDER":
@@ -898,6 +957,23 @@ def _manipulator_priority_review_message(candidate: dict[str, Any]) -> str:
         "The candidate manipulator priority update is valid. It will set "
         f"{target} manipulator priority policy to {policy}. Please approve, reject, or request revision."
     )
+
+
+def parse_tooling_count_request(text: str) -> dict[str, int] | None:
+    normalized = str(text or "").lower()
+    patterns = [
+        r"only\s+(\d+)\s+remain",
+        r"so that only\s+(\d+)\s+remain",
+        r"number of tooling.*?(\d+)",
+        r"tooling count.*?(\d+)",
+        r"show\s+(\d+)\s+tools",
+        r"limit.*?(\d+)\s+tools",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, normalized)
+        if match:
+            return {"add_reference_number": int(match.group(1))}
+    return None
 
 
 def _coerce_simulation_config_intent(candidate: dict[str, Any]) -> None:
@@ -945,6 +1021,9 @@ def _coerce_simulation_config_intent(candidate: dict[str, Any]) -> None:
                 value = float(match.group(1)) if "." in match.group(1) else int(match.group(1))
                 updates[field] = value
                 break
+    tooling_count_update = parse_tooling_count_request(intent_text)
+    if tooling_count_update:
+        updates.update(tooling_count_update)
     if "add_reference_number" in intent_text or "add reference number" in intent_text:
         number_match = re.search(r"\b(?:add_reference_number|add reference number)\b[^\d]*(\d+)\b", intent_text)
         if not number_match:
@@ -969,9 +1048,10 @@ def _coerce_simulation_config_intent(candidate: dict[str, Any]) -> None:
         return
     candidate["simulation_config_updates"] = updates
     candidate["goal"] = None
-    candidate["line_id"] = None
-    candidate["target_scope"] = "ALL_LINES"
-    candidate["target_lines"] = []
+    if not candidate.get("target_scope") and not candidate.get("target_lines") and not candidate.get("line_id"):
+        candidate["line_id"] = None
+        candidate["target_scope"] = "ALL_LINES"
+        candidate["target_lines"] = []
     candidate["request_types"] = _dedupe_values([*(candidate.get("request_types") or []), "SIMULATION_CONFIG_UPDATE"])
     candidate["detected_request_types"] = _dedupe_values(
         [*(candidate.get("detected_request_types") or []), "SIMULATION_CONFIG_UPDATE"]
@@ -990,7 +1070,7 @@ def _simulation_config_review_message(updates: dict[str, Any]) -> str:
     if updates.get("add_reference_number") is not None:
         return (
             "The candidate simulation configuration update is valid. It will set "
-            f"add_reference_number to {updates['add_reference_number']} for the full-system simulation."
+            f"the simulated tooling count to {updates['add_reference_number']} for the full-system simulation."
         )
     fields = ", ".join(sorted(updates))
     return f"The candidate simulation configuration update is valid. It will update {fields} for the simulation."

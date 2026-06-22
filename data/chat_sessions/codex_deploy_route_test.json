@@ -1,0 +1,26 @@
+{
+  "conversation": [
+    {
+      "content": "Simulation completed and KPI evidence supports deployment. Reply DEPLOY, DO_NOT_DEPLOY, or REQUEST_REVISION.",
+      "role": "assistant"
+    }
+  ],
+  "normalized_request": {
+    "operator_id": "op_001",
+    "run_id": "sim_1e706d38-1e09-44e4-a0e9-e718efb2c2d9",
+    "scenario_spec_id": "scn_6ba2d368-1232-4460-8c48-59511974b5ad",
+    "trt_id": "trt-demo",
+    "trt_version": "v56"
+  },
+  "pending_deployment": {
+    "deployment_recommended": true,
+    "run_id": "sim_1e706d38-1e09-44e4-a0e9-e718efb2c2d9",
+    "scenario_spec_id": "scn_6ba2d368-1232-4460-8c48-59511974b5ad",
+    "trt_id": "trt-demo",
+    "trt_version": "v56"
+  },
+  "pending_intent": null,
+  "session_id": "codex_deploy_route_test",
+  "state": "WAITING_FOR_DEPLOYMENT_DECISION",
+  "updated_at": "2026-06-22T14:25:49.502900Z"
+}
