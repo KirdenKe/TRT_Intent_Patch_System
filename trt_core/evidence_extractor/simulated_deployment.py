@@ -202,9 +202,37 @@ def simulated_deploy(
         "trt_id": trt_id,
         "trt_version": trt_version,
         "simulation_config": simulation_config,
+        "operator_facing": {
+            "simulated_tooling_count": simulation_config.get("add_reference_number"),
+        },
         "updated_at": _now_utc(),
     }
     defaults_path.write_text(json.dumps(defaults, indent=2, sort_keys=True), encoding="utf-8")
+    try:
+        saved_defaults = json.loads(defaults_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return {
+            "status": "DEPLOYMENT_PARTIAL_FAILURE",
+            "deployment_id": deployment_id,
+            "trt_id": trt_id,
+            "trt_version": trt_version,
+            "message": "Deployment state update failed verification.",
+            "errors": [f"Digital twin default config could not be reread: {exc}"],
+        }
+    saved_config = saved_defaults.get("simulation_config") or {}
+    expected_count = simulation_config.get("add_reference_number")
+    if expected_count is not None and int(saved_config.get("add_reference_number") or -1) != int(expected_count):
+        return {
+            "status": "DEPLOYMENT_PARTIAL_FAILURE",
+            "deployment_id": deployment_id,
+            "trt_id": trt_id,
+            "trt_version": trt_version,
+            "message": "Deployment state update failed verification.",
+            "errors": [
+                "Expected simulated tooling count "
+                f"{expected_count} but persisted default is {saved_config.get('add_reference_number')}."
+            ],
+        }
 
     audit_dir = repository.root / "data" / "deployments"
     audit_dir.mkdir(parents=True, exist_ok=True)

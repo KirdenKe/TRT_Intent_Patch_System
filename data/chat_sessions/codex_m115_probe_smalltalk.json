@@ -1,0 +1,28 @@
+{
+  "conversation": [
+    {
+      "content": "yo dude",
+      "role": "user"
+    },
+    {
+      "content": "Please provide the operator_id and the reason for this request.",
+      "role": "assistant"
+    }
+  ],
+  "latest_dialogue_decision": {
+    "approval_decision": null,
+    "deployment_decision": null,
+    "dialogue_state": "NEEDS_CLARIFICATION",
+    "missing_or_unclear_items": [
+      "operator_id",
+      "reason"
+    ],
+    "normalized_request": null,
+    "operator_message": "Please provide the operator_id and the reason for this request."
+  },
+  "normalized_request": {},
+  "pending_intent": null,
+  "session_id": "codex_m115_probe_smalltalk",
+  "state": "WAITING_FOR_CLARIFICATION",
+  "updated_at": "2026-06-22T16:43:20.281306Z"
+}

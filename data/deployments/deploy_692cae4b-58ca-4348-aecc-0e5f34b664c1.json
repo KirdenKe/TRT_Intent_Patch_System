@@ -1,0 +1,381 @@
+{
+  "acknowledged_risks": [],
+  "created_at": "2026-06-22T20:07:30.581179Z",
+  "decision": "DEPLOY",
+  "deployment_comment": "DEPLOY",
+  "deployment_id": "deploy_692cae4b-58ca-4348-aecc-0e5f34b664c1",
+  "deployment_type": "SIMULATED_PHYSICAL_DEPLOYMENT",
+  "evidence_summary": {
+    "acknowledged_risks": [],
+    "deployment_allowed": true,
+    "deployment_recommended": true,
+    "failed_checks": [],
+    "failed_lines": [],
+    "failure_summary": null,
+    "inconclusive_lines": [],
+    "kpi_evaluation_scope": "FULL_ENVIRONMENT_SCOPE",
+    "kpi_table": [
+      {
+        "batch_gating": {
+          "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+          "status": "PASS"
+        },
+        "deployment_blocking": false,
+        "downtime_pass": true,
+        "downtime_seconds": 0.0,
+        "failed_check_ids": [],
+        "failed_checks": [],
+        "failure_reason": null,
+        "line_id": "line_1",
+        "max_downtime_seconds": null,
+        "operator_reason": "line_1 sorted all 5 tools shown in the simulation. The completed set contained 3 required ENT tools and 2 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "placement": {
+          "reason": "No misplaced tools or placement validation warnings were recorded.",
+          "status": "PASS"
+        },
+        "priority_deviation_count": 0,
+        "priority_pass": true,
+        "priority_policy": "EXPLICIT_TYPE_ORDER",
+        "priority_required_first": {
+          "reason": "EXPLICIT_TYPE_ORDER does not require ENT-required tools to be picked first.",
+          "status": "NOT_APPLICABLE"
+        },
+        "simulated_tools_completed": 5,
+        "status": "PASS",
+        "target_min_throughput_per_hour": 80.0,
+        "throughput_pass": true,
+        "throughput_per_hour": 18000.0,
+        "unwanted_completed_count": 2,
+        "unwanted_completion_time_seconds": 1.0,
+        "wanted_completed_count": 3,
+        "wanted_completion_time_seconds": 1.0,
+        "warning_check_ids": [],
+        "warnings": []
+      },
+      {
+        "batch_gating": {
+          "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+          "status": "PASS"
+        },
+        "deployment_blocking": false,
+        "downtime_pass": true,
+        "downtime_seconds": 0.0,
+        "failed_check_ids": [],
+        "failed_checks": [],
+        "failure_reason": null,
+        "line_id": "line_2",
+        "max_downtime_seconds": null,
+        "operator_reason": "line_2 sorted all 5 tools shown in the simulation. The completed set contained 5 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "placement": {
+          "reason": "No misplaced tools or placement validation warnings were recorded.",
+          "status": "PASS"
+        },
+        "priority_deviation_count": 0,
+        "priority_pass": true,
+        "priority_policy": "EXPLICIT_TYPE_ORDER",
+        "priority_required_first": {
+          "reason": "EXPLICIT_TYPE_ORDER does not require ENT-required tools to be picked first.",
+          "status": "NOT_APPLICABLE"
+        },
+        "simulated_tools_completed": 5,
+        "status": "PASS",
+        "target_min_throughput_per_hour": 80.0,
+        "throughput_pass": true,
+        "throughput_per_hour": 18000.0,
+        "unwanted_completed_count": 0,
+        "unwanted_completion_time_seconds": 1.0,
+        "wanted_completed_count": 5,
+        "wanted_completion_time_seconds": 1.0,
+        "warning_check_ids": [],
+        "warnings": []
+      },
+      {
+        "batch_gating": {
+          "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+          "status": "PASS"
+        },
+        "deployment_blocking": false,
+        "downtime_pass": true,
+        "downtime_seconds": 0.0,
+        "failed_check_ids": [],
+        "failed_checks": [],
+        "failure_reason": null,
+        "line_id": "line_3",
+        "max_downtime_seconds": null,
+        "operator_reason": "line_3 sorted all 5 tools shown in the simulation. The completed set contained 1 required ENT tool and 4 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "placement": {
+          "reason": "No misplaced tools or placement validation warnings were recorded.",
+          "status": "PASS"
+        },
+        "priority_deviation_count": 0,
+        "priority_pass": true,
+        "priority_policy": "EXPLICIT_TYPE_ORDER",
+        "priority_required_first": {
+          "reason": "EXPLICIT_TYPE_ORDER does not require ENT-required tools to be picked first.",
+          "status": "NOT_APPLICABLE"
+        },
+        "simulated_tools_completed": 5,
+        "status": "PASS",
+        "target_min_throughput_per_hour": 80.0,
+        "throughput_pass": true,
+        "throughput_per_hour": 18000.0,
+        "unwanted_completed_count": 4,
+        "unwanted_completion_time_seconds": 1.0,
+        "wanted_completed_count": 1,
+        "wanted_completion_time_seconds": 1.0,
+        "warning_check_ids": [],
+        "warnings": []
+      },
+      {
+        "batch_gating": {
+          "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+          "status": "PASS"
+        },
+        "deployment_blocking": false,
+        "downtime_pass": true,
+        "downtime_seconds": 0.0,
+        "failed_check_ids": [],
+        "failed_checks": [],
+        "failure_reason": null,
+        "line_id": "line_4",
+        "max_downtime_seconds": null,
+        "operator_reason": "line_4 sorted all 5 tools shown in the simulation. The completed set contained 3 required ENT tools and 2 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "placement": {
+          "reason": "No misplaced tools or placement validation warnings were recorded.",
+          "status": "PASS"
+        },
+        "priority_deviation_count": 0,
+        "priority_pass": true,
+        "priority_policy": "EXPLICIT_TYPE_ORDER",
+        "priority_required_first": {
+          "reason": "EXPLICIT_TYPE_ORDER does not require ENT-required tools to be picked first.",
+          "status": "NOT_APPLICABLE"
+        },
+        "simulated_tools_completed": 5,
+        "status": "PASS",
+        "target_min_throughput_per_hour": 80.0,
+        "throughput_pass": true,
+        "throughput_per_hour": 18000.0,
+        "unwanted_completed_count": 2,
+        "unwanted_completion_time_seconds": 1.0,
+        "wanted_completed_count": 3,
+        "wanted_completion_time_seconds": 1.0,
+        "warning_check_ids": [],
+        "warnings": []
+      }
+    ],
+    "likely_root_cause": null,
+    "line_findings": [
+      {
+        "deployment_blocking": false,
+        "line_id": "line_1",
+        "operator_text": "line_1 sorted all 5 tools shown in the simulation. The completed set contained 3 required ENT tools and 2 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "severity": "INFO"
+      },
+      {
+        "deployment_blocking": false,
+        "line_id": "line_2",
+        "operator_text": "line_2 sorted all 5 tools shown in the simulation. The completed set contained 5 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "severity": "INFO"
+      },
+      {
+        "deployment_blocking": false,
+        "line_id": "line_3",
+        "operator_text": "line_3 sorted all 5 tools shown in the simulation. The completed set contained 1 required ENT tool and 4 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "severity": "INFO"
+      },
+      {
+        "deployment_blocking": false,
+        "line_id": "line_4",
+        "operator_text": "line_4 sorted all 5 tools shown in the simulation. The completed set contained 3 required ENT tools and 2 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "severity": "INFO"
+      }
+    ],
+    "line_results": [
+      {
+        "batch_gating": {
+          "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+          "status": "PASS"
+        },
+        "deployment_blocking": false,
+        "downtime_pass": true,
+        "downtime_seconds": 0.0,
+        "failed_check_ids": [],
+        "failed_checks": [],
+        "failure_reason": null,
+        "line_id": "line_1",
+        "max_downtime_seconds": null,
+        "operator_reason": "line_1 sorted all 5 tools shown in the simulation. The completed set contained 3 required ENT tools and 2 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "placement": {
+          "reason": "No misplaced tools or placement validation warnings were recorded.",
+          "status": "PASS"
+        },
+        "priority_deviation_count": 0,
+        "priority_pass": true,
+        "priority_policy": "EXPLICIT_TYPE_ORDER",
+        "priority_required_first": {
+          "reason": "EXPLICIT_TYPE_ORDER does not require ENT-required tools to be picked first.",
+          "status": "NOT_APPLICABLE"
+        },
+        "simulated_tools_completed": 5,
+        "status": "PASS",
+        "target_min_throughput_per_hour": 80.0,
+        "throughput_pass": true,
+        "throughput_per_hour": 18000.0,
+        "unwanted_completed_count": 2,
+        "unwanted_completion_time_seconds": 1.0,
+        "wanted_completed_count": 3,
+        "wanted_completion_time_seconds": 1.0,
+        "warning_check_ids": [],
+        "warnings": []
+      },
+      {
+        "batch_gating": {
+          "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+          "status": "PASS"
+        },
+        "deployment_blocking": false,
+        "downtime_pass": true,
+        "downtime_seconds": 0.0,
+        "failed_check_ids": [],
+        "failed_checks": [],
+        "failure_reason": null,
+        "line_id": "line_2",
+        "max_downtime_seconds": null,
+        "operator_reason": "line_2 sorted all 5 tools shown in the simulation. The completed set contained 5 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "placement": {
+          "reason": "No misplaced tools or placement validation warnings were recorded.",
+          "status": "PASS"
+        },
+        "priority_deviation_count": 0,
+        "priority_pass": true,
+        "priority_policy": "EXPLICIT_TYPE_ORDER",
+        "priority_required_first": {
+          "reason": "EXPLICIT_TYPE_ORDER does not require ENT-required tools to be picked first.",
+          "status": "NOT_APPLICABLE"
+        },
+        "simulated_tools_completed": 5,
+        "status": "PASS",
+        "target_min_throughput_per_hour": 80.0,
+        "throughput_pass": true,
+        "throughput_per_hour": 18000.0,
+        "unwanted_completed_count": 0,
+        "unwanted_completion_time_seconds": 1.0,
+        "wanted_completed_count": 5,
+        "wanted_completion_time_seconds": 1.0,
+        "warning_check_ids": [],
+        "warnings": []
+      },
+      {
+        "batch_gating": {
+          "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+          "status": "PASS"
+        },
+        "deployment_blocking": false,
+        "downtime_pass": true,
+        "downtime_seconds": 0.0,
+        "failed_check_ids": [],
+        "failed_checks": [],
+        "failure_reason": null,
+        "line_id": "line_3",
+        "max_downtime_seconds": null,
+        "operator_reason": "line_3 sorted all 5 tools shown in the simulation. The completed set contained 1 required ENT tool and 4 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "placement": {
+          "reason": "No misplaced tools or placement validation warnings were recorded.",
+          "status": "PASS"
+        },
+        "priority_deviation_count": 0,
+        "priority_pass": true,
+        "priority_policy": "EXPLICIT_TYPE_ORDER",
+        "priority_required_first": {
+          "reason": "EXPLICIT_TYPE_ORDER does not require ENT-required tools to be picked first.",
+          "status": "NOT_APPLICABLE"
+        },
+        "simulated_tools_completed": 5,
+        "status": "PASS",
+        "target_min_throughput_per_hour": 80.0,
+        "throughput_pass": true,
+        "throughput_per_hour": 18000.0,
+        "unwanted_completed_count": 4,
+        "unwanted_completion_time_seconds": 1.0,
+        "wanted_completed_count": 1,
+        "wanted_completion_time_seconds": 1.0,
+        "warning_check_ids": [],
+        "warnings": []
+      },
+      {
+        "batch_gating": {
+          "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+          "status": "PASS"
+        },
+        "deployment_blocking": false,
+        "downtime_pass": true,
+        "downtime_seconds": 0.0,
+        "failed_check_ids": [],
+        "failed_checks": [],
+        "failure_reason": null,
+        "line_id": "line_4",
+        "max_downtime_seconds": null,
+        "operator_reason": "line_4 sorted all 5 tools shown in the simulation. The completed set contained 3 required ENT tools and 2 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+        "placement": {
+          "reason": "No misplaced tools or placement validation warnings were recorded.",
+          "status": "PASS"
+        },
+        "priority_deviation_count": 0,
+        "priority_pass": true,
+        "priority_policy": "EXPLICIT_TYPE_ORDER",
+        "priority_required_first": {
+          "reason": "EXPLICIT_TYPE_ORDER does not require ENT-required tools to be picked first.",
+          "status": "NOT_APPLICABLE"
+        },
+        "simulated_tools_completed": 5,
+        "status": "PASS",
+        "target_min_throughput_per_hour": 80.0,
+        "throughput_pass": true,
+        "throughput_per_hour": 18000.0,
+        "unwanted_completed_count": 2,
+        "unwanted_completion_time_seconds": 1.0,
+        "wanted_completed_count": 3,
+        "wanted_completion_time_seconds": 1.0,
+        "warning_check_ids": [],
+        "warnings": []
+      }
+    ],
+    "next_action": "ASK_DEPLOY_APPROVAL",
+    "operator_next_action": "DEPLOY, DO_NOT_DEPLOY, REQUEST_REVISION",
+    "operator_options": [
+      "DEPLOY",
+      "DO_NOT_DEPLOY",
+      "REQUEST_REVISION"
+    ],
+    "operator_summary": "Simulation completed and KPI evidence supports deployment. Passing lines: line_1, line_2, line_3, line_4.",
+    "overall_result": "PASS",
+    "passed_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "requires_operator_acknowledgement": false,
+    "risk_summary": "Evidence supports deployment.",
+    "risk_tier": "INFO",
+    "simulation_config": {
+      "full_environment_tooling_count": null,
+      "simulated_tooling_count": 5
+    },
+    "summary_message": "All deterministic KPI checks passed.",
+    "technical_findings": [],
+    "warning_checks": [],
+    "warnings": []
+  },
+  "operator_acknowledged": true,
+  "operator_acknowledgement_required": false,
+  "operator_id": null,
+  "run_id": "sim_a0026054-bbba-45ed-91b2-72089332f17c",
+  "scenario_spec_id": "scn_9ad8726d-4dff-4b47-847c-b72fec576251",
+  "status": "DEPLOYED",
+  "trt_id": "trt-demo",
+  "trt_version": "v63",
+  "updated_digital_twin_defaults_path": "data/digital_twin/default_simulation_config.json",
+  "updated_state_record_path": "data/state_records/current_state.json"
+}

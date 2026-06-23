@@ -1,7 +1,10 @@
 {
-  "deployment_id": "deploy_17842a06-4680-4f4e-9173-38e0760a37df",
-  "run_id": "sim_85d487c0-08ef-4389-b333-08b8fce99eaa",
-  "scenario_spec_id": "scn_616e284b-5b6c-49c7-9821-ab6dff1331aa",
+  "deployment_id": "deploy_692cae4b-58ca-4348-aecc-0e5f34b664c1",
+  "operator_facing": {
+    "simulated_tooling_count": 5
+  },
+  "run_id": "sim_a0026054-bbba-45ed-91b2-72089332f17c",
+  "scenario_spec_id": "scn_9ad8726d-4dff-4b47-847c-b72fec576251",
   "simulation_config": {
     "add_reference_number": 5,
     "allowed_overlap_ratio": 0.99,
@@ -17,6 +20,6 @@
   },
   "source": "simulated_physical_deployment",
   "trt_id": "trt-demo",
-  "trt_version": "v59",
-  "updated_at": "2026-06-22T16:00:13.138368Z"
+  "trt_version": "v63",
+  "updated_at": "2026-06-22T20:07:30.577659Z"
 }

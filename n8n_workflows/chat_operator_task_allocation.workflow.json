@@ -754,7 +754,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const decision = $input.first().json || {};\nconst source = $('Build vLLM Dialogue Decision Body').first().json;\nconst normalized = decision.normalized_request || {};\nconst payload = decision.payload || {};\nconst context = decision.context || {};\nconst loadedSession = source.loaded_session || {};\nconst loadedState = loadedSession.state || 'IDLE';\nconst deploymentPending = loadedState === 'WAITING_FOR_DEPLOYMENT_DECISION' || decision.dialogue_state === 'DEPLOYMENT_DECISION';\nlet turnType = 'TASK_REQUEST';\nif (deploymentPending) turnType = 'DEPLOYMENT_DECISION';\nelse if (decision.dialogue_state === 'CANCELLED') turnType = 'CANCEL';\nelse if (decision.dialogue_state === 'APPROVAL_DECISION') turnType = 'APPROVAL_DECISION';\nelse if (decision.dialogue_state === 'DEPLOYMENT_DECISION') turnType = 'DEPLOYMENT_DECISION';\nelse if (decision.dialogue_state === 'UNKNOWN') turnType = 'UNKNOWN';\nconst sessionId = decision.session_id || source.session_id || 'default';\nconst operatorMessage = String(decision.operator_message || payload.message || '').replace(/add_reference_number/gi, 'simulated tooling count').replace(/add reference number/gi, 'simulated tooling count');\nreturn [{\n  json: {\n    ...decision,\n    turn_type: turnType,\n    deployment_pending: deploymentPending,\n    pending_deployment: loadedSession.pending_deployment || payload.pending_deployment || null,\n    loaded_session: loadedSession,\n    operator_id: normalized.operator_id || context.operator_id || loadedSession.normalized_request?.operator_id || null,\n    intent_text: normalized.intent_text || context.intent_text || source.active_request?.original_user_request || source.raw_chat_input || '',\n    reason: normalized.reason || context.reason || null,\n    decision: decision.approval_decision || decision.deployment_decision || null,\n    comment: null,\n    raw_chat_input: source.raw_chat_input || '',\n    debug: false,\n    reviewed_patch_exists: !!(decision.dialogue_state === 'APPROVAL_DECISION' && source.loaded_session?.candidate_patch_summary),\n    reviewed_context: source.loaded_session?.candidate_patch_summary || null,\n    chat_session_state: loadedState,\n    pending_intent: null,\n    operator_message: operatorMessage,\n    context: {\n      ...context,\n      session_id: sessionId,\n      operator_id: normalized.operator_id || context.operator_id || loadedSession.normalized_request?.operator_id || null,\n      reason: normalized.reason || context.reason || null,\n      intent_text: normalized.intent_text || context.intent_text || source.active_request?.original_user_request || source.raw_chat_input || '',\n      affected_lines: context.affected_lines || payload.candidate_patch?.affected_lines || normalized.target_lines || [],\n      simulation_config_updates: context.simulation_config_updates || payload.candidate_patch?.simulation_config_updates || normalized.simulation_config_updates || null,\n      pending_deployment: loadedSession.pending_deployment || null\n    },\n    payload: {\n      ...payload,\n      pending_deployment: loadedSession.pending_deployment || payload.pending_deployment || null,\n      message: operatorMessage || payload.message,\n      user_message: operatorMessage || payload.user_message\n    },\n    body: {\n      operator_id: normalized.operator_id || context.operator_id || loadedSession.normalized_request?.operator_id || null,\n      intent_text: normalized.intent_text || context.intent_text || source.active_request?.original_user_request || source.raw_chat_input || '',\n      reason: normalized.reason || context.reason || null\n    },\n    errors: decision.errors || []\n  }\n}];"
+        "jsCode": "const decision = $input.first().json || {};\nconst source = $('Build vLLM Dialogue Decision Body').first().json;\nconst normalized = decision.normalized_request || {};\nconst payload = decision.payload || {};\nconst context = decision.context || {};\nconst loadedSession = source.loaded_session || {};\nconst loadedState = loadedSession.state || 'IDLE';\nconst deploymentPending = loadedState === 'WAITING_FOR_DEPLOYMENT_DECISION' || decision.dialogue_state === 'DEPLOYMENT_DECISION' || decision.turn_type === 'DEPLOYMENT_DECISION';\nconst allowedTurns = ['SMALL_TALK', 'TASK_REQUEST', 'CLARIFICATION_VALUES', 'APPROVAL_DECISION', 'DEPLOYMENT_DECISION', 'CANCEL', 'CONFUSED', 'UNKNOWN'];\nlet turnType = allowedTurns.includes(decision.turn_type) ? decision.turn_type : null;\nif (deploymentPending) turnType = 'DEPLOYMENT_DECISION';\nelse if (!turnType && decision.dialogue_state === 'CANCELLED') turnType = 'CANCEL';\nelse if (!turnType && decision.dialogue_state === 'APPROVAL_DECISION') turnType = 'APPROVAL_DECISION';\nelse if (!turnType && decision.dialogue_state === 'DEPLOYMENT_DECISION') turnType = 'DEPLOYMENT_DECISION';\nelse if (!turnType && decision.dialogue_state === 'UNKNOWN') turnType = 'UNKNOWN';\nelse if (!turnType && decision.dialogue_state === 'READY_FOR_REVIEW') turnType = 'TASK_REQUEST';\nelse if (!turnType && decision.dialogue_state === 'NEEDS_CLARIFICATION') turnType = 'CLARIFICATION_VALUES';\nelse if (!turnType) turnType = 'UNKNOWN';\nconst sessionId = decision.session_id || source.session_id || 'default';\nconst pendingIntent = loadedSession.pending_intent || null;\nconst operatorMessage = String(decision.operator_message || payload.message || '')\n  .replace(/add_reference_number/gi, 'simulated tooling count')\n  .replace(/add reference number/gi, 'simulated tooling count')\n  .replace(/request_type/gi, 'task change')\n  .replace(/request type/gi, 'task change');\nconst intentText = turnType === 'SMALL_TALK' || turnType === 'CONFUSED' || turnType === 'UNKNOWN'\n  ? null\n  : (normalized.intent_text || context.intent_text || pendingIntent?.intent_text || pendingIntent?.original_intent_text || source.active_request?.original_user_request || source.raw_chat_input || null);\nconst operatorId = normalized.operator_id || context.operator_id || pendingIntent?.operator_id || loadedSession.normalized_request?.operator_id || null;\nconst reason = normalized.reason || context.reason || pendingIntent?.reason || loadedSession.normalized_request?.reason || null;\nreturn [{\n  json: {\n    ...decision,\n    turn_type: turnType,\n    deployment_pending: deploymentPending,\n    pending_deployment: loadedSession.pending_deployment || payload.pending_deployment || null,\n    loaded_session: loadedSession,\n    operator_id: operatorId,\n    intent_text: intentText,\n    reason,\n    decision: decision.approval_decision || decision.deployment_decision || null,\n    comment: null,\n    raw_chat_input: source.raw_chat_input || '',\n    debug: false,\n    reviewed_patch_exists: !!(turnType === 'APPROVAL_DECISION' && source.loaded_session?.candidate_patch_summary),\n    reviewed_context: source.loaded_session?.candidate_patch_summary || null,\n    chat_session_state: loadedState,\n    pending_intent: pendingIntent,\n    operator_message: operatorMessage,\n    context: {\n      ...context,\n      session_id: sessionId,\n      operator_id: operatorId,\n      reason,\n      intent_text: intentText,\n      affected_lines: context.affected_lines || payload.candidate_patch?.affected_lines || normalized.target_lines || [],\n      simulation_config_updates: context.simulation_config_updates || payload.candidate_patch?.simulation_config_updates || normalized.simulation_config_updates || null,\n      pending_deployment: loadedSession.pending_deployment || null,\n      pending_intent: pendingIntent,\n      kpi_updates: normalized.kpi_updates || context.kpi_updates || null\n    },\n    payload: {\n      ...payload,\n      pending_deployment: loadedSession.pending_deployment || payload.pending_deployment || null,\n      message: operatorMessage || payload.message,\n      user_message: operatorMessage || payload.user_message,\n      kpi_updates: normalized.kpi_updates || payload.kpi_updates || null\n    },\n    body: {\n      operator_id: operatorId,\n      intent_text: intentText,\n      reason\n    },\n    errors: decision.errors || []\n  }\n}];"
       },
       "id": "084cda5d-e6cf-4f79-b7b4-4a68794455ba",
       "name": "Normalize Dialogue Decision",
@@ -1097,7 +1097,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ {\n  session_id: $json.context?.session_id || $json.session_id || 'default',\n  state: 'WAITING_FOR_REQUIRED_FIELDS',\n  pending_intent: {\n    original_intent_text: $json.intent_summary || $json.intent_text || $json.raw_chat_input || '',\n    intent_text: $json.intent_summary || $json.intent_text || $json.raw_chat_input || '',\n    operator_id: $json.operator_id || null,\n    reason: $json.reason || null,\n    missing_fields: $json.missing_fields || [],\n    pending_status: 'WAITING_FOR_REQUIRED_FIELDS'\n  }\n} }}",
+        "jsonBody": "={{ {\n  session_id: $json.context?.session_id || $json.session_id || 'default',\n  state: 'WAITING_FOR_REQUIRED_FIELDS',\n  conversation: $json.raw_backend_response?.conversation || [],\n  latest_dialogue_decision: $json.raw_backend_response?.llm_decision_raw || null,\n  normalized_request: {\n    ...($json.raw_backend_response?.normalized_request || {}),\n    operator_id: $json.operator_id || null,\n    reason: $json.reason || null,\n    intent_text: $json.intent_summary || $json.raw_backend_response?.intent_text || ''\n  },\n  pending_intent: {\n    original_intent_text: $json.intent_summary || $json.raw_backend_response?.intent_text || $json.raw_backend_response?.raw_chat_input || '',\n    intent_text: $json.intent_summary || $json.raw_backend_response?.intent_text || $json.raw_backend_response?.raw_chat_input || '',\n    operator_id: $json.operator_id || null,\n    reason: $json.reason || null,\n    missing_fields: $json.missing_fields || [],\n    pending_status: 'WAITING_FOR_REQUIRED_FIELDS'\n  }\n} }}",
         "options": {}
       },
       "id": "62ff1ace-8596-4d3d-ad55-1b52e49c87d5",
@@ -1111,7 +1111,7 @@
     },
     {
       "parameters": {
-        "jsCode": "return [{ json: $('Build Canonical Clarification Payload').first().json }];"
+        "jsCode": "return [{ json: $('Build Required Fields Clarification Payload').first().json }];"
       },
       "id": "7cd09022-b1c9-4472-b4ee-565f1f2115e0",
       "name": "Restore Canonical Clarification After Session Save",
@@ -1177,7 +1177,7 @@
           "conditions": [
             {
               "id": "3741f97f-9402-4736-bc24-5b027215359b",
-              "leftValue": "={{ $json.dialogue_state === 'NEEDS_CLARIFICATION' }}",
+              "leftValue": "={{ $json.dialogue_state === 'NEEDS_CLARIFICATION' && !['TASK_REQUEST', 'SMALL_TALK', 'CONFUSED', 'UNKNOWN'].includes($json.turn_type) }}",
               "rightValue": true,
               "operator": {
                 "type": "boolean",
@@ -1201,7 +1201,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\n\nfunction affectedLinesFromOperations(operations = []) {\n  const lines = new Set();\n  for (const operation of operations || []) {\n    const path = String(operation.path || \"\");\n    const match = path.match(/^\\/lines\\/([^/]+)/);\n    if (match) lines.add(match[1]);\n  }\n  return Array.from(lines).sort();\n}\n\nconst existingCandidate =\n  input.payload?.candidate_patch ||\n  input.body?.candidate_patch ||\n  input.candidate_patch ||\n  null;\n\nconst reconstructedCandidate =\n  existingCandidate ||\n  (\n    input.patch_id && Array.isArray(input.operations)\n      ? {\n          patch_id: input.patch_id,\n          trt_id: input.trt_id,\n          base_version: input.base_version,\n          operator_id: input.operator_id,\n          intent_text: input.intent_text,\n          reason: input.reason,\n          request_types: input.request_types || [],\n          operations: input.operations,\n          status: input.status || \"REVIEWED\",\n          simulation_config_updates: input.simulation_config_updates || null\n        }\n      : null\n  );\n\nconst affectedLines =\n  (Array.isArray(input.context?.affected_lines) && input.context.affected_lines.length ? input.context.affected_lines : null) ||\n  (Array.isArray(input.payload?.affected_lines) && input.payload.affected_lines.length ? input.payload.affected_lines : null) ||\n  (Array.isArray(input.affected_lines) && input.affected_lines.length ? input.affected_lines : null) ||\n  (reconstructedCandidate ? affectedLinesFromOperations(reconstructedCandidate.operations) : []);\n\nconst simulationConfigUpdates =\n  input.context?.simulation_config_updates ||\n  input.payload?.simulation_config_updates ||\n  input.body?.simulation_config_updates ||\n  input.simulation_config_updates ||\n  reconstructedCandidate?.simulation_config_updates ||\n  null;\n\nconst output = {\n  ...input,\n  candidate_patch: reconstructedCandidate,\n  context: {\n    ...(input.context || {}),\n    patch_id: reconstructedCandidate?.patch_id || input.context?.patch_id || null,\n    trt_id: reconstructedCandidate?.trt_id || input.context?.trt_id || null,\n    trt_version: reconstructedCandidate?.base_version || input.context?.trt_version || null,\n    affected_lines: affectedLines,\n    simulation_config_updates: simulationConfigUpdates\n  },\n  body: {\n    ...(input.body || {}),\n    candidate_patch: reconstructedCandidate,\n    affected_lines: affectedLines,\n    simulation_config_updates: simulationConfigUpdates,\n    decision: input.body?.decision || input.decision || input.operator_decision?.decision || null,\n    comment: input.body?.comment || input.comment || input.operator_decision?.comment || \"\"\n  },\n  payload: {\n    ...(input.payload || {}),\n    candidate_patch: reconstructedCandidate,\n    affected_lines: affectedLines,\n    simulation_config_updates: simulationConfigUpdates,\n    decision: input.payload?.decision || input.decision || input.operator_decision?.decision || null,\n    comment: input.payload?.comment || input.comment || input.operator_decision?.comment || \"\",\n    raw_release_decision_reply:\n      input.payload?.raw_release_decision_reply ||\n      input.operator_decision?.raw_reply ||\n      input.raw_release_decision_reply ||\n      null\n  }\n};\n\nif (!output.payload?.candidate_patch && !output.body?.candidate_patch && !output.candidate_patch) {\n  throw new Error(`Approval path invariant failed: candidate_patch is missing after canonicalization. Available top-level keys: ${Object.keys(input).sort().join(', ')}`);\n}\n\nreturn [{ json: output }];"
+        "jsCode": "const input = $input.first().json;\n\nfunction affectedLinesFromOperations(operations = []) {\n  const lines = new Set();\n  for (const operation of operations || []) {\n    const path = String(operation.path || \"\");\n    const match = path.match(/^\\/lines\\/([^/]+)/);\n    if (match) lines.add(match[1]);\n  }\n  return Array.from(lines).sort();\n}\n\nconst existingCandidate =\n  input.payload?.candidate_patch ||\n  input.body?.candidate_patch ||\n  input.candidate_patch ||\n  null;\n\nconst reconstructedCandidate =\n  existingCandidate ||\n  (\n    input.patch_id && Array.isArray(input.operations)\n      ? {\n          patch_id: input.patch_id,\n          trt_id: input.trt_id,\n          base_version: input.base_version,\n          operator_id: input.operator_id,\n          intent_text: input.intent_text,\n          reason: input.reason,\n          request_types: input.request_types || [],\n          operations: input.operations,\n          status: input.status || \"REVIEWED\",\n          simulation_config_updates: input.simulation_config_updates || null\n        }\n      : null\n  );\n\nconst affectedLines =\n  (Array.isArray(input.context?.affected_lines) && input.context.affected_lines.length ? input.context.affected_lines : null) ||\n  (Array.isArray(input.payload?.affected_lines) && input.payload.affected_lines.length ? input.payload.affected_lines : null) ||\n  (Array.isArray(input.affected_lines) && input.affected_lines.length ? input.affected_lines : null) ||\n  (reconstructedCandidate ? affectedLinesFromOperations(reconstructedCandidate.operations) : []);\n\nconst simulationConfigUpdates =\n  input.context?.simulation_config_updates ||\n  input.payload?.simulation_config_updates ||\n  input.body?.simulation_config_updates ||\n  input.simulation_config_updates ||\n  reconstructedCandidate?.simulation_config_updates ||\n  null;\n\nconst candidateWithContext = reconstructedCandidate\n  ? {\n      ...reconstructedCandidate,\n      affected_lines: Array.isArray(reconstructedCandidate.affected_lines) && reconstructedCandidate.affected_lines.length\n        ? reconstructedCandidate.affected_lines\n        : affectedLines,\n      ...(reconstructedCandidate.simulation_config_updates || simulationConfigUpdates\n        ? { simulation_config_updates: reconstructedCandidate.simulation_config_updates || simulationConfigUpdates }\n        : {})\n    }\n  : null;\n\nif (candidateWithContext && !candidateWithContext.simulation_config_updates) {\n  delete candidateWithContext.simulation_config_updates;\n}\n\nconst output = {\n  ...input,\n  candidate_patch: candidateWithContext,\n  context: {\n    ...(input.context || {}),\n    patch_id: candidateWithContext?.patch_id || input.context?.patch_id || null,\n    trt_id: candidateWithContext?.trt_id || input.context?.trt_id || null,\n    trt_version: candidateWithContext?.base_version || input.context?.trt_version || null,\n    affected_lines: affectedLines,\n    simulation_config_updates: simulationConfigUpdates\n  },\n  body: {\n    ...(input.body || {}),\n    candidate_patch: candidateWithContext,\n    affected_lines: affectedLines,\n    simulation_config_updates: simulationConfigUpdates,\n    decision: input.body?.decision || input.decision || input.operator_decision?.decision || null,\n    comment: input.body?.comment || input.comment || input.operator_decision?.comment || \"\"\n  },\n  payload: {\n    ...(input.payload || {}),\n    candidate_patch: candidateWithContext,\n    affected_lines: affectedLines,\n    simulation_config_updates: simulationConfigUpdates,\n    decision: input.payload?.decision || input.decision || input.operator_decision?.decision || null,\n    comment: input.payload?.comment || input.comment || input.operator_decision?.comment || \"\",\n    raw_release_decision_reply:\n      input.payload?.raw_release_decision_reply ||\n      input.operator_decision?.raw_reply ||\n      input.raw_release_decision_reply ||\n      null\n  }\n};\n\nif (!output.payload?.candidate_patch && !output.body?.candidate_patch && !output.candidate_patch) {\n  throw new Error(`Approval path invariant failed: candidate_patch is missing after canonicalization. Available top-level keys: ${Object.keys(input).sort().join(', ')}`);\n}\n\nreturn [{ json: output }];"
       },
       "id": "a90e22c7-91c3-4878-ad5d-da1795c91ce1",
       "name": "Canonicalize Candidate Patch For Approval",
@@ -1248,7 +1248,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json || {};\nconst source = $('Build vLLM Dialogue Decision Body').first().json || {};\nconst loadedSession = source.loaded_session || {};\nconst pending = loadedSession.pending_deployment || input.pending_deployment || input.payload?.pending_deployment || {};\nconst text = String(input.raw_chat_input || source.raw_chat_input || source.latest_user_message || '').trim();\nconst normalized = text.toLowerCase().replace(/[.!?]+$/g, '').replace(/\\s+/g, ' ');\nfunction includesAny(values) { return values.some(value => normalized.includes(value)); }\nlet deploymentDecision = input.deployment_decision || input.decision || null;\nif (!deploymentDecision || deploymentDecision === 'UNKNOWN') {\n  if (['deploy_with_ack', 'deploy with ack', 'deploy with acknowledgement', 'deploy with acknowledgment', 'deploy anyway', 'acknowledge and deploy'].includes(normalized) || includesAny(['deploy with ack', 'deploy with acknowledgement', 'deploy with acknowledgment', 'deploy anyway', 'acknowledge and deploy'])) {\n    deploymentDecision = 'DEPLOY_WITH_ACK';\n  } else if (['deploy', 'deploy now', 'yes deploy', 'apply deployment', 'deploy it', 'send to production', 'apply to physical line', 'deploy to physical production line'].includes(normalized) || includesAny(['yes deploy', 'deploy it', 'deploy now', 'apply deployment'])) {\n    deploymentDecision = 'DEPLOY';\n  } else if (['do not deploy', \"don't deploy\", 'no deploy', 'hold deployment', 'cancel deployment'].includes(normalized) || includesAny(['do not deploy', \"don't deploy\", 'hold deployment', 'cancel deployment'])) {\n    deploymentDecision = 'DO_NOT_DEPLOY';\n  } else if (['rerun', 'rerun simulation', 'run simulation again'].includes(normalized) || includesAny(['rerun simulation', 'run simulation again'])) {\n    deploymentDecision = 'RERUN_SIMULATION';\n  } else if (includesAny(['request revision', 'revise', 'change request', 'change the request'])) {\n    deploymentDecision = 'REQUEST_REVISION';\n  } else {\n    deploymentDecision = 'UNKNOWN';\n  }\n}\nconst evidenceSummary = pending.evidence_summary || input.payload?.evidence_summary || {};\nconst acknowledgedRisks = pending.acknowledged_risks || evidenceSummary.acknowledged_risks || [];\nreturn [{\n  json: {\n    ...input,\n    turn_type: 'DEPLOYMENT_DECISION',\n    deployment_decision: deploymentDecision,\n    decision: deploymentDecision,\n    acknowledged_risks: acknowledgedRisks,\n    pending_deployment: pending,\n    operator_id: input.operator_id || loadedSession.normalized_request?.operator_id || loadedSession.pending_intent?.operator_id || input.context?.operator_id || null,\n    deployment_comment: text || deploymentDecision,\n    context: {\n      ...(input.context || {}),\n      session_id: source.session_id || input.context?.session_id || input.session_id || 'default',\n      pending_deployment: pending\n    },\n    payload: {\n      ...(input.payload || {}),\n      pending_deployment: pending,\n      deployment_decision: deploymentDecision,\n      acknowledged_risks: acknowledgedRisks\n    }\n  }\n}];"
+        "jsCode": "const input = $input.first().json || {};\nlet source = {};\ntry {\n  source = $('Build vLLM Dialogue Decision Body').first().json || {};\n} catch (error) {\n  source = input;\n}\nconst loadedSession = source.loaded_session || input.loaded_session || {};\nconst pending = loadedSession.pending_deployment || input.pending_deployment || input.payload?.pending_deployment || {};\nconst pendingEvidence = loadedSession.pending_evidence || input.pending_evidence || input.payload?.pending_evidence || {};\nconst text = String(input.raw_chat_input || source.raw_chat_input || source.latest_user_message || '').trim();\nconst normalized = text.toLowerCase().replace(/_/g, ' ').replace(/[.!?]+$/g, '').replace(/\\s+/g, ' ').trim();\nfunction includesAny(values) { return values.some(value => normalized.includes(value)); }\nlet deploymentDecision = input.deployment_decision || input.decision || null;\nif (!deploymentDecision || deploymentDecision === 'UNKNOWN') {\n  if (['deploy_with_ack', 'deploy with ack', 'deploy with acknowledgement', 'deploy with acknowledgment', 'deploy anyway', 'acknowledge and deploy'].includes(normalized) || includesAny(['deploy with ack', 'deploy with acknowledgement', 'deploy with acknowledgment', 'deploy anyway', 'acknowledge and deploy'])) {\n    deploymentDecision = 'DEPLOY_WITH_ACK';\n  } else if (['deploy', 'deploy now', 'yes deploy', 'apply deployment', 'deploy it', 'send to production', 'apply to physical line', 'deploy to physical production line'].includes(normalized) || includesAny(['yes deploy', 'deploy it', 'deploy now', 'apply deployment'])) {\n    deploymentDecision = 'DEPLOY';\n  } else if (['do not deploy', \"don't deploy\", 'no deploy', 'hold deployment', 'cancel deployment'].includes(normalized) || includesAny(['do not deploy', \"don't deploy\", 'hold deployment', 'cancel deployment'])) {\n    deploymentDecision = 'DO_NOT_DEPLOY';\n  } else if (['rerun', 'rerun simulation', 'run simulation again'].includes(normalized) || includesAny(['rerun simulation', 'run simulation again'])) {\n    deploymentDecision = 'RERUN_SIMULATION';\n  } else if (includesAny(['request revision', 'revise', 'change request', 'change the request'])) {\n    deploymentDecision = 'REQUEST_REVISION';\n  } else {\n    deploymentDecision = 'UNKNOWN';\n  }\n}\nconst evidenceSummary = pending.evidence_summary || input.payload?.evidence_summary || {};\nconst acknowledgedRisks = pending.acknowledged_risks || evidenceSummary.acknowledged_risks || [];\nreturn [{\n  json: {\n    ...input,\n    turn_type: 'DEPLOYMENT_DECISION',\n    deployment_decision: deploymentDecision,\n    decision: deploymentDecision,\n    acknowledged_risks: acknowledgedRisks,\n    pending_deployment: pending,\n    pending_evidence: pendingEvidence,\n    operator_id: input.operator_id || loadedSession.normalized_request?.operator_id || loadedSession.pending_intent?.operator_id || input.context?.operator_id || null,\n    deployment_comment: text || deploymentDecision,\n    context: {\n      ...(input.context || {}),\n      session_id: source.session_id || input.context?.session_id || input.session_id || 'default',\n      pending_deployment: pending,\n      pending_evidence: pendingEvidence\n    },\n    payload: {\n      ...(input.payload || {}),\n      pending_deployment: pending,\n      pending_evidence: pendingEvidence,\n      deployment_decision: deploymentDecision,\n      acknowledged_risks: acknowledgedRisks\n    }\n  }\n}];"
       },
       "id": "parse-deployment-decision",
       "name": "Parse Deployment Decision",
@@ -1362,7 +1362,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json || {};\nconst decision = input.deployment_decision || 'UNKNOWN';\nconst pending = input.pending_deployment || input.payload?.pending_deployment || {};\nconst options = pending.operator_options || pending.evidence_summary?.operator_options || ['DEPLOY', 'DO_NOT_DEPLOY', 'REQUEST_REVISION', 'RERUN_SIMULATION'];\nlet message = `Please reply ${options.join(', ')}.`;\nlet status = 'WAITING_FOR_DEPLOYMENT_DECISION';\nif (decision === 'DO_NOT_DEPLOY') {\n  status = 'DEPLOYMENT_CANCELLED';\n  message = 'Deployment was cancelled. The validated strategy was not deployed. The conversation is complete.';\n} else if (decision === 'REQUEST_REVISION') {\n  status = 'REQUEST_REVISION';\n  message = 'Deployment was not performed. Please send the revised task request when ready.';\n} else if (decision === 'RERUN_SIMULATION') {\n  status = 'RERUN_REQUESTED';\n  message = 'Rerun requested. The current chat workflow does not rerun the ScenarioSpec from this deployment prompt yet; please request a rerun from the simulation workflow.';\n}\nreturn [{ json: { status, user_message: message, context: input.context || {}, payload: { message, user_message: message, deployment_decision: decision }, errors: [] } }];"
+        "jsCode": "const input = $input.first().json || {};\nconst decision = input.deployment_decision || 'UNKNOWN';\nconst pending = input.pending_deployment || input.payload?.pending_deployment || {};\nconst options = pending.operator_options || pending.evidence_summary?.operator_options || ['DEPLOY', 'DO_NOT_DEPLOY', 'REQUEST_REVISION', 'RERUN_SIMULATION'];\nlet message = `Please reply ${options.join(', ')}.`;\nlet status = 'WAITING_FOR_DEPLOYMENT_DECISION';\nif (decision === 'DO_NOT_DEPLOY') {\n  status = 'DEPLOYMENT_CANCELLED';\n  message = 'Deployment was cancelled. The validated strategy was not deployed. The conversation is complete.';\n} else if (decision === 'REQUEST_REVISION') {\n  status = 'REQUEST_REVISION';\n  message = 'Deployment was not performed. Please send the revised task request when ready.';\n} else if (decision === 'RERUN_SIMULATION') {\n  status = 'RERUN_REQUESTED';\n  message = 'Rerun requested. The same ScenarioSpec context is preserved for the simulation rerun path.';\n}\nreturn [{ json: { status, user_message: message, context: input.context || {}, payload: { message, user_message: message, deployment_decision: decision }, errors: [] } }];"
       },
       "id": "return-non-deploy-decision-message",
       "name": "Return Non-Deploy Decision Message",
@@ -1626,6 +1626,118 @@
         2500,
         -420
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json || {};\nconst loadedSession = input.loaded_session || {};\nconst pending = loadedSession.pending_intent || input.pending_intent || null;\nif (loadedSession.state !== 'WAITING_FOR_REQUIRED_FIELDS' || !pending) {\n  return [{ json: input }];\n}\nconst originalIntent = pending.intent_text || pending.original_intent_text || input.intent_text || input.context?.intent_text || input.raw_chat_input || '';\nconst operatorId = input.operator_id || pending.operator_id || null;\nconst reason = input.reason || pending.reason || null;\nconst merged = {\n  ...input,\n  turn_type: input.turn_type || 'CLARIFICATION_VALUES',\n  intent_text: originalIntent,\n  operator_id: operatorId,\n  reason,\n  pending_intent: pending,\n  merge_pending_required_fields_called: true,\n  merge_pending_required_fields_original_intent: originalIntent,\n  context: {\n    ...(input.context || {}),\n    intent_text: originalIntent,\n    operator_id: operatorId,\n    reason,\n    pending_intent: pending\n  },\n  payload: {\n    ...(input.payload || {}),\n    pending_intent: pending\n  },\n  body: {\n    ...(input.body || {}),\n    operator_id: operatorId,\n    intent_text: originalIntent,\n    reason\n  }\n};\nreturn [{ json: merged }];"
+      },
+      "id": "merge-pending-required-fields",
+      "name": "Merge Pending Required Fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nreturn [{\n  json: {\n    status: 'NEEDS_CLARIFICATION',\n    intent_summary: input.intent_text || input.raw_chat_input || '',\n    missing_fields: input.missing_fields || [],\n    field_labels: input.field_labels || {\n      operator_id: 'operator ID',\n      intent_text: 'task request',\n      reason: 'reason for the change'\n    },\n    operator_id: input.operator_id || null,\n    reason: input.reason || null,\n    context: input.context || {},\n    payload: {\n      ...(input.payload || {}),\n      message: input.operator_message || input.payload?.message || 'Please provide the missing operator details.',\n      user_message: input.operator_message || input.payload?.user_message || 'Please provide the missing operator details.'\n    },\n    errors: [],\n    example: {\n      operator_id: 'op_001',\n      reason: 'test for milestone 11.5'\n    },\n    debug: input.debug === true,\n    raw_backend_response: input\n  }\n}];"
+      },
+      "id": "build-required-fields-clarification-payload",
+      "name": "Build Required Fields Clarification Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2820,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json || {};\nconst extracted = $('Extract Session ID').first().json || {};\nconst sessionId = input.context?.session_id || input.session_id || extracted.session_id;\nif (!sessionId || sessionId === 'default') {\n  throw new Error('Cannot save post-evidence decision state without real chat session_id.');\n}\nconst payload = input.payload || {};\nconst context = input.context || {};\nconst evidence = payload.evidence_summary || payload.raw_evidence?.evidence_summary || {};\nconst runId = payload.simulation_run_id || payload.run_id || evidence.run_id || context.simulation_run_id || context.run_id || context.last_run_id || null;\nconst scenarioSpecId = payload.scenario_spec_id || evidence.scenario_spec_id || context.scenario_spec_id || context.scenario_spec_ids?.slice(-1)?.[0] || null;\nconst pendingEvidence = {\n  run_id: runId,\n  scenario_spec_id: scenarioSpecId,\n  trt_id: context.trt_id || payload.trt_id || 'trt-demo',\n  trt_version: context.trt_version || payload.trt_version || null,\n  evidence_summary: evidence || null,\n  message: payload.message || payload.user_message || null\n};\nreturn [{\n  json: {\n    ...input,\n    session_id: sessionId,\n    pending_evidence: pendingEvidence,\n    session_save_payload: {\n      session_id: sessionId,\n      state: 'WAITING_FOR_POST_EVIDENCE_DECISION',\n      pending_intent: null,\n      allowed_actions: ['REQUEST_REVISION', 'RERUN_SIMULATION', 'CANCEL'],\n      pending_evidence: pendingEvidence,\n      normalized_request: context || {},\n      conversation: [\n        { role: 'assistant', content: payload.message || payload.user_message || 'Evidence is ready and deployment is not currently allowed.' }\n      ]\n    }\n  }\n}];"
+      },
+      "id": "build-post-evidence-decision-session-state",
+      "name": "Build Post-Evidence Decision Session State",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4940,
+        -260
+      ],
+      "notes": "Saves non-terminal evidence-failure state so REQUEST_REVISION/RERUN_SIMULATION/CANCEL continue the same run context."
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://trt-api:8000/chat/session/{{$json.session_id}}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.session_save_payload }}"
+      },
+      "id": "save-post-evidence-decision-session-state",
+      "name": "Save Post-Evidence Decision Session State",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5200,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prior = $('Build Post-Evidence Decision Session State').first().json;\nreturn [{ json: prior }];"
+      },
+      "id": "restore-post-evidence-summary-after-session-save",
+      "name": "Restore Post-Evidence Summary After Session Save",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5460,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "non-deploy-decision-is-terminal",
+              "leftValue": "={{ ['DEPLOYMENT_CANCELLED'].includes($json.status) }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "non-deploy-decision-is-terminal",
+      "name": "Non-Deploy Decision Is Terminal?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2180,
+        -1060
+      ]
     }
   ],
   "connections": {
@@ -1863,7 +1975,7 @@
       "main": [
         [
           {
-            "node": "Build Canonical Clarification Payload",
+            "node": "Build Required Fields Clarification Payload",
             "type": "main",
             "index": 0
           }
@@ -2238,7 +2350,7 @@
       "main": [
         [
           {
-            "node": "Deployment Decision Pending?",
+            "node": "Merge Pending Required Fields",
             "type": "main",
             "index": 0
           }
@@ -2387,7 +2499,7 @@
       "main": [
         [
           {
-            "node": "Clear Non-Deploy Session State",
+            "node": "Non-Deploy Decision Is Terminal?",
             "type": "main",
             "index": 0
           }
@@ -2427,7 +2539,7 @@
         ],
         [
           {
-            "node": "Chat Final Summary",
+            "node": "Build Post-Evidence Decision Session State",
             "type": "main",
             "index": 0
           }
@@ -2548,6 +2660,79 @@
         [
           {
             "node": "Return Deployment Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Required Fields Clarification Payload": {
+      "main": [
+        [
+          {
+            "node": "Save Required Field Session State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Pending Required Fields": {
+      "main": [
+        [
+          {
+            "node": "Deployment Decision Pending?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Post-Evidence Decision Session State": {
+      "main": [
+        [
+          {
+            "node": "Save Post-Evidence Decision Session State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Post-Evidence Decision Session State": {
+      "main": [
+        [
+          {
+            "node": "Restore Post-Evidence Summary After Session Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Post-Evidence Summary After Session Save": {
+      "main": [
+        [
+          {
+            "node": "Chat Final Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Non-Deploy Decision Is Terminal?": {
+      "main": [
+        [
+          {
+            "node": "Clear Non-Deploy Session State",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Chat Response",
             "type": "main",
             "index": 0
           }

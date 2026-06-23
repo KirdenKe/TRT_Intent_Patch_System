@@ -531,6 +531,7 @@ def test_simulated_deployment_updates_state_and_digital_twin_defaults(tmp_path: 
     defaults = json.loads((tmp_path / "data" / "digital_twin" / "default_simulation_config.json").read_text())
     assert defaults["run_id"] == "sim_deploy"
     assert defaults["simulation_config"]["add_reference_number"] == 5
+    assert defaults["operator_facing"]["simulated_tooling_count"] == 5
 
 
 def test_simulated_deployment_rejects_failed_evidence(tmp_path: Path) -> None:

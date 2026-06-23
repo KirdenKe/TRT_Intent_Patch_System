@@ -1,0 +1,85 @@
+{
+  "audit_id": "audit-3866f1ea-5493-4b1d-8a20-d093f243c874",
+  "base_version": "v59",
+  "candidate_patch": {
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "base_version": "v59",
+    "intent_text": "i want to set all line's throughput/hr back to 60",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_1/kpi/min_throughput_per_hour",
+        "value": 60
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/kpi/min_throughput_per_hour",
+        "value": 60
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/kpi/min_throughput_per_hour",
+        "value": 60
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/kpi/min_throughput_per_hour",
+        "value": 60
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "patch_46dff800-0b9d-4017-be48-797d49faf6a6",
+    "reason": "test for milestone 11.5",
+    "request_types": [
+      "KPI_LIMIT_UPDATE"
+    ],
+    "simulation_config_updates": null,
+    "status": "REVIEWED",
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [
+      "/lines/line_1/kpi/min_throughput_per_hour",
+      "/lines/line_2/kpi/min_throughput_per_hour",
+      "/lines/line_3/kpi/min_throughput_per_hour",
+      "/lines/line_4/kpi/min_throughput_per_hour"
+    ],
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "intent_text": "i want to set all line's throughput/hr back to 60",
+    "reason": "test for milestone 11.5"
+  },
+  "created_at_utc": "2026-06-22T16:53:35.459033Z",
+  "current_trt_path": null,
+  "operator_decision": {
+    "comment": "APPROVE: test",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-06-22T16:53:35.612624Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch_46dff800-0b9d-4017-be48-797d49faf6a6",
+  "previous_trt_version": "v59",
+  "release_id": "rel_45b4791f-d077-43ab-bc59-5eeac3fc5b6f",
+  "status": "NEEDS_REVISION",
+  "trt_id": "trt-demo",
+  "trt_version": "v59",
+  "updated_at_utc": "2026-06-22T16:53:35.612624Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": false,
+    "semantic": true
+  },
+  "version_path": null
+}

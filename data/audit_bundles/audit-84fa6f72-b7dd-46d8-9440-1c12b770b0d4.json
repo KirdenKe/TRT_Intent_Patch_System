@@ -1,0 +1,98 @@
+{
+  "audit_id": "audit-84fa6f72-b7dd-46d8-9440-1c12b770b0d4",
+  "intent_text": "i want to adjust the throughput/hr for all production lines to at least 80; set the tooling picking target for production lines 2 and 4 to needle holder; and adjust the tooling picking order for production lines 1 and 3 to prioritize picking tooling other than suction cannula.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [
+          "NEEDLE_HOLDER"
+        ],
+        "ordered_tool_ids": [],
+        "policy": "EXPLICIT_TYPE_ORDER",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/min_throughput_per_hour",
+      "value": 80
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [
+          "NEEDLE_HOLDER"
+        ],
+        "ordered_tool_ids": [],
+        "policy": "EXPLICIT_TYPE_ORDER",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/kpi/min_throughput_per_hour",
+      "value": 80
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [
+          "NEEDLE_HOLDER"
+        ],
+        "ordered_tool_ids": [],
+        "policy": "EXPLICIT_TYPE_ORDER",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/kpi/min_throughput_per_hour",
+      "value": 80
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [
+          "NEEDLE_HOLDER"
+        ],
+        "ordered_tool_ids": [],
+        "policy": "EXPLICIT_TYPE_ORDER",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/kpi/min_throughput_per_hour",
+      "value": 80
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch_dc4f3962-18b9-4834-8b7e-4162d15945bb",
+  "reason": "test for milestone 11.5",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-22T19:48:25.778235Z",
+  "trt_after_hash": "2adfc0d6484444e8dba1cf219b3d4bc086c899ebc78960b08fbd1c0aef696f60",
+  "trt_after_version": "v63",
+  "trt_before_hash": "5a581dcb58e5a94046bdac842508ee49ff1563a358438ee2831d9477ecdab3b4",
+  "trt_before_version": "v62",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

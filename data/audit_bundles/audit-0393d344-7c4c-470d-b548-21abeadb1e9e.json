@@ -1,0 +1,46 @@
+{
+  "audit_id": "audit-0393d344-7c4c-470d-b548-21abeadb1e9e",
+  "intent_text": "i want to set all line's throughput/hr back to 60",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/min_throughput_per_hour",
+      "value": 60
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/kpi/min_throughput_per_hour",
+      "value": 60
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/kpi/min_throughput_per_hour",
+      "value": 60
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/kpi/min_throughput_per_hour",
+      "value": 60
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch_46dff800-0b9d-4017-be48-797d49faf6a6",
+  "reason": "test for milestone 11.5",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-22T16:56:33.565179Z",
+  "trt_after_hash": "eb0b7059ff739dfa82ad8ada7bf424f9bee4f637f61a4d92c74d0b8d9537020e",
+  "trt_after_version": "v60",
+  "trt_before_hash": "0e607e383bc21d56c77f69813e3fcea91c6de31fc5db21b17bc71ec1e3d981fe",
+  "trt_before_version": "v59",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

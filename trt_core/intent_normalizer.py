@@ -16,6 +16,7 @@ REQUEST_TYPES = [
     "TASK_GOAL_UPDATE",
     "INSTRUMENT_SCOPE_UPDATE",
     "KPI_LIMIT_UPDATE",
+    "KPI_UPDATE",
     "PRIORITY_UPDATE",
     "MANIPULATOR_PRIORITY_UPDATE",
     "ABNORMAL_STRATEGY_UPDATE",
@@ -80,6 +81,7 @@ IMPLEMENTED_MANIPULATOR_PRIORITY_POLICIES = [
     "EXPLICIT_TOOL_ORDER",
     "EXPLICIT_TYPE_ORDER",
 ]
+NON_MATCHING_TYPES_FIRST = "NON_MATCHING_TYPES_FIRST"
 RESTRICTED_SIMULATION_SETTING_MESSAGES = {
     "layout_source": "layout_source is an infrastructure simulation setting and cannot be changed through normal operator requests.",
     "layout source": "layout_source is an infrastructure simulation setting and cannot be changed through normal operator requests.",
@@ -89,6 +91,99 @@ RESTRICTED_SIMULATION_SETTING_MESSAGES = {
     "seed db path": "seed_db_path is infrastructure configuration and cannot be changed through normal operator requests.",
     "reuse_precomputed_layouts": "reuse_precomputed_layouts is an internal layout-cache setting and cannot be changed through normal operator requests.",
     "reuse precomputed layouts": "reuse_precomputed_layouts is an internal layout-cache setting and cannot be changed through normal operator requests.",
+}
+
+SUB_REQUEST_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "request_type": {
+            "type": "string",
+            "enum": [
+                "TASK_GOAL_UPDATE",
+                "INSTRUMENT_SCOPE_UPDATE",
+                "KPI_LIMIT_UPDATE",
+                "KPI_UPDATE",
+                "PRIORITY_UPDATE",
+                "MANIPULATOR_PRIORITY_UPDATE",
+                "ABNORMAL_STRATEGY_UPDATE",
+                "TOOLING_POLICY_UPDATE",
+                "SIMULATION_CONFIG_UPDATE",
+            ],
+        },
+        "request_types": {"type": ["array", "null"], "items": {"type": "string", "enum": REQUEST_TYPES}},
+        "target_scope": {"type": ["string", "null"], "enum": ["SINGLE_LINE", "MULTIPLE_LINES", "ALL_LINES", None]},
+        "target_lines": {
+            "type": ["array", "null"],
+            "items": {"type": "string", "enum": ["line_1", "line_2", "line_3", "line_4"]},
+        },
+        "line_id": {"type": ["string", "null"], "enum": ["line_1", "line_2", "line_3", "line_4", None]},
+        "goal": {
+            "type": ["string", "null"],
+            "enum": ["ROUTINE_CLASSIFICATION", "TRAUMA_SET_PRIORITY", "BACKLOG_CLEARING", None],
+        },
+        "priority": {"type": ["integer", "null"], "minimum": 1, "maximum": 5},
+        "kpi_updates": {
+            "type": ["object", "null"],
+            "properties": {
+                "deadline_minutes": {"type": ["integer", "null"]},
+                "max_downtime_seconds": {"type": ["integer", "null"]},
+                "min_throughput_per_hour": {"type": ["integer", "null"]},
+            },
+            "additionalProperties": False,
+        },
+        "selected_normalized_types": {"type": ["array", "null"], "items": {"type": "string"}},
+        "target_normalized_types": {"type": ["array", "null"], "items": {"type": "string"}},
+        "selected_tool_ids": {"type": ["array", "null"], "items": {"type": "string", "enum": SUPPORTED_TOOL_IDS}},
+        "excluded_tool_ids": {"type": ["array", "null"], "items": {"type": "string", "enum": SUPPORTED_TOOL_IDS}},
+        "required_tool_ids": {"type": ["array", "null"], "items": {"type": "string", "enum": SUPPORTED_TOOL_IDS}},
+        "target_set_id": {"type": ["string", "null"]},
+        "tooling_target": {"type": ["object", "null"]},
+        "tooling_policy": {
+            "type": ["object", "null"],
+            "properties": {"required_scope": {"type": "string", "enum": TOOLING_REQUIRED_SCOPES}},
+            "additionalProperties": False,
+        },
+        "manipulator_priority": {
+            "type": ["object", "null"],
+            "properties": {
+                "policy": {"type": "string", "enum": IMPLEMENTED_MANIPULATOR_PRIORITY_POLICIES},
+                "prioritize": {"type": ["string", "null"], "enum": [NON_MATCHING_TYPES_FIRST, None]},
+                "reference_normalized_types": {"type": "array", "items": {"type": "string"}},
+                "ordered_tool_ids": {"type": "array", "items": {"type": "string", "enum": SUPPORTED_TOOL_IDS}},
+                "ordered_normalized_types": {"type": "array", "items": {"type": "string"}},
+                "tie_breaker": {"type": "string", "enum": ["FCFS"]},
+                "enabled": {"type": "boolean"},
+            },
+            "additionalProperties": False,
+        },
+        "simulation_config_updates": {
+            "type": ["object", "null"],
+            "properties": {
+                "headless": {"type": ["boolean", "null"]},
+                "global_seed": {"type": ["integer", "null"], "minimum": 0},
+                "reuse_verified_seed": {"type": ["boolean", "null"]},
+                "add_reference_number": {"type": ["integer", "null"], "minimum": 0},
+                "allowed_overlap_ratio": {"type": ["number", "null"], "minimum": 0},
+                "chosen_intervention_mode": {
+                    "type": ["string", "null"],
+                    "enum": ["continue-until-arrival", "immediate-stop", None],
+                },
+                "travel_time": {"type": ["number", "null"], "minimum": 0},
+                "fix_duration": {"type": ["number", "null"], "minimum": 0},
+                "resume_delay": {"type": ["number", "null"], "minimum": 0},
+                "episode_success_requires_reset_cycles": {"type": ["integer", "null"], "minimum": 1},
+            },
+            "additionalProperties": False,
+        },
+        "abnormal_strategy": {
+            "type": ["string", "null"],
+            "enum": ["STOP_LINE", "CONTINUE_FEASIBLE_TASKS", "ASK_OPERATOR", None],
+        },
+        "operator_text": {"type": ["string", "null"]},
+        "clarification_questions": {"type": ["array", "null"], "items": {"type": "string"}},
+        "unsupported_terms": {"type": ["array", "null"], "items": {"type": "string"}},
+    },
+    "additionalProperties": False,
 }
 
 
@@ -140,6 +235,11 @@ LLM_EXTRACTED_FIELDS_SCHEMA: dict[str, Any] = {
             "type": ["object", "null"],
             "properties": {
                 "policy": {"type": "string", "enum": IMPLEMENTED_MANIPULATOR_PRIORITY_POLICIES},
+                "prioritize": {"type": ["string", "null"], "enum": [NON_MATCHING_TYPES_FIRST, None]},
+                "reference_normalized_types": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
                 "ordered_tool_ids": {
                     "type": "array",
                     "items": {"type": "string", "enum": SUPPORTED_TOOL_IDS},
@@ -203,6 +303,7 @@ LLM_EXTRACTED_FIELDS_SCHEMA: dict[str, Any] = {
             "type": "array",
             "items": {"type": "string", "enum": REQUEST_TYPES},
         },
+        "sub_requests": {"type": ["array", "null"], "items": SUB_REQUEST_SCHEMA},
     },
     "required": [
         "action",
@@ -250,6 +351,7 @@ DOMAIN_CANDIDATE_SCHEMA: dict[str, Any] = {
             "items": {"type": "string", "enum": ["line_1", "line_2", "line_3", "line_4"]},
         },
         "request_types": {"type": ["array", "null"], "items": {"type": "string", "enum": REQUEST_TYPES}},
+        "sub_requests": {"type": ["array", "null"], "items": SUB_REQUEST_SCHEMA},
         "goal": {
             "type": ["string", "null"],
             "enum": ["ROUTINE_CLASSIFICATION", "TRAUMA_SET_PRIORITY", "BACKLOG_CLEARING", None],
@@ -288,6 +390,11 @@ DOMAIN_CANDIDATE_SCHEMA: dict[str, Any] = {
             "type": ["object", "null"],
             "properties": {
                 "policy": {"type": "string", "enum": IMPLEMENTED_MANIPULATOR_PRIORITY_POLICIES},
+                "prioritize": {"type": ["string", "null"], "enum": [NON_MATCHING_TYPES_FIRST, None]},
+                "reference_normalized_types": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
                 "ordered_tool_ids": {
                     "type": "array",
                     "items": {"type": "string", "enum": SUPPORTED_TOOL_IDS},
@@ -429,10 +536,15 @@ def schema_for_current_trt(schema: dict[str, Any], current_trt: dict[str, Any]) 
         ordered_types = priority_props.get("ordered_normalized_types") or {}
         if isinstance(ordered_types.get("items"), dict):
             ordered_types["items"]["enum"] = normalized_types
+        reference_types = priority_props.get("reference_normalized_types") or {}
+        if isinstance(reference_types.get("items"), dict):
+            reference_types["items"]["enum"] = normalized_types
     return scoped
 
 
 def normalize_domain_candidate(candidate: dict[str, Any], current_trt: dict[str, Any]) -> dict[str, Any]:
+    if candidate.get("sub_requests"):
+        return _normalize_composite_domain_candidate(candidate, current_trt)
     candidate = _coerce_domain_candidate_v2(candidate, current_trt)
     logger.info("normalized_candidate=%r", candidate)
     logger.info("normalized_candidate.request_types=%r", candidate.get("request_types"))
@@ -486,7 +598,7 @@ def normalize_domain_candidate(candidate: dict[str, Any], current_trt: dict[str,
                 {
                     "op": "replace" if "manipulator_priority" in current_trt["lines"][line_id] else "add",
                     "path": f"/lines/{line_id}/manipulator_priority",
-                    "value": _normalize_manipulator_priority(candidate["manipulator_priority"]),
+                    "value": _normalize_manipulator_priority(candidate["manipulator_priority"], current_trt),
                 }
             )
         tooling_policy = candidate.get("tooling_policy")
@@ -526,6 +638,14 @@ def normalize_domain_candidate(candidate: dict[str, Any], current_trt: dict[str,
                     "op": "replace" if "selected_tool_ids" in current_trt["lines"][line_id] else "add",
                     "path": f"/lines/{line_id}/selected_tool_ids",
                     "value": candidate["selected_tool_ids"],
+                }
+            )
+        if candidate.get("selected_normalized_types") is not None:
+            operations.append(
+                {
+                    "op": "replace" if "selected_normalized_types" in current_trt["lines"][line_id] else "add",
+                    "path": f"/lines/{line_id}/selected_normalized_types",
+                    "value": candidate["selected_normalized_types"],
                 }
             )
         if candidate.get("excluded_tool_ids") is not None:
@@ -608,9 +728,140 @@ def normalize_domain_candidate(candidate: dict[str, Any], current_trt: dict[str,
     }
     if simulation_config_updates:
         patch["simulation_config_updates"] = simulation_config_updates
+    if candidate.get("kpi_updates"):
+        patch["message"] = _kpi_update_review_message(candidate, line_ids)
     if candidate.get("manipulator_priority"):
         patch["message"] = _manipulator_priority_review_message(candidate)
     return patch
+
+
+def _normalize_composite_domain_candidate(candidate: dict[str, Any], current_trt: dict[str, Any]) -> dict[str, Any]:
+    sub_requests = candidate.get("sub_requests")
+    if not isinstance(sub_requests, list) or not sub_requests:
+        raise ValueError("Composite intent requires at least one sub_request.")
+
+    operations: list[dict[str, Any]] = []
+    request_types: list[str] = []
+    affected_lines: list[str] = []
+    simulation_config_updates: dict[str, Any] = {}
+    normalized_sub_requests: list[dict[str, Any]] = []
+
+    for index, sub_request in enumerate(sub_requests, start=1):
+        if not isinstance(sub_request, dict):
+            raise ValueError(f"sub_requests[{index}] must be an object.")
+        sub_candidate = _candidate_from_sub_request(candidate, sub_request, index)
+        sub_patch = normalize_domain_candidate(sub_candidate, current_trt)
+        operations.extend(sub_patch.get("operations") or [])
+        request_types = _dedupe_values([*request_types, *(sub_patch.get("request_types") or [])])
+        affected_lines = _dedupe_values([*affected_lines, *(sub_patch.get("affected_lines") or [])])
+        if sub_patch.get("simulation_config_updates"):
+            simulation_config_updates.update(sub_patch["simulation_config_updates"])
+        normalized_sub_requests.append(
+            {
+                **sub_request,
+                "request_types": sub_patch.get("request_types") or sub_candidate.get("request_types") or [],
+                "affected_lines": sub_patch.get("affected_lines") or [],
+                "operation_paths": [operation.get("path") for operation in sub_patch.get("operations") or []],
+                "simulation_config_updates": sub_patch.get("simulation_config_updates") or sub_candidate.get("simulation_config_updates") or {},
+            }
+        )
+
+    if not operations and not simulation_config_updates:
+        raise ValueError("Composite intent did not produce any patch operations or simulation config updates.")
+
+    patch: dict[str, Any] = {
+        "patch_id": candidate["patch_id"],
+        "trt_id": candidate["trt_id"],
+        "base_version": candidate["base_version"],
+        "operator_id": candidate["operator_id"],
+        "intent_text": candidate["intent_text"],
+        "reason": candidate["reason"],
+        "operations": operations,
+        "request_types": _dedupe_values([*(candidate.get("request_types") or []), *request_types]),
+        "affected_lines": affected_lines,
+        "sub_requests": normalized_sub_requests,
+        "status": "REVIEWED",
+        "message": _composite_review_message(normalized_sub_requests),
+    }
+    if simulation_config_updates:
+        patch["simulation_config_updates"] = simulation_config_updates
+    return patch
+
+
+def _candidate_from_sub_request(candidate: dict[str, Any], sub_request: dict[str, Any], index: int) -> dict[str, Any]:
+    request_type = sub_request.get("request_type")
+    request_types = sub_request.get("request_types") or ([request_type] if request_type else [])
+    tooling_target = sub_request.get("tooling_target") or {}
+    selected_normalized_types = (
+        sub_request.get("selected_normalized_types")
+        or sub_request.get("target_normalized_types")
+        or tooling_target.get("selected_normalized_types")
+        or tooling_target.get("target_normalized_types")
+    )
+    selected_tool_ids = sub_request.get("selected_tool_ids") or tooling_target.get("selected_tool_ids")
+    target_set_id = sub_request.get("target_set_id") or tooling_target.get("target_set_id")
+    tooling_policy = sub_request.get("tooling_policy") or tooling_target.get("tooling_policy")
+    if selected_normalized_types or selected_tool_ids:
+        request_types = _dedupe_values([*request_types, "INSTRUMENT_SCOPE_UPDATE", "TOOLING_POLICY_UPDATE"])
+        tooling_policy = tooling_policy or {"required_scope": "SELECTED_TOOLING"}
+
+    sub_candidate = {
+        "patch_id": f"{candidate['patch_id']}_sub_{index}",
+        "trt_id": candidate["trt_id"],
+        "base_version": candidate["base_version"],
+        "operator_id": candidate["operator_id"],
+        "intent_text": sub_request.get("operator_text") or candidate["intent_text"],
+        "reason": candidate["reason"],
+        "line_id": sub_request.get("line_id"),
+        "action": "PROPOSE_PATCH",
+        "target_scope": sub_request.get("target_scope"),
+        "target_lines": sub_request.get("target_lines"),
+        "request_types": request_types,
+        "goal": sub_request.get("goal"),
+        "priority": sub_request.get("priority"),
+        "allowed_instruments": sub_request.get("allowed_instruments"),
+        "excluded_instruments": sub_request.get("excluded_instruments"),
+        "selected_normalized_types": selected_normalized_types,
+        "excluded_normalized_types": sub_request.get("excluded_normalized_types"),
+        "selected_tool_ids": selected_tool_ids,
+        "excluded_tool_ids": sub_request.get("excluded_tool_ids"),
+        "required_tool_ids": sub_request.get("required_tool_ids"),
+        "target_set_id": target_set_id,
+        "manipulator_priority": sub_request.get("manipulator_priority"),
+        "simulation_config_updates": sub_request.get("simulation_config_updates"),
+        "kpi_updates": sub_request.get("kpi_updates") or {},
+        "tooling_policy": tooling_policy,
+        "abnormal_strategy": sub_request.get("abnormal_strategy"),
+        "clarification_questions": sub_request.get("clarification_questions") or [],
+        "unsupported_terms": sub_request.get("unsupported_terms") or [],
+        "detected_request_types": request_types,
+        "status": "REVIEWED",
+    }
+    return sub_candidate
+
+
+def _composite_review_message(sub_requests: list[dict[str, Any]]) -> str:
+    return (
+        "The candidate patch passed validation. It will apply the requested composite changes across "
+        f"{len(sub_requests)} sub-requests. Please approve, reject, or request revision."
+    )
+
+
+def _kpi_update_review_message(candidate: dict[str, Any], line_ids: list[str]) -> str:
+    updates = candidate.get("kpi_updates") or {}
+    if set(updates) == {"min_throughput_per_hour"}:
+        value = updates.get("min_throughput_per_hour")
+        if candidate.get("target_scope") == "ALL_LINES":
+            target_phrase = "all production lines"
+        elif len(line_ids) == 1:
+            target_phrase = line_ids[0].replace("_", " ")
+        else:
+            target_phrase = ", ".join(line_ids)
+        return (
+            "The candidate patch passed validation. It will set the minimum throughput target for "
+            f"{target_phrase} to {value} per hour. Please approve, reject, or request revision."
+        )
+    return "The candidate KPI patch passed validation. Please approve, reject, or request revision."
 
 
 def _target_lines(candidate: dict[str, Any], current_trt: dict[str, Any]) -> list[str]:
@@ -719,8 +970,11 @@ def _coerce_domain_candidate_v2(candidate: dict[str, Any], current_trt: dict[str
         coerced["request_types"] = list(coerced.get("detected_request_types") or [])
     if coerced.get("request_types") is None:
         coerced["request_types"] = _infer_request_types(coerced)
+    coerced["request_types"] = _normalize_request_type_aliases(coerced.get("request_types") or [])
     if coerced.get("detected_request_types") is None:
         coerced["detected_request_types"] = list(coerced.get("request_types") or [])
+    else:
+        coerced["detected_request_types"] = _normalize_request_type_aliases(coerced.get("detected_request_types") or [])
     coerced["clarification_questions"] = [
         question
         for question in (coerced.get("clarification_questions") or [])
@@ -772,7 +1026,7 @@ def _coerce_manipulator_priority_intent(candidate: dict[str, Any], current_trt: 
         priority["ordered_tool_ids"] = ordered_tool_ids
 
     ordered_types = _ordered_normalized_types_from_text(intent_text, current_trt)
-    if ordered_types and not ordered_tool_ids:
+    if ordered_types and not ordered_tool_ids and priority.get("prioritize") != NON_MATCHING_TYPES_FIRST:
         priority["policy"] = "EXPLICIT_TYPE_ORDER"
         priority["ordered_normalized_types"] = ordered_types
 
@@ -787,7 +1041,7 @@ def _coerce_manipulator_priority_intent(candidate: dict[str, Any], current_trt: 
         return
 
     candidate["goal"] = None
-    priority = _normalize_manipulator_priority(priority)
+    priority = _normalize_manipulator_priority(priority, current_trt)
     candidate["manipulator_priority"] = priority
     candidate["request_types"] = _dedupe_values([*(candidate.get("request_types") or []), "MANIPULATOR_PRIORITY_UPDATE"])
     candidate["detected_request_types"] = _dedupe_values(
@@ -887,20 +1141,33 @@ def _ordered_normalized_types_from_text(intent_text: str, current_trt: dict[str,
     return _dedupe_values(normalized_type for _, normalized_type in sorted(matches))
 
 
-def _normalize_manipulator_priority(priority: dict[str, Any]) -> dict[str, Any]:
+def _normalize_manipulator_priority(priority: dict[str, Any], current_trt: dict[str, Any] | None = None) -> dict[str, Any]:
     policy = priority.get("policy") or "FCFS"
-    return {
+    reference_types = _dedupe_values(priority.get("reference_normalized_types") or [])
+    prioritize = priority.get("prioritize")
+    ordered_normalized_types = _dedupe_values(priority.get("ordered_normalized_types") or [])
+    if prioritize == NON_MATCHING_TYPES_FIRST:
+        reference_types = _expand_reference_normalized_types(reference_types, current_trt or {})
+        policy = "EXPLICIT_TYPE_ORDER"
+        if not ordered_normalized_types:
+            ordered_normalized_types = _non_matching_normalized_types(reference_types, current_trt or {})
+    normalized = {
         "policy": policy,
         "ordered_tool_ids": _dedupe_values(priority.get("ordered_tool_ids") or []),
-        "ordered_normalized_types": _dedupe_values(priority.get("ordered_normalized_types") or []),
+        "ordered_normalized_types": ordered_normalized_types,
         "tie_breaker": priority.get("tie_breaker") or "FCFS",
         "enabled": bool(priority.get("enabled", True)),
     }
+    if prioritize:
+        normalized["prioritize"] = prioritize
+    if reference_types:
+        normalized["reference_normalized_types"] = reference_types
+    return normalized
 
 
 def _manipulator_priority_reasons(priority: dict[str, Any], current_trt: dict[str, Any]) -> list[str]:
     reasons: list[str] = []
-    normalized = _normalize_manipulator_priority(priority)
+    normalized = _normalize_manipulator_priority(priority, current_trt)
     policy = normalized["policy"]
     if policy not in IMPLEMENTED_MANIPULATOR_PRIORITY_POLICIES:
         reasons.append(f"manipulator_priority.policy is not implemented: {policy}")
@@ -917,6 +1184,22 @@ def _manipulator_priority_reasons(priority: dict[str, Any], current_trt: dict[st
         if valid_types and tool_type not in valid_types:
             reasons.append(f"ordered_normalized_type not found in current TRT: {tool_type}")
     return reasons
+
+
+def _expand_reference_normalized_types(reference_types: list[str], current_trt: dict[str, Any]) -> list[str]:
+    normalized_types = set(build_tool_vocabulary(current_trt)["normalized_types"])
+    expanded: list[str] = []
+    for tool_type in reference_types:
+        if tool_type in normalized_types:
+            expanded.append(tool_type)
+        if tool_type == "FORCEPS":
+            expanded.extend(sorted(tool for tool in normalized_types if "FORCEPS" in tool))
+    return _dedupe_values(expanded)
+
+
+def _non_matching_normalized_types(reference_types: list[str], current_trt: dict[str, Any]) -> list[str]:
+    references = set(reference_types)
+    return [tool_type for tool_type in build_tool_vocabulary(current_trt)["normalized_types"] if tool_type not in references]
 
 
 def _manipulator_priority_review_message(candidate: dict[str, Any]) -> str:
@@ -1337,6 +1620,15 @@ def _infer_request_types(candidate: dict[str, Any]) -> list[str]:
     if candidate.get("target_scope") in {"MULTIPLE_LINES", "ALL_LINES"}:
         request_types.append("MULTI_LINE_POLICY_UPDATE")
     return list(dict.fromkeys(request_types))
+
+
+def _normalize_request_type_aliases(request_types: Any) -> list[str]:
+    normalized: list[str] = []
+    for request_type in request_types or []:
+        value = "KPI_LIMIT_UPDATE" if request_type == "KPI_UPDATE" else request_type
+        if value not in normalized:
+            normalized.append(value)
+    return normalized
 
 
 def _dedupe_reasons(reasons: Any) -> list[str]:

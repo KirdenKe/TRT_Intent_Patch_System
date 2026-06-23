@@ -69,6 +69,28 @@ def test_clear_chat_session_returns_idle(tmp_path):
     assert loaded["pending_intent"] is None
 
 
+def test_file_backed_chat_session_accepts_post_evidence_decision_state(tmp_path):
+    repository = FakeRepository(root=tmp_path)
+    saved = save_chat_session(
+        "post-evidence-session",
+        {
+            "state": "WAITING_FOR_POST_EVIDENCE_DECISION",
+            "allowed_actions": ["REQUEST_REVISION", "RERUN_SIMULATION", "CANCEL"],
+            "pending_intent": None,
+            "pending_evidence": {
+                "run_id": "sim_test",
+                "scenario_spec_id": "scn_test",
+            },
+        },
+        repository,
+    )
+    loaded = load_chat_session("post-evidence-session", repository)
+
+    assert saved["state"] == "WAITING_FOR_POST_EVIDENCE_DECISION"
+    assert loaded["allowed_actions"] == ["REQUEST_REVISION", "RERUN_SIMULATION", "CANCEL"]
+    assert loaded["pending_evidence"]["run_id"] == "sim_test"
+
+
 def priority_pending() -> dict:
     return {
         "original_intent_text": (

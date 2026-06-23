@@ -27,10 +27,22 @@ from scenario_generation.template_registry import get_template
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = PROJECT_ROOT / "schemas" / "scenario_spec.schema.json"
 ISAAC_SUPPORTED_STRATEGIES = {"STOP_LINE", "CONTINUE_FEASIBLE_TASKS"}
+DEFAULT_SIMULATION_CONFIG_PATH = PROJECT_ROOT / "data" / "digital_twin" / "default_simulation_config.json"
 
 
 def omit_none_values(value: dict[str, Any]) -> dict[str, Any]:
     return {key: item for key, item in value.items() if item is not None}
+
+
+def _load_deployed_simulation_defaults() -> dict[str, Any]:
+    if not DEFAULT_SIMULATION_CONFIG_PATH.exists():
+        return {}
+    try:
+        payload = json.loads(DEFAULT_SIMULATION_CONFIG_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    config = payload.get("simulation_config")
+    return deepcopy(config) if isinstance(config, dict) else {}
 
 
 def generate_scenario_spec(
@@ -277,6 +289,9 @@ def _build_simulation_config(
     override: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     config = deepcopy(template["simulation_config"])
+    deployed_defaults = _load_deployed_simulation_defaults()
+    if deployed_defaults:
+        config.update({key: value for key, value in deployed_defaults.items() if value is not None})
     if override:
         config.update({key: value for key, value in override.items() if value is not None})
     simulation_lines = simulation_scope.get("lines") or []
@@ -293,7 +308,7 @@ def _build_simulation_config(
     if override and override.get("add_reference_number") is not None:
         config["add_reference_number"] = int(override["add_reference_number"])
     else:
-        config["add_reference_number"] = len(trt.get("tool_catalog") or {}) or int(config.get("add_reference_number") or 27)
+        config["add_reference_number"] = int(config.get("add_reference_number") or len(trt.get("tool_catalog") or {}) or 27)
     config["reuse_verified_seed"] = config.get("global_seed") is None and bool(config.get("reuse_verified_seed", True))
     config.pop("reuse_precomputed_layouts", None)
     config.pop("seed_db_path", None)
@@ -421,6 +436,7 @@ def _build_line_policies(trt: dict[str, Any], plan: dict[str, Any], required_lin
             "goal": line["goal"],
             "allowed_instruments": list(line["allowed_instruments"]),
             "excluded_instruments": list(line["excluded_instruments"]),
+            "selected_normalized_types": list(line.get("selected_normalized_types", [])),
             "selected_tool_ids": list(line.get("selected_tool_ids", [])),
             "excluded_tool_ids": list(line.get("excluded_tool_ids", [])),
             "required_tool_ids": list(line.get("required_tool_ids", [])),

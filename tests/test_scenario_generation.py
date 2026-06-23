@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 from jsonschema import Draft202012Validator
 
 from scenario_generation.errors import OperatorResolutionRequiredError, ScenarioGenerationError, TemplateRegistryError
+import scenario_generation.generator as generator_module
 from scenario_generation.generator import generate_scenario_spec
 from scenario_generation.models import ScenarioGenerationRequest
 from scenario_generation.template_registry import normalize_template_registry, validate_template_registry
@@ -71,7 +73,8 @@ def test_scenario_spec_includes_workspace_contract(fixture_loader):
     assert contract["expected_run_artifact_path"].startswith("outputs/run_artifacts/")
 
 
-def test_scenario_spec_uses_template_registry_defaults(fixture_loader):
+def test_scenario_spec_uses_template_registry_defaults(fixture_loader, monkeypatch, tmp_path):
+    monkeypatch.setattr(generator_module, "DEFAULT_SIMULATION_CONFIG_PATH", tmp_path / "missing-defaults.json")
     spec = generate_scenario_spec(make_request(fixture_loader))
 
     assert spec["scene_template"] == "pick_up_example.py"
@@ -91,6 +94,29 @@ def test_scenario_spec_uses_template_registry_defaults(fixture_loader):
     assert spec["simulation_config"]["resume_delay"] == 0.5
     assert spec["operator_model"] == {"travel_time": 5.0, "fix_duration": 8.0, "resume_delay": 0.5}
     assert spec["assertions"] == {"use_existing_validation_module": True}
+
+
+def test_scenario_spec_uses_deployed_digital_twin_defaults_before_template_fallback(
+    fixture_loader,
+    monkeypatch,
+    tmp_path,
+):
+    defaults_path = tmp_path / "default_simulation_config.json"
+    defaults_path.write_text(
+        json.dumps({"simulation_config": {"add_reference_number": 5, "layout_source": "auto"}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(generator_module, "DEFAULT_SIMULATION_CONFIG_PATH", defaults_path)
+
+    spec = generate_scenario_spec(make_request(fixture_loader))
+    assert spec["simulation_config"]["add_reference_number"] == 5
+
+    override_request = replace(
+        make_request(fixture_loader),
+        simulation_config_override={"add_reference_number": 6},
+    )
+    override_spec = generate_scenario_spec(override_request)
+    assert override_spec["simulation_config"]["add_reference_number"] == 6
 
 
 def test_template_registry_normalizes_null_optional_isaac_args(fixture_loader):

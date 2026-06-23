@@ -1,5 +1,5 @@
 {
-  "audit_id": "audit-84fa6f72-b7dd-46d8-9440-1c12b770b0d4",
+  "audit_id": "audit-1ecaf157-1139-4de7-b4a4-8df6bb829a45",
   "experiment_id": "ent_surgical_tooling_sorting_demo",
   "lines": {
     "line_1": {
@@ -26,12 +26,12 @@
       "kpi": {
         "deadline_minutes": null,
         "max_downtime_seconds": null,
-        "min_throughput_per_hour": 80
+        "min_throughput_per_hour": 60
       },
       "manipulator_priority": {
         "enabled": true,
         "ordered_normalized_types": [
-          "NEEDLE_HOLDER"
+          "FORCEPS"
         ],
         "ordered_tool_ids": [],
         "policy": "EXPLICIT_TYPE_ORDER",
@@ -69,12 +69,12 @@
       "kpi": {
         "deadline_minutes": null,
         "max_downtime_seconds": null,
-        "min_throughput_per_hour": 80
+        "min_throughput_per_hour": 60
       },
       "manipulator_priority": {
         "enabled": true,
         "ordered_normalized_types": [
-          "NEEDLE_HOLDER"
+          "FORCEPS"
         ],
         "ordered_tool_ids": [],
         "policy": "EXPLICIT_TYPE_ORDER",
@@ -116,12 +116,12 @@
       "kpi": {
         "deadline_minutes": null,
         "max_downtime_seconds": null,
-        "min_throughput_per_hour": 80
+        "min_throughput_per_hour": 60
       },
       "manipulator_priority": {
         "enabled": true,
         "ordered_normalized_types": [
-          "NEEDLE_HOLDER"
+          "FORCEPS"
         ],
         "ordered_tool_ids": [],
         "policy": "EXPLICIT_TYPE_ORDER",
@@ -163,12 +163,12 @@
       "kpi": {
         "deadline_minutes": null,
         "max_downtime_seconds": null,
-        "min_throughput_per_hour": 80
+        "min_throughput_per_hour": 60
       },
       "manipulator_priority": {
         "enabled": true,
         "ordered_normalized_types": [
-          "NEEDLE_HOLDER"
+          "FORCEPS"
         ],
         "ordered_tool_ids": [],
         "policy": "EXPLICIT_TYPE_ORDER",
@@ -183,9 +183,9 @@
       }
     }
   },
-  "previous_version": "v62",
-  "release_id": "rel_f87d593e-9a94-46bf-a4ab-eba0a343e343",
-  "released_at": "2026-06-22T19:48:25.772260Z",
+  "previous_version": "v61",
+  "release_id": "rel_7b4e4978-fe73-4170-a6ca-abf6864efca0",
+  "released_at": "2026-06-22T17:41:05.323857Z",
   "tool_catalog": {
     "tool_01": {
       "belongs_to_ent_set": false,
@@ -468,5 +468,5 @@
     }
   },
   "trt_id": "trt-demo",
-  "version": "v63"
+  "version": "v62"
 }

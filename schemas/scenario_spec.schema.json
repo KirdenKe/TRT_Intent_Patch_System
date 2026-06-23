@@ -81,6 +81,11 @@
             "items": {"type": "string", "enum": ["SCISSORS", "FORCEPS", "CLAMPS", "RETRACTOR"]}
           },
           "priority": {"type": "integer", "minimum": 1, "maximum": 5},
+          "selected_normalized_types": {
+            "type": "array",
+            "items": {"type": "string"},
+            "uniqueItems": true
+          },
           "manipulator_priority": {
             "type": "object",
             "required": ["policy", "ordered_tool_ids", "ordered_normalized_types", "tie_breaker", "enabled"],
@@ -94,6 +99,12 @@
                 "uniqueItems": true
               },
               "ordered_normalized_types": {
+                "type": "array",
+                "items": {"type": "string"},
+                "uniqueItems": true
+              },
+              "prioritize": {"const": "NON_MATCHING_TYPES_FIRST"},
+              "reference_normalized_types": {
                 "type": "array",
                 "items": {"type": "string"},
                 "uniqueItems": true

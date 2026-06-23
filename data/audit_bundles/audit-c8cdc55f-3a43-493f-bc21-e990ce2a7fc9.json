@@ -1,0 +1,98 @@
+{
+  "audit_id": "audit-c8cdc55f-3a43-493f-bc21-e990ce2a7fc9",
+  "intent_text": "i want to adjust the throughput/hr for all production lines to at least 60; set the tooling picking target for production lines 2 and 4 to retractors; and adjust the tooling picking order for production lines 1 and 3 to prioritize picking tooling other than forceps.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [
+          "FORCEPS"
+        ],
+        "ordered_tool_ids": [],
+        "policy": "EXPLICIT_TYPE_ORDER",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/min_throughput_per_hour",
+      "value": 60
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [
+          "FORCEPS"
+        ],
+        "ordered_tool_ids": [],
+        "policy": "EXPLICIT_TYPE_ORDER",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/kpi/min_throughput_per_hour",
+      "value": 60
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [
+          "FORCEPS"
+        ],
+        "ordered_tool_ids": [],
+        "policy": "EXPLICIT_TYPE_ORDER",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/kpi/min_throughput_per_hour",
+      "value": 60
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [
+          "FORCEPS"
+        ],
+        "ordered_tool_ids": [],
+        "policy": "EXPLICIT_TYPE_ORDER",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/kpi/min_throughput_per_hour",
+      "value": 60
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch_bf34a922-a4bd-475b-8516-0d11fe410bdd",
+  "reason": "test for milestone 11.5",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-22T17:10:28.876082Z",
+  "trt_after_hash": "8d5818a045a3dd57ee668aa7a0b5f84c6096ffdd71047a47c11876a7002f1533",
+  "trt_after_version": "v61",
+  "trt_before_hash": "eb0b7059ff739dfa82ad8ada7bf424f9bee4f637f61a4d92c74d0b8d9537020e",
+  "trt_before_version": "v60",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

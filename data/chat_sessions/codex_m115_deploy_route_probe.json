@@ -1,0 +1,16 @@
+{
+  "conversation": [],
+  "normalized_request": {
+    "operator_id": "op_001"
+  },
+  "pending_deployment": {
+    "deployment_recommended": true,
+    "run_id": "sim_85d487c0-08ef-4389-b333-08b8fce99eaa",
+    "scenario_spec_id": "scn_616e284b-5b6c-49c7-9821-ab6dff1331aa",
+    "trt_id": "trt-demo",
+    "trt_version": "v59"
+  },
+  "session_id": "codex_m115_deploy_route_probe",
+  "state": "WAITING_FOR_DEPLOYMENT_DECISION",
+  "updated_at": "2026-06-22T16:59:21.579581Z"
+}

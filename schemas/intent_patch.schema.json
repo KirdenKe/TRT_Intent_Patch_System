@@ -36,6 +36,10 @@
       "type": "array",
       "items": { "type": "string" }
     },
+    "sub_requests": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
     "message": { "type": "string" },
     "simulation_config_updates": {
       "type": "object",
@@ -69,6 +73,14 @@
           "uniqueItems": true
         },
         "ordered_normalized_types": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "prioritize": {
+          "enum": ["NON_MATCHING_TYPES_FIRST"]
+        },
+        "reference_normalized_types": {
           "type": "array",
           "items": { "type": "string" },
           "uniqueItems": true

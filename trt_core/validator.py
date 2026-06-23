@@ -18,6 +18,7 @@ WRITABLE_LINE_FIELDS = {
     "allowed_instruments",
     "excluded_instruments",
     "selected_tool_ids",
+    "selected_normalized_types",
     "excluded_tool_ids",
     "required_tool_ids",
     "target_set_id",
@@ -35,6 +36,8 @@ WRITABLE_MANIPULATOR_PRIORITY_FIELDS = {
     "ordered_normalized_types",
     "tie_breaker",
     "enabled",
+    "prioritize",
+    "reference_normalized_types",
 }
 
 
@@ -111,7 +114,7 @@ def is_whitelisted_path(path: str) -> bool:
         return False
     if field in {"goal", "priority", "abnormal_strategy"}:
         return len(parts) == 3
-    if field in {"allowed_instruments", "excluded_instruments", "selected_tool_ids", "excluded_tool_ids", "required_tool_ids"}:
+    if field in {"allowed_instruments", "excluded_instruments", "selected_tool_ids", "selected_normalized_types", "excluded_tool_ids", "required_tool_ids"}:
         return len(parts) in {3, 4}
     if field == "target_set_id":
         return len(parts) == 3
@@ -120,7 +123,7 @@ def is_whitelisted_path(path: str) -> bool:
             return True
         if len(parts) == 4:
             return parts[3] in WRITABLE_MANIPULATOR_PRIORITY_FIELDS
-        if len(parts) == 5 and parts[3] in {"ordered_tool_ids", "ordered_normalized_types"}:
+        if len(parts) == 5 and parts[3] in {"ordered_tool_ids", "ordered_normalized_types", "reference_normalized_types"}:
             return True
         return False
     if field == "kpi":

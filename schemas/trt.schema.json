@@ -78,6 +78,11 @@
             "items": { "$ref": "#/$defs/tool_id" },
             "uniqueItems": true
           },
+          "selected_normalized_types": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/tool_type" },
+            "uniqueItems": true
+          },
           "excluded_tool_ids": {
             "type": "array",
             "items": { "$ref": "#/$defs/tool_id" },
@@ -225,6 +230,14 @@
           "uniqueItems": true
         },
         "ordered_normalized_types": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/tool_type" },
+          "uniqueItems": true
+        },
+        "prioritize": {
+          "enum": ["NON_MATCHING_TYPES_FIRST"]
+        },
+        "reference_normalized_types": {
           "type": "array",
           "items": { "$ref": "#/$defs/tool_type" },
           "uniqueItems": true

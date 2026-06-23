@@ -1,0 +1,17 @@
+{
+  "allowed_actions": [
+    "REQUEST_REVISION",
+    "RERUN_SIMULATION",
+    "CANCEL"
+  ],
+  "pending_evidence": {
+    "run_id": "sim_b5dfc33d-0d87-4df4-a4d9-e965dbfbd224",
+    "scenario_spec_id": "scn_1f07cf3a-2466-4c29-a372-de52a0f4263a",
+    "trt_id": "trt-demo",
+    "trt_version": "v60"
+  },
+  "pending_intent": null,
+  "session_id": "codex_post_evidence_route_probe",
+  "state": "WAITING_FOR_POST_EVIDENCE_DECISION",
+  "updated_at": "2026-06-22T17:33:15.986824Z"
+}

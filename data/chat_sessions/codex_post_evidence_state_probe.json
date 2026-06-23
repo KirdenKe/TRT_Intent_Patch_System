@@ -1,0 +1,654 @@
+{
+  "allowed_actions": [
+    "REQUEST_REVISION",
+    "RERUN_SIMULATION",
+    "CANCEL"
+  ],
+  "pending_evidence": {
+    "evidence_summary": {
+      "acknowledged_risks": [],
+      "deployment_allowed": false,
+      "deployment_recommended": false,
+      "failed_checks": [
+        {
+          "actual": "0 tools/hr",
+          "actual_value": 0.0,
+          "check_id": "throughput.min_per_hour",
+          "deployment_blocking": true,
+          "evidence_row_id": null,
+          "evidence_source": "line_kpis.throughput_per_hour",
+          "expected": "at least 60 tools/hr",
+          "expected_value": 60.0,
+          "line_id": "line_1",
+          "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+          "operator_impact": "Deployment may reduce line productivity.",
+          "operator_label": "Throughput target was missed",
+          "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+          "severity": "FAIL",
+          "technical_check_id": "throughput.min_per_hour",
+          "technical_explanation": "line_1 failed throughput because the simulated rate was 0 tools/hr, below the target of 60 tools/hr."
+        },
+        {
+          "actual": "0 tools/hr",
+          "actual_value": 0.0,
+          "check_id": "throughput.min_per_hour",
+          "deployment_blocking": true,
+          "evidence_row_id": null,
+          "evidence_source": "line_kpis.throughput_per_hour",
+          "expected": "at least 60 tools/hr",
+          "expected_value": 60.0,
+          "line_id": "line_2",
+          "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+          "operator_impact": "Deployment may reduce line productivity.",
+          "operator_label": "Throughput target was missed",
+          "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+          "severity": "FAIL",
+          "technical_check_id": "throughput.min_per_hour",
+          "technical_explanation": "line_2 failed throughput because the simulated rate was 0 tools/hr, below the target of 60 tools/hr."
+        },
+        {
+          "actual": "0 tools/hr",
+          "actual_value": 0.0,
+          "check_id": "throughput.min_per_hour",
+          "deployment_blocking": true,
+          "evidence_row_id": null,
+          "evidence_source": "line_kpis.throughput_per_hour",
+          "expected": "at least 60 tools/hr",
+          "expected_value": 60.0,
+          "line_id": "line_3",
+          "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+          "operator_impact": "Deployment may reduce line productivity.",
+          "operator_label": "Throughput target was missed",
+          "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+          "severity": "FAIL",
+          "technical_check_id": "throughput.min_per_hour",
+          "technical_explanation": "line_3 failed throughput because the simulated rate was 0 tools/hr, below the target of 60 tools/hr."
+        },
+        {
+          "actual": "0 tools/hr",
+          "actual_value": 0.0,
+          "check_id": "throughput.min_per_hour",
+          "deployment_blocking": true,
+          "evidence_row_id": null,
+          "evidence_source": "line_kpis.throughput_per_hour",
+          "expected": "at least 60 tools/hr",
+          "expected_value": 60.0,
+          "line_id": "line_4",
+          "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+          "operator_impact": "Deployment may reduce line productivity.",
+          "operator_label": "Throughput target was missed",
+          "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+          "severity": "FAIL",
+          "technical_check_id": "throughput.min_per_hour",
+          "technical_explanation": "line_4 failed throughput because the simulated rate was 0 tools/hr, below the target of 60 tools/hr."
+        }
+      ],
+      "failed_lines": [
+        "line_1",
+        "line_2",
+        "line_3",
+        "line_4"
+      ],
+      "failure_summary": {
+        "failure_details": {},
+        "failure_reason": "Run ended before completing the required number of successful reset cycles.",
+        "failure_stage": "FAILED",
+        "operator_explanation": "Simulation failed during FAILED. The recorded reason was: Run ended before completing the required number of successful reset cycles.",
+        "operator_next_action": "REQUEST_REVISION or RERUN_SIMULATION",
+        "partial_line_kpis_available": true,
+        "raw_error_message": "Run ended before completing the required number of successful reset cycles.",
+        "source": "output_db"
+      },
+      "inconclusive_lines": [],
+      "kpi_evaluation_scope": "FULL_ENVIRONMENT_SCOPE",
+      "kpi_table": [
+        {
+          "batch_gating": {
+            "reason": "No batch completion KPI rows were recorded for this line.",
+            "status": "NO_DATA"
+          },
+          "deployment_blocking": true,
+          "downtime_pass": true,
+          "downtime_seconds": 0.0,
+          "failed_check_ids": [
+            "throughput.min_per_hour"
+          ],
+          "failed_checks": [
+            {
+              "actual": "0 tools/hr",
+              "actual_value": 0.0,
+              "check_id": "throughput.min_per_hour",
+              "deployment_blocking": true,
+              "evidence_row_id": null,
+              "evidence_source": "line_kpis.throughput_per_hour",
+              "expected": "at least 60 tools/hr",
+              "expected_value": 60.0,
+              "line_id": "line_1",
+              "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+              "operator_impact": "Deployment may reduce line productivity.",
+              "operator_label": "Throughput target was missed",
+              "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+              "severity": "FAIL",
+              "technical_check_id": "throughput.min_per_hour",
+              "technical_explanation": "line_1 failed throughput because the simulated rate was 0 tools/hr, below the target of 60 tools/hr."
+            }
+          ],
+          "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+          "line_id": "line_1",
+          "max_downtime_seconds": null,
+          "operator_reason": "line_1 sorted all 27 tools shown in the simulation. The completed set contained 20 required ENT tools and 7 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+          "placement": {
+            "reason": "No misplaced tools or placement validation warnings were recorded.",
+            "status": "PASS"
+          },
+          "priority_deviation_count": 1,
+          "priority_pass": true,
+          "priority_policy": "REQUIRED_FIRST",
+          "priority_required_first": {
+            "reason": "All wanted table tools were picked before unwanted table tools in each evaluated batch.",
+            "status": "PASS"
+          },
+          "simulated_tools_completed": 27,
+          "status": "FAIL",
+          "target_min_throughput_per_hour": 60.0,
+          "throughput_pass": false,
+          "throughput_per_hour": 0.0,
+          "unwanted_completed_count": 7,
+          "unwanted_completion_time_seconds": 0.0,
+          "wanted_completed_count": 20,
+          "wanted_completion_time_seconds": 0.0,
+          "warning_check_ids": [],
+          "warnings": []
+        },
+        {
+          "batch_gating": {
+            "reason": "No batch completion KPI rows were recorded for this line.",
+            "status": "NO_DATA"
+          },
+          "deployment_blocking": true,
+          "downtime_pass": true,
+          "downtime_seconds": 0.0,
+          "failed_check_ids": [
+            "throughput.min_per_hour"
+          ],
+          "failed_checks": [
+            {
+              "actual": "0 tools/hr",
+              "actual_value": 0.0,
+              "check_id": "throughput.min_per_hour",
+              "deployment_blocking": true,
+              "evidence_row_id": null,
+              "evidence_source": "line_kpis.throughput_per_hour",
+              "expected": "at least 60 tools/hr",
+              "expected_value": 60.0,
+              "line_id": "line_2",
+              "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+              "operator_impact": "Deployment may reduce line productivity.",
+              "operator_label": "Throughput target was missed",
+              "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+              "severity": "FAIL",
+              "technical_check_id": "throughput.min_per_hour",
+              "technical_explanation": "line_2 failed throughput because the simulated rate was 0 tools/hr, below the target of 60 tools/hr."
+            }
+          ],
+          "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+          "line_id": "line_2",
+          "max_downtime_seconds": null,
+          "operator_reason": "line_2 sorted all 27 tools shown in the simulation. The completed set contained 20 required ENT tools and 7 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+          "placement": {
+            "reason": "No misplaced tools or placement validation warnings were recorded.",
+            "status": "PASS"
+          },
+          "priority_deviation_count": 0,
+          "priority_pass": true,
+          "priority_policy": "REQUIRED_FIRST",
+          "priority_required_first": {
+            "reason": "All wanted table tools were picked before unwanted table tools in each evaluated batch.",
+            "status": "PASS"
+          },
+          "simulated_tools_completed": 27,
+          "status": "FAIL",
+          "target_min_throughput_per_hour": 60.0,
+          "throughput_pass": false,
+          "throughput_per_hour": 0.0,
+          "unwanted_completed_count": 7,
+          "unwanted_completion_time_seconds": 0.0,
+          "wanted_completed_count": 20,
+          "wanted_completion_time_seconds": 0.0,
+          "warning_check_ids": [],
+          "warnings": []
+        },
+        {
+          "batch_gating": {
+            "reason": "No batch completion KPI rows were recorded for this line.",
+            "status": "NO_DATA"
+          },
+          "deployment_blocking": true,
+          "downtime_pass": true,
+          "downtime_seconds": 0.0,
+          "failed_check_ids": [
+            "throughput.min_per_hour"
+          ],
+          "failed_checks": [
+            {
+              "actual": "0 tools/hr",
+              "actual_value": 0.0,
+              "check_id": "throughput.min_per_hour",
+              "deployment_blocking": true,
+              "evidence_row_id": null,
+              "evidence_source": "line_kpis.throughput_per_hour",
+              "expected": "at least 60 tools/hr",
+              "expected_value": 60.0,
+              "line_id": "line_3",
+              "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+              "operator_impact": "Deployment may reduce line productivity.",
+              "operator_label": "Throughput target was missed",
+              "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+              "severity": "FAIL",
+              "technical_check_id": "throughput.min_per_hour",
+              "technical_explanation": "line_3 failed throughput because the simulated rate was 0 tools/hr, below the target of 60 tools/hr."
+            }
+          ],
+          "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+          "line_id": "line_3",
+          "max_downtime_seconds": null,
+          "operator_reason": "line_3 sorted all 27 tools shown in the simulation. The completed set contained 18 required ENT tools and 9 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+          "placement": {
+            "reason": "No misplaced tools or placement validation warnings were recorded.",
+            "status": "PASS"
+          },
+          "priority_deviation_count": 0,
+          "priority_pass": true,
+          "priority_policy": "REQUIRED_FIRST",
+          "priority_required_first": {
+            "reason": "All wanted table tools were picked before unwanted table tools in each evaluated batch.",
+            "status": "PASS"
+          },
+          "simulated_tools_completed": 27,
+          "status": "FAIL",
+          "target_min_throughput_per_hour": 60.0,
+          "throughput_pass": false,
+          "throughput_per_hour": 0.0,
+          "unwanted_completed_count": 9,
+          "unwanted_completion_time_seconds": 0.0,
+          "wanted_completed_count": 18,
+          "wanted_completion_time_seconds": 0.0,
+          "warning_check_ids": [],
+          "warnings": []
+        },
+        {
+          "batch_gating": {
+            "reason": "No batch completion KPI rows were recorded for this line.",
+            "status": "NO_DATA"
+          },
+          "deployment_blocking": true,
+          "downtime_pass": true,
+          "downtime_seconds": 0.0,
+          "failed_check_ids": [
+            "throughput.min_per_hour"
+          ],
+          "failed_checks": [
+            {
+              "actual": "0 tools/hr",
+              "actual_value": 0.0,
+              "check_id": "throughput.min_per_hour",
+              "deployment_blocking": true,
+              "evidence_row_id": null,
+              "evidence_source": "line_kpis.throughput_per_hour",
+              "expected": "at least 60 tools/hr",
+              "expected_value": 60.0,
+              "line_id": "line_4",
+              "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+              "operator_impact": "Deployment may reduce line productivity.",
+              "operator_label": "Throughput target was missed",
+              "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+              "severity": "FAIL",
+              "technical_check_id": "throughput.min_per_hour",
+              "technical_explanation": "line_4 failed throughput because the simulated rate was 0 tools/hr, below the target of 60 tools/hr."
+            }
+          ],
+          "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+          "line_id": "line_4",
+          "max_downtime_seconds": null,
+          "operator_reason": "line_4 sorted all 27 tools shown in the simulation. The completed set contained 18 required ENT tools and 9 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+          "placement": {
+            "reason": "No misplaced tools or placement validation warnings were recorded.",
+            "status": "PASS"
+          },
+          "priority_deviation_count": 0,
+          "priority_pass": true,
+          "priority_policy": "REQUIRED_FIRST",
+          "priority_required_first": {
+            "reason": "All wanted table tools were picked before unwanted table tools in each evaluated batch.",
+            "status": "PASS"
+          },
+          "simulated_tools_completed": 27,
+          "status": "FAIL",
+          "target_min_throughput_per_hour": 60.0,
+          "throughput_pass": false,
+          "throughput_per_hour": 0.0,
+          "unwanted_completed_count": 9,
+          "unwanted_completion_time_seconds": 0.0,
+          "wanted_completed_count": 18,
+          "wanted_completion_time_seconds": 0.0,
+          "warning_check_ids": [],
+          "warnings": []
+        }
+      ],
+      "likely_root_cause": null,
+      "line_findings": [
+        {
+          "deployment_blocking": true,
+          "line_id": "line_1",
+          "operator_text": "line_1 sorted all 27 tools shown in the simulation. The completed set contained 20 required ENT tools and 7 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+          "severity": "BLOCKING"
+        },
+        {
+          "deployment_blocking": true,
+          "line_id": "line_2",
+          "operator_text": "line_2 sorted all 27 tools shown in the simulation. The completed set contained 20 required ENT tools and 7 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+          "severity": "BLOCKING"
+        },
+        {
+          "deployment_blocking": true,
+          "line_id": "line_3",
+          "operator_text": "line_3 sorted all 27 tools shown in the simulation. The completed set contained 18 required ENT tools and 9 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+          "severity": "BLOCKING"
+        },
+        {
+          "deployment_blocking": true,
+          "line_id": "line_4",
+          "operator_text": "line_4 sorted all 27 tools shown in the simulation. The completed set contained 18 required ENT tools and 9 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+          "severity": "BLOCKING"
+        }
+      ],
+      "line_results": [
+        {
+          "batch_gating": {
+            "reason": "No batch completion KPI rows were recorded for this line.",
+            "status": "NO_DATA"
+          },
+          "deployment_blocking": true,
+          "downtime_pass": true,
+          "downtime_seconds": 0.0,
+          "failed_check_ids": [
+            "throughput.min_per_hour"
+          ],
+          "failed_checks": [
+            {
+              "actual": "0 tools/hr",
+              "actual_value": 0.0,
+              "check_id": "throughput.min_per_hour",
+              "deployment_blocking": true,
+              "evidence_row_id": null,
+              "evidence_source": "line_kpis.throughput_per_hour",
+              "expected": "at least 60 tools/hr",
+              "expected_value": 60.0,
+              "line_id": "line_1",
+              "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+              "operator_impact": "Deployment may reduce line productivity.",
+              "operator_label": "Throughput target was missed",
+              "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+              "severity": "FAIL",
+              "technical_check_id": "throughput.min_per_hour",
+              "technical_explanation": "line_1 failed throughput because the simulated rate was 0 tools/hr, below the target of 60 tools/hr."
+            }
+          ],
+          "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+          "line_id": "line_1",
+          "max_downtime_seconds": null,
+          "operator_reason": "line_1 sorted all 27 tools shown in the simulation. The completed set contained 20 required ENT tools and 7 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+          "placement": {
+            "reason": "No misplaced tools or placement validation warnings were recorded.",
+            "status": "PASS"
+          },
+          "priority_deviation_count": 1,
+          "priority_pass": true,
+          "priority_policy": "REQUIRED_FIRST",
+          "priority_required_first": {
+            "reason": "All wanted table tools were picked before unwanted table tools in each evaluated batch.",
+            "status": "PASS"
+          },
+          "simulated_tools_completed": 27,
+          "status": "FAIL",
+          "target_min_throughput_per_hour": 60.0,
+          "throughput_pass": false,
+          "throughput_per_hour": 0.0,
+          "unwanted_completed_count": 7,
+          "unwanted_completion_time_seconds": 0.0,
+          "wanted_completed_count": 20,
+          "wanted_completion_time_seconds": 0.0,
+          "warning_check_ids": [],
+          "warnings": []
+        },
+        {
+          "batch_gating": {
+            "reason": "No batch completion KPI rows were recorded for this line.",
+            "status": "NO_DATA"
+          },
+          "deployment_blocking": true,
+          "downtime_pass": true,
+          "downtime_seconds": 0.0,
+          "failed_check_ids": [
+            "throughput.min_per_hour"
+          ],
+          "failed_checks": [
+            {
+              "actual": "0 tools/hr",
+              "actual_value": 0.0,
+              "check_id": "throughput.min_per_hour",
+              "deployment_blocking": true,
+              "evidence_row_id": null,
+              "evidence_source": "line_kpis.throughput_per_hour",
+              "expected": "at least 60 tools/hr",
+              "expected_value": 60.0,
+              "line_id": "line_2",
+              "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+              "operator_impact": "Deployment may reduce line productivity.",
+              "operator_label": "Throughput target was missed",
+              "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+              "severity": "FAIL",
+              "technical_check_id": "throughput.min_per_hour",
+              "technical_explanation": "line_2 failed throughput because the simulated rate was 0 tools/hr, below the target of 60 tools/hr."
+            }
+          ],
+          "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+          "line_id": "line_2",
+          "max_downtime_seconds": null,
+          "operator_reason": "line_2 sorted all 27 tools shown in the simulation. The completed set contained 20 required ENT tools and 7 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+          "placement": {
+            "reason": "No misplaced tools or placement validation warnings were recorded.",
+            "status": "PASS"
+          },
+          "priority_deviation_count": 0,
+          "priority_pass": true,
+          "priority_policy": "REQUIRED_FIRST",
+          "priority_required_first": {
+            "reason": "All wanted table tools were picked before unwanted table tools in each evaluated batch.",
+            "status": "PASS"
+          },
+          "simulated_tools_completed": 27,
+          "status": "FAIL",
+          "target_min_throughput_per_hour": 60.0,
+          "throughput_pass": false,
+          "throughput_per_hour": 0.0,
+          "unwanted_completed_count": 7,
+          "unwanted_completion_time_seconds": 0.0,
+          "wanted_completed_count": 20,
+          "wanted_completion_time_seconds": 0.0,
+          "warning_check_ids": [],
+          "warnings": []
+        },
+        {
+          "batch_gating": {
+            "reason": "No batch completion KPI rows were recorded for this line.",
+            "status": "NO_DATA"
+          },
+          "deployment_blocking": true,
+          "downtime_pass": true,
+          "downtime_seconds": 0.0,
+          "failed_check_ids": [
+            "throughput.min_per_hour"
+          ],
+          "failed_checks": [
+            {
+              "actual": "0 tools/hr",
+              "actual_value": 0.0,
+              "check_id": "throughput.min_per_hour",
+              "deployment_blocking": true,
+              "evidence_row_id": null,
+              "evidence_source": "line_kpis.throughput_per_hour",
+              "expected": "at least 60 tools/hr",
+              "expected_value": 60.0,
+              "line_id": "line_3",
+              "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+              "operator_impact": "Deployment may reduce line productivity.",
+              "operator_label": "Throughput target was missed",
+              "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+              "severity": "FAIL",
+              "technical_check_id": "throughput.min_per_hour",
+              "technical_explanation": "line_3 failed throughput because the simulated rate was 0 tools/hr, below the target of 60 tools/hr."
+            }
+          ],
+          "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+          "line_id": "line_3",
+          "max_downtime_seconds": null,
+          "operator_reason": "line_3 sorted all 27 tools shown in the simulation. The completed set contained 18 required ENT tools and 9 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+          "placement": {
+            "reason": "No misplaced tools or placement validation warnings were recorded.",
+            "status": "PASS"
+          },
+          "priority_deviation_count": 0,
+          "priority_pass": true,
+          "priority_policy": "REQUIRED_FIRST",
+          "priority_required_first": {
+            "reason": "All wanted table tools were picked before unwanted table tools in each evaluated batch.",
+            "status": "PASS"
+          },
+          "simulated_tools_completed": 27,
+          "status": "FAIL",
+          "target_min_throughput_per_hour": 60.0,
+          "throughput_pass": false,
+          "throughput_per_hour": 0.0,
+          "unwanted_completed_count": 9,
+          "unwanted_completion_time_seconds": 0.0,
+          "wanted_completed_count": 18,
+          "wanted_completion_time_seconds": 0.0,
+          "warning_check_ids": [],
+          "warnings": []
+        },
+        {
+          "batch_gating": {
+            "reason": "No batch completion KPI rows were recorded for this line.",
+            "status": "NO_DATA"
+          },
+          "deployment_blocking": true,
+          "downtime_pass": true,
+          "downtime_seconds": 0.0,
+          "failed_check_ids": [
+            "throughput.min_per_hour"
+          ],
+          "failed_checks": [
+            {
+              "actual": "0 tools/hr",
+              "actual_value": 0.0,
+              "check_id": "throughput.min_per_hour",
+              "deployment_blocking": true,
+              "evidence_row_id": null,
+              "evidence_source": "line_kpis.throughput_per_hour",
+              "expected": "at least 60 tools/hr",
+              "expected_value": 60.0,
+              "line_id": "line_4",
+              "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+              "operator_impact": "Deployment may reduce line productivity.",
+              "operator_label": "Throughput target was missed",
+              "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+              "severity": "FAIL",
+              "technical_check_id": "throughput.min_per_hour",
+              "technical_explanation": "line_4 failed throughput because the simulated rate was 0 tools/hr, below the target of 60 tools/hr."
+            }
+          ],
+          "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+          "line_id": "line_4",
+          "max_downtime_seconds": null,
+          "operator_reason": "line_4 sorted all 27 tools shown in the simulation. The completed set contained 18 required ENT tools and 9 unwanted tools. The robot picked the required ENT tools before the unwanted tools available on the table. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+          "placement": {
+            "reason": "No misplaced tools or placement validation warnings were recorded.",
+            "status": "PASS"
+          },
+          "priority_deviation_count": 0,
+          "priority_pass": true,
+          "priority_policy": "REQUIRED_FIRST",
+          "priority_required_first": {
+            "reason": "All wanted table tools were picked before unwanted table tools in each evaluated batch.",
+            "status": "PASS"
+          },
+          "simulated_tools_completed": 27,
+          "status": "FAIL",
+          "target_min_throughput_per_hour": 60.0,
+          "throughput_pass": false,
+          "throughput_per_hour": 0.0,
+          "unwanted_completed_count": 9,
+          "unwanted_completion_time_seconds": 0.0,
+          "wanted_completed_count": 18,
+          "wanted_completion_time_seconds": 0.0,
+          "warning_check_ids": [],
+          "warnings": []
+        }
+      ],
+      "next_action": "REVISE_OR_RERUN",
+      "operator_next_action": "REQUEST_REVISION, RERUN_SIMULATION",
+      "operator_options": [
+        "REQUEST_REVISION",
+        "RERUN_SIMULATION"
+      ],
+      "operator_summary": "Simulation failed. Failure stage: FAILED. Failure reason: Run ended before completing the required number of successful reset cycles.. Deployment is not recommended.",
+      "overall_result": "FAIL",
+      "passed_lines": [],
+      "requires_operator_acknowledgement": false,
+      "risk_summary": "Deployment is blocked by one or more operational findings.",
+      "risk_tier": "BLOCKING",
+      "simulation_config": {
+        "full_environment_tooling_count": null,
+        "simulated_tooling_count": 27
+      },
+      "summary_message": "KPI validation failed for line_1, line_2, line_3, line_4. Operational reasons: The simulated line processed fewer tools per hour than the minimum target..",
+      "technical_findings": [
+        {
+          "code": "throughput.min_per_hour",
+          "line_id": "line_1",
+          "operator_text": "The simulated line processed fewer tools per hour than the minimum target.",
+          "severity": "BLOCKING"
+        },
+        {
+          "code": "throughput.min_per_hour",
+          "line_id": "line_2",
+          "operator_text": "The simulated line processed fewer tools per hour than the minimum target.",
+          "severity": "BLOCKING"
+        },
+        {
+          "code": "throughput.min_per_hour",
+          "line_id": "line_3",
+          "operator_text": "The simulated line processed fewer tools per hour than the minimum target.",
+          "severity": "BLOCKING"
+        },
+        {
+          "code": "throughput.min_per_hour",
+          "line_id": "line_4",
+          "operator_text": "The simulated line processed fewer tools per hour than the minimum target.",
+          "severity": "BLOCKING"
+        }
+      ],
+      "warning_checks": [],
+      "warnings": []
+    },
+    "run_id": "sim_b5dfc33d-0d87-4df4-a4d9-e965dbfbd224",
+    "scenario_spec_id": "scn_1f07cf3a-2466-4c29-a372-de52a0f4263a",
+    "trt_id": "trt-demo",
+    "trt_version": "v60"
+  },
+  "pending_intent": null,
+  "session_id": "codex_post_evidence_state_probe",
+  "state": "WAITING_FOR_POST_EVIDENCE_DECISION",
+  "updated_at": "2026-06-22T17:29:36.359690Z"
+}

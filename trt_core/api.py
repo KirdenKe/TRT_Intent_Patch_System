@@ -562,6 +562,7 @@ def _dialogue_decision_schema() -> dict[str, Any]:
         "additionalProperties": False,
         "required": [
             "dialogue_state",
+            "turn_type",
             "operator_message",
             "normalized_request",
             "missing_or_unclear_items",
@@ -580,6 +581,19 @@ def _dialogue_decision_schema() -> dict[str, Any]:
                     "UNKNOWN",
                 ],
             },
+            "turn_type": {
+                "type": "string",
+                "enum": [
+                    "SMALL_TALK",
+                    "TASK_REQUEST",
+                    "CLARIFICATION_VALUES",
+                    "APPROVAL_DECISION",
+                    "DEPLOYMENT_DECISION",
+                    "CANCEL",
+                    "CONFUSED",
+                    "UNKNOWN",
+                ],
+            },
             "operator_message": {"type": "string"},
             "normalized_request": {
                 "type": ["object", "null"],
@@ -591,6 +605,7 @@ def _dialogue_decision_schema() -> dict[str, Any]:
                     "target_lines",
                     "target_set_id",
                     "request_types",
+                    "kpi_updates",
                     "manipulator_priority",
                     "simulation_config_updates",
                 ],
@@ -602,6 +617,15 @@ def _dialogue_decision_schema() -> dict[str, Any]:
                     "target_lines": {"type": "array", "items": {"type": "string"}},
                     "target_set_id": {"type": ["string", "null"], "enum": ["ENT_SURGICAL_TOOLING_SET", None]},
                     "request_types": {"type": "array", "items": {"type": "string"}},
+                    "kpi_updates": {
+                        "type": ["object", "null"],
+                        "properties": {
+                            "min_throughput_per_hour": {"type": ["integer", "null"]},
+                            "deadline_minutes": {"type": ["number", "null"]},
+                            "max_downtime_seconds": {"type": ["number", "null"]},
+                        },
+                        "additionalProperties": False,
+                    },
                     "manipulator_priority": {
                         "type": ["object", "null"],
                         "properties": {
@@ -633,21 +657,28 @@ def _build_dialogue_decision_prompt(payload: dict[str, Any], session: dict[str, 
     latest = str(payload.get("latest_user_message") or payload.get("raw_chat_input") or "")
     conversation = _session_conversation(session, latest)
     current_trt = repository.get_current_trt()
+    pending_intent = session.get("pending_intent") or {}
+    normalized_session_request = session.get("normalized_request") or {}
     active_request = {
+        "session_state": session.get("state") or "IDLE",
         "original_user_request": next((turn["content"] for turn in conversation if turn["role"] == "user"), ""),
-        "operator_id": (session.get("normalized_request") or {}).get("operator_id"),
-        "reason": (session.get("normalized_request") or {}).get("reason"),
+        "operator_id": normalized_session_request.get("operator_id") or pending_intent.get("operator_id"),
+        "reason": normalized_session_request.get("reason") or pending_intent.get("reason"),
         "prior_clarification_questions": [turn["content"] for turn in conversation if turn["role"] == "assistant"],
         "prior_clarification_answers": [
             turn["content"]
             for index, turn in enumerate(conversation)
             if turn["role"] == "user" and index > 0
         ],
+        "pending_intent": pending_intent or None,
         "candidate_patch_summary": session.get("candidate_patch_summary"),
         "review_status": session.get("review_status"),
         "approval_status": session.get("approval_status"),
         "scenario_spec_id": session.get("scenario_spec_id"),
         "run_id": session.get("run_id"),
+        "pending_evidence": session.get("pending_evidence"),
+        "pending_deployment": session.get("pending_deployment"),
+        "allowed_actions": session.get("allowed_actions") or [],
     }
     domain_context = {
         "valid_lines": sorted((current_trt.get("lines") or {}).keys()) or ["line_1", "line_2", "line_3", "line_4"],
@@ -669,9 +700,20 @@ def _build_dialogue_decision_prompt(payload: dict[str, Any], session: dict[str, 
         {
             "role": "system",
             "content": (
-                "You are the single dialogue-state decision maker for an operator task-allocation chat. "
+                "You are the only component that classifies the operator's chat turn. "
+                "Return turn_type as one of SMALL_TALK, TASK_REQUEST, CLARIFICATION_VALUES, APPROVAL_DECISION, "
+                "DEPLOYMENT_DECISION, CANCEL, CONFUSED, or UNKNOWN. "
                 "Read the full conversation and decide whether the request is ready for review, needs one clarification, "
                 "is an approval/deployment decision, is cancelled, or is unknown. "
+                "Do not require operators to use internal schema terms such as request_type. "
+                "Classify casual greetings and filler as SMALL_TALK with normalized_request null. "
+                "Classify production-line KPI changes as TASK_REQUEST. "
+                "If a pending task exists and the user provides operator_id or reason, classify the turn as CLARIFICATION_VALUES. "
+                "If session_state is WAITING_FOR_POST_EVIDENCE_DECISION, classify REQUEST_REVISION or revise as DEPLOYMENT_DECISION "
+                "with deployment_decision REQUEST_REVISION, classify RERUN_SIMULATION or rerun it as DEPLOYMENT_DECISION with "
+                "deployment_decision RERUN_SIMULATION, and classify cancel as CANCEL. Do not treat those replies as new task requests. "
+                "For throughput/hr, throughput per hour, min throughput, or minimum throughput requests, set "
+                "normalized_request.kpi_updates.min_throughput_per_hour to the requested number and include KPI_UPDATE in request_types. "
                 "Do not ask the same clarification twice if the user answered it semantically. "
                 "Map 'number of tooling so only N remain' to simulation_config_updates.add_reference_number=N, "
                 "but never mention add_reference_number to the operator; say simulated tooling count. "
@@ -681,6 +723,16 @@ def _build_dialogue_decision_prompt(payload: dict[str, Any], session: dict[str, 
                 "If operator_id or reason is missing, return NEEDS_CLARIFICATION and ask only for the missing fields. "
                 "If the previous assistant asked whether this is production-line priority or robot ENT-required-first picking, and the latest user says "
                 "robots pick ENT surgical tooling set first, return READY_FOR_REVIEW, not another clarification. "
+                "Examples: input 'yo dude' with session_state IDLE returns turn_type SMALL_TALK, dialogue_state UNKNOWN, "
+                "operator_id null, reason null, intent_text null, and decision null. "
+                "Input 'i want to set all line\\'s throughput/hr back to 60' with session_state IDLE returns turn_type TASK_REQUEST, "
+                "dialogue_state NEEDS_CLARIFICATION, intent_text 'set all line\\'s throughput/hr back to 60', "
+                "target_scope ALL_LINES, target_lines [], request_types ['KPI_UPDATE'], "
+                "kpi_updates {'min_throughput_per_hour': 60}, operator_id null, and reason null. "
+                "Input 'operator_id: op_001 reason: test for milestone 11.5' with session_state WAITING_FOR_REQUIRED_FIELDS "
+                "and pending_intent.intent_text 'set all line\\'s throughput/hr back to 60' returns turn_type CLARIFICATION_VALUES, "
+                "dialogue_state NEEDS_CLARIFICATION or READY_FOR_REVIEW depending on whether the normalized_request is complete, "
+                "operator_id 'op_001', reason 'test for milestone 11.5', and intent_text null unless restating the task. "
                 "Return only JSON matching the schema."
             ),
         },
@@ -690,6 +742,8 @@ def _build_dialogue_decision_prompt(payload: dict[str, Any], session: dict[str, 
 
 
 def _resolved_dialogue_intent_text(normalized_request: dict[str, Any], fallback: str) -> str:
+    if normalized_request.get("kpi_updates"):
+        return str(normalized_request.get("intent_text") or fallback or "")
     priority = normalized_request.get("manipulator_priority") or {}
     lines = list(normalized_request.get("target_lines") or [])
     if normalized_request.get("target_scope") == "ALL_LINES":
@@ -707,6 +761,37 @@ def _resolved_dialogue_intent_text(normalized_request: dict[str, Any], fallback:
     if updates.get("add_reference_number") is not None:
         parts.append(f"Set the simulated tooling count to {updates['add_reference_number']}.")
     return " ".join(parts) or str(normalized_request.get("intent_text") or fallback or "")
+
+
+def _dialogue_state_for_turn(turn_type: str, default: str = "UNKNOWN") -> str:
+    return {
+        "APPROVAL_DECISION": "APPROVAL_DECISION",
+        "DEPLOYMENT_DECISION": "DEPLOYMENT_DECISION",
+        "CANCEL": "CANCELLED",
+        "SMALL_TALK": "UNKNOWN",
+        "CONFUSED": "UNKNOWN",
+        "UNKNOWN": "UNKNOWN",
+    }.get(turn_type, default)
+
+
+def _turn_type_for_dialogue_state(dialogue_state: str) -> str:
+    return {
+        "APPROVAL_DECISION": "APPROVAL_DECISION",
+        "DEPLOYMENT_DECISION": "DEPLOYMENT_DECISION",
+        "CANCELLED": "CANCEL",
+        "UNKNOWN": "UNKNOWN",
+    }.get(dialogue_state, "TASK_REQUEST")
+
+
+def _internal_request_types(request_types: Any) -> list[str]:
+    internal: list[str] = []
+    for value in request_types or []:
+        text = str(value or "")
+        if text == "KPI_UPDATE":
+            text = "KPI_LIMIT_UPDATE"
+        if text and text not in internal:
+            internal.append(text)
+    return internal
 
 
 @app.post("/chat/dialogue-decision")
@@ -730,6 +815,7 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
     except (OSError, TimeoutError, urllib.error.URLError, ValueError, KeyError, TypeError) as exc:
         decision = {
             "dialogue_state": "UNKNOWN",
+            "turn_type": "UNKNOWN",
             "operator_message": f"I could not evaluate the dialogue state: {exc}",
             "normalized_request": None,
             "missing_or_unclear_items": ["dialogue_state"],
@@ -738,9 +824,30 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
         }
 
     dialogue_state = str(decision.get("dialogue_state") or "UNKNOWN")
+    turn_type = str(decision.get("turn_type") or _turn_type_for_dialogue_state(dialogue_state))
+    if not decision.get("dialogue_state"):
+        dialogue_state = _dialogue_state_for_turn(turn_type)
+    if turn_type == "CANCEL":
+        dialogue_state = "CANCELLED"
+    elif turn_type in {"APPROVAL_DECISION", "DEPLOYMENT_DECISION"}:
+        dialogue_state = turn_type
     operator_message = _operator_facing_text(decision.get("operator_message") or "")
     normalized_request = decision.get("normalized_request") if isinstance(decision.get("normalized_request"), dict) else {}
     normalized_request = dict(normalized_request or {})
+    sim_updates = normalized_request.get("simulation_config_updates")
+    if isinstance(sim_updates, dict) and not any(value is not None for value in sim_updates.values()):
+        normalized_request["simulation_config_updates"] = None
+    request_types = _internal_request_types(normalized_request.get("request_types") or [])
+    if normalized_request.get("kpi_updates") and "KPI_LIMIT_UPDATE" not in request_types:
+        request_types.append("KPI_LIMIT_UPDATE")
+    if normalized_request.get("target_set_id") and "TOOLING_POLICY_UPDATE" not in request_types:
+        request_types.append("TOOLING_POLICY_UPDATE")
+    if normalized_request.get("manipulator_priority") and "MANIPULATOR_PRIORITY_UPDATE" not in request_types:
+        request_types.append("MANIPULATOR_PRIORITY_UPDATE")
+    if normalized_request.get("simulation_config_updates") and "SIMULATION_CONFIG_UPDATE" not in request_types:
+        request_types.append("SIMULATION_CONFIG_UPDATE")
+    if request_types:
+        normalized_request["request_types"] = request_types
     if normalized_request.get("manipulator_priority"):
         priority = dict(normalized_request["manipulator_priority"])
         priority.pop("scope", None)
@@ -759,11 +866,17 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
         "operator_id": normalized_request.get("operator_id"),
         "reason": normalized_request.get("reason"),
         "intent_text": normalized_request.get("intent_text"),
-        "request_types": normalized_request.get("request_types"),
     }
     target_ready = normalized_request.get("target_scope") == "ALL_LINES" or bool(normalized_request.get("target_lines"))
+    has_update = bool(
+        normalized_request.get("request_types")
+        or normalized_request.get("kpi_updates")
+        or normalized_request.get("target_set_id")
+        or normalized_request.get("manipulator_priority")
+        or normalized_request.get("simulation_config_updates")
+    )
     if dialogue_state == "READY_FOR_REVIEW" and (
-        any(not value for value in required_for_review.values()) or not target_ready
+        any(not value for value in required_for_review.values()) or not target_ready or not has_update
     ):
         missing = [
             name
@@ -772,8 +885,12 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
         ]
         if not target_ready:
             missing.append("target_lines")
+        if not has_update:
+            missing.append("task_change")
         dialogue_state = "NEEDS_CLARIFICATION"
         decision["dialogue_state"] = dialogue_state
+        if turn_type == "READY_FOR_REVIEW":
+            turn_type = "TASK_REQUEST"
         decision["missing_or_unclear_items"] = missing
         operator_message = _operator_facing_text(
             decision.get("operator_message")
@@ -782,6 +899,7 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
     conversation = decision_input["conversation"]
     response: dict[str, Any] = {
         "dialogue_state": dialogue_state,
+        "turn_type": turn_type,
         "operator_message": operator_message,
         "normalized_request": normalized_request,
         "missing_or_unclear_items": decision.get("missing_or_unclear_items") or [],
@@ -803,7 +921,17 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
                 normalized_request,
                 operator_message or decision_input["active_request"]["original_user_request"],
             ),
-            "excluded_instruments": [],
+            "line_id": None,
+            "action": "PROPOSE_PATCH",
+            "goal": None,
+            "priority": None,
+            "allowed_instruments": None,
+            "excluded_instruments": None,
+            "selected_normalized_types": None,
+            "excluded_normalized_types": None,
+            "selected_tool_ids": None,
+            "excluded_tool_ids": None,
+            "required_tool_ids": None,
             "status": "DRAFT",
             "target_scope": normalized_request.get("target_scope"),
             "target_lines": normalized_request.get("target_lines") or [],
@@ -812,6 +940,11 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
             "detected_request_types": normalized_request.get("request_types") or [],
             "manipulator_priority": normalized_request.get("manipulator_priority"),
             "simulation_config_updates": normalized_request.get("simulation_config_updates") or {},
+            "kpi_updates": normalized_request.get("kpi_updates") or {},
+            "tooling_policy": None,
+            "abnormal_strategy": None,
+            "clarification_questions": [],
+            "unsupported_terms": [],
         }
         try:
             intent_patch = normalize_domain_candidate(candidate, current_trt)
@@ -877,6 +1010,18 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
                 }
             )
     elif dialogue_state == "NEEDS_CLARIFICATION":
+        missing_items = set(response.get("missing_or_unclear_items") or [])
+        required_field_only = bool(missing_items) and missing_items <= {"operator_id", "reason", "intent_text"}
+        if turn_type in {"TASK_REQUEST", "CLARIFICATION_VALUES"} and required_field_only:
+            response.update(
+                {
+                    "status": "NEEDS_CLARIFICATION",
+                    "payload": {"message": operator_message, "user_message": operator_message},
+                    "context": {"session_id": session_id},
+                    "errors": [],
+                }
+            )
+            return response
         if operator_message and (not conversation or conversation[-1] != {"role": "assistant", "content": operator_message}):
             conversation.append({"role": "assistant", "content": operator_message})
         save_chat_session(
@@ -907,7 +1052,9 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
                 "status": dialogue_state,
                 "payload": {"message": operator_message},
                 "context": {"session_id": session_id},
-                "errors": [] if dialogue_state in {"APPROVAL_DECISION", "DEPLOYMENT_DECISION"} else [operator_message or "Dialogue state is unknown."],
+                "errors": []
+                if dialogue_state in {"APPROVAL_DECISION", "DEPLOYMENT_DECISION"} or turn_type == "SMALL_TALK"
+                else [operator_message or "Dialogue state is unknown."],
             }
         )
     return response
@@ -2042,6 +2189,28 @@ def post_evidence_summarize(payload: dict[str, Any]) -> dict[str, Any]:
             },
         }
         save_chat_session(str(payload["session_id"]), session_payload, repository)
+    elif payload.get("session_id") and summary.get("next_action") in {
+        "REVISE_OR_RERUN",
+        "REQUEST_REVISION_OR_RERUN",
+        "WAIT",
+    }:
+        raw_artifact = (evidence.get("raw_evidence") or {}).get("run_artifact") or {}
+        save_chat_session(
+            str(payload["session_id"]),
+            {
+                "state": "WAITING_FOR_POST_EVIDENCE_DECISION",
+                "pending_intent": None,
+                "allowed_actions": ["REQUEST_REVISION", "RERUN_SIMULATION", "CANCEL"],
+                "pending_evidence": {
+                    "run_id": run_id,
+                    "scenario_spec_id": evidence.get("scenario_spec_id") or scenario_spec_id,
+                    "trt_id": raw_artifact.get("trt_id") or trt_id,
+                    "trt_version": raw_artifact.get("trt_version") or trt_version,
+                    "evidence_summary": summary,
+                },
+            },
+            repository,
+        )
     return evidence
 
 

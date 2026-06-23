@@ -11,6 +11,7 @@ from trt_core.digital_twin_adapter.result_reader import read_simulation_results
 from trt_core.intent_precheck import deterministic_intent_precheck
 from trt_core.intent_normalizer import normalize_domain_candidate
 from trt_core.intent_normalizer import parse_tooling_count_request
+from trt_core.validator import validate_firewall
 
 
 def current_trt() -> dict:
@@ -182,6 +183,101 @@ def test_combined_adjustment_focus_request_still_creates_manipulator_priority():
     assert all(operation["value"]["policy"] == "REQUIRED_FIRST" for operation in priority_ops)
     assert "simulated tooling count to 6" in patch["message"]
     assert "add_reference_number" not in patch["message"]
+
+
+def test_composite_request_sub_requests_compile_independently():
+    trt = current_trt()
+    trt["tool_catalog"]["tool_09"]["type"] = "Surgical Forceps"
+    trt["tool_catalog"]["tool_09"]["normalized_type"] = "SURGICAL_FORCEPS"
+    trt["tool_catalog"]["tool_10"]["type"] = "Sponge Forceps"
+    trt["tool_catalog"]["tool_10"]["normalized_type"] = "SPONGE_FORCEPS"
+    trt["tool_catalog"]["tool_20"]["type"] = "Nerve Retractor"
+    trt["tool_catalog"]["tool_20"]["normalized_type"] = "NERVE_RETRACTOR"
+    trt["tool_catalog"]["tool_21"]["type"] = "Double-ended Surgical Retractor"
+    trt["tool_catalog"]["tool_21"]["normalized_type"] = "DOUBLE_ENDED_SURGICAL_RETRACTOR"
+    trt["tool_catalog"]["tool_23"]["type"] = "Mastoid Retractor"
+    trt["tool_catalog"]["tool_23"]["normalized_type"] = "MASTOID_RETRACTOR"
+    composite = candidate(
+        "i want to adjust the throughput/hr for all production lines to at least 60; "
+        "set the tooling picking target for production lines 2 and 4 to retractors; "
+        "and adjust the tooling picking order for production lines 1 and 3 to prioritize picking tooling other than forceps."
+    )
+    composite["sub_requests"] = [
+        {
+            "request_type": "KPI_UPDATE",
+            "target_scope": "ALL_LINES",
+            "target_lines": ["line_1", "line_2", "line_3", "line_4"],
+            "kpi_updates": {"min_throughput_per_hour": 60},
+            "operator_text": "adjust the throughput/hr for all production lines to at least 60",
+        },
+        {
+            "request_type": "TOOLING_POLICY_UPDATE",
+            "target_scope": "MULTIPLE_LINES",
+            "target_lines": ["line_2", "line_4"],
+            "selected_normalized_types": [
+                "DOUBLE_ENDED_SURGICAL_RETRACTOR",
+                "NERVE_RETRACTOR",
+                "MASTOID_RETRACTOR",
+            ],
+            "operator_text": "set the tooling picking target for production lines 2 and 4 to retractors",
+        },
+        {
+            "request_type": "MANIPULATOR_PRIORITY_UPDATE",
+            "target_scope": "MULTIPLE_LINES",
+            "target_lines": ["line_1", "line_3"],
+            "manipulator_priority": {
+                "enabled": True,
+                "policy": "EXPLICIT_TYPE_ORDER",
+                "prioritize": "NON_MATCHING_TYPES_FIRST",
+                "reference_normalized_types": ["FORCEPS", "SURGICAL_FORCEPS", "SPONGE_FORCEPS"],
+                "ordered_normalized_types": [],
+                "ordered_tool_ids": [],
+                "tie_breaker": "FCFS",
+            },
+            "operator_text": "adjust the tooling picking order for production lines 1 and 3 to prioritize picking tooling other than forceps",
+        },
+    ]
+
+    patch = normalize_domain_candidate(composite, trt)
+    validation_results, validation_reasons = validate_firewall(patch, trt)
+
+    assert patch["affected_lines"] == ["line_1", "line_2", "line_3", "line_4"]
+    assert all(validation_results.values()), validation_reasons
+    assert len(patch["sub_requests"]) == 3
+    kpi_ops = [op for op in patch["operations"] if op["path"].endswith("/kpi/min_throughput_per_hour")]
+    assert [op["path"] for op in kpi_ops] == [
+        "/lines/line_1/kpi/min_throughput_per_hour",
+        "/lines/line_2/kpi/min_throughput_per_hour",
+        "/lines/line_3/kpi/min_throughput_per_hour",
+        "/lines/line_4/kpi/min_throughput_per_hour",
+    ]
+    assert all(op["value"] == 60 for op in kpi_ops)
+
+    type_target_ops = [op for op in patch["operations"] if op["path"].endswith("/selected_normalized_types")]
+    assert [op["path"] for op in type_target_ops] == [
+        "/lines/line_2/selected_normalized_types",
+        "/lines/line_4/selected_normalized_types",
+    ]
+    selected_tool_ops = [op for op in patch["operations"] if op["path"].endswith("/selected_tool_ids")]
+    assert [op["path"] for op in selected_tool_ops] == [
+        "/lines/line_2/selected_tool_ids",
+        "/lines/line_4/selected_tool_ids",
+    ]
+    assert all(set(op["value"]) == {"tool_20", "tool_21", "tool_23"} for op in selected_tool_ops)
+
+    priority_ops = [op for op in patch["operations"] if op["path"].endswith("/manipulator_priority")]
+    assert [op["path"] for op in priority_ops] == [
+        "/lines/line_1/manipulator_priority",
+        "/lines/line_3/manipulator_priority",
+    ]
+    for op in priority_ops:
+        value = op["value"]
+        assert value["policy"] == "EXPLICIT_TYPE_ORDER"
+        assert value["prioritize"] == "NON_MATCHING_TYPES_FIRST"
+        assert set(value["reference_normalized_types"]) == {"FORCEPS", "SURGICAL_FORCEPS", "SPONGE_FORCEPS"}
+        assert "FORCEPS" not in value["ordered_normalized_types"]
+        assert "SURGICAL_FORCEPS" not in value["ordered_normalized_types"]
+        assert "SPONGE_FORCEPS" not in value["ordered_normalized_types"]
 
 
 def test_ambiguous_prioritize_adjustment_requires_clarification():
