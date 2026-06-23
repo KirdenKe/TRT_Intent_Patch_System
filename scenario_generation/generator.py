@@ -106,6 +106,15 @@ def generate_scenario_spec(
             candidate_strategy_id=candidate_strategy_id,
         )
     scenario_spec_id = new_scenario_spec_id()
+    simulation_config = _build_simulation_config(
+        template,
+        line_bindings,
+        trt,
+        simulation_scope_obj,
+        operator_model_override or template["operator_model"],
+        request.simulation_config_override,
+    )
+    expected_command_args = _expected_command_args_from_override(request.simulation_config_override)
     spec: ScenarioSpec = {
         "scenario_spec_id": scenario_spec_id,
         "scenario_template_id": template["template_id"],
@@ -122,14 +131,7 @@ def generate_scenario_spec(
         "tool_sets": deepcopy(trt.get("tool_sets", {})),
         "workspace_contract": _build_workspace_contract(template, scenario_spec_id, output_path),
         "scene_template": template["scene_template"],
-        "simulation_config": _build_simulation_config(
-            template,
-            line_bindings,
-            trt,
-            simulation_scope_obj,
-            operator_model_override or template["operator_model"],
-            request.simulation_config_override,
-        ),
+        "simulation_config": simulation_config,
         "line_bindings": line_bindings,
         "line_policies": _build_line_policies(trt, plan, required_line_ids),
         "operator_model": deepcopy(operator_model_override or template["operator_model"]),
@@ -141,6 +143,13 @@ def generate_scenario_spec(
             "reconciliation_overall_status": plan["overall_status"],
             "source_state_hash": plan.get("source_state_hash"),
             "source_trt_hash": plan.get("source_trt_hash"),
+            "expected_command_args": expected_command_args,
+            "simulation_config_compilation_trace": {
+                "simulation_config_override": deepcopy(request.simulation_config_override or {}),
+                "compiled_simulation_config": deepcopy(simulation_config),
+                "expected_command_args": deepcopy(expected_command_args),
+            },
+            "dry_run_only": bool((request.simulation_config_override or {}).get("dry_run_only")),
         },
     }
     validate_scenario_spec(spec)
@@ -278,6 +287,16 @@ def _build_simulation_scope(value: dict[str, Any] | str | None, required_line_id
         "lines": list(required_line_ids),
         "reason": default_reason,
     }
+
+
+def _expected_command_args_from_override(override: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(override, dict):
+        return {}
+    expected: dict[str, Any] = {}
+    for key in ("num_envs", "chosen_intervention_mode", "travel_time", "fix_duration", "resume_delay", "add_reference_number"):
+        if override.get(key) is not None:
+            expected[key] = override[key]
+    return expected
 
 
 def _build_simulation_config(

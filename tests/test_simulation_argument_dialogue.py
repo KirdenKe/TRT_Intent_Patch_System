@@ -159,3 +159,111 @@ def test_command_defaults_and_global_seed_rule():
     seeded = build_isaac_command_args_with_sources(spec)["command_args"]
     assert seeded["global_seed"] == 777
     assert seeded["reuse_verified_seed"] is False
+
+
+def test_dry_run_time_arrival_updates_are_reviewed_and_compile_to_command_args():
+    data = candidate("milestone 11.6 dry run")
+    data.update(
+        {
+            "target_scope": "MULTIPLE_LINES",
+            "target_lines": ["line_1", "line_2"],
+            "request_types": ["SIMULATION_CONFIG_UPDATE", "ABNORMAL_STRATEGY_UPDATE", "DRY_RUN_ONLY"],
+            "simulation_config_updates": {
+                "num_envs": 2,
+                "chosen_intervention_mode": "immediate-stop",
+                "travel_time": 3.0,
+                "fix_duration": 6.0,
+                "resume_delay": 1.5,
+                "add_reference_number": 6,
+                "dry_run_only": True,
+            },
+            "dry_run_only": True,
+            "deployment_allowed_after_success": False,
+        }
+    )
+
+    patch = normalize_domain_candidate(data, current_trt())
+
+    assert patch["operations"] == []
+    assert patch["dry_run_only"] is True
+    assert patch["deployment_allowed_after_success"] is False
+    assert patch["simulation_config_updates"] == data["simulation_config_updates"]
+
+    spec = {
+        "simulation_scope": {"mode": "EXPLICIT_OPERATOR_LIMITED", "lines": ["line_1", "line_2"]},
+        "simulation_config": patch["simulation_config_updates"],
+        "operator_model": {"travel_time": 5.0, "fix_duration": 8.0, "resume_delay": 0.5},
+        "tool_catalog": {f"tool_{index:02d}": {} for index in range(1, 28)},
+        "governance_metadata": {
+            "dry_run_only": True,
+            "expected_command_args": {
+                "num_envs": 2,
+                "chosen_intervention_mode": "immediate-stop",
+                "travel_time": 3.0,
+                "fix_duration": 6.0,
+                "resume_delay": 1.5,
+                "add_reference_number": 6,
+            },
+        },
+    }
+    args = build_isaac_command_args_with_sources(spec)["command_args"]
+
+    assert args["num_envs"] == 2
+    assert args["chosen_intervention_mode"] == "immediate-stop"
+    assert args["travel_time"] == 3.0
+    assert args["fix_duration"] == 6.0
+    assert args["resume_delay"] == 1.5
+    assert args["add_reference_number"] == 6
+
+
+def test_exact_time_arrival_request_repairs_incomplete_model_extraction():
+    text = (
+        "okay, two production lines fucked up today. i want to confirm that with only two production lines "
+        "remaining, my arrival time can be reduced by about 2.5 seconds, and the time to resolve entanglements "
+        "can be reduced by 1.5 seconds. however, to ensure the remaining production lines operate normally, "
+        "pls stop the robotic arms immediately upon detecting an anomaly. because of this, pls adjust the "
+        "recovery time to be 2 second slower, and set the number of tooling per production line to 5. adjust "
+        "the throughput/hr for all production lines to at least 90; set the tooling picking target for "
+        "production lines 2 to knife handle; and adjust the tooling picking order for production lines 1 to "
+        "prioritize picking tooling other than ent tooling set."
+    )
+    data = candidate(text)
+    data.update(
+        {
+            "request_types": ["SIMULATION_CONFIG_UPDATE"],
+            "simulation_config_updates": {
+                "num_envs": 2,
+                "travel_time": 2.5,
+                "fix_duration": 6.5,
+                "resume_delay": 0.0,
+                "add_reference_number": 5,
+            },
+        }
+    )
+
+    patch = normalize_domain_candidate(data, current_trt())
+
+    assert patch["simulation_config_updates"] == {
+        "num_envs": 2,
+        "chosen_intervention_mode": "immediate-stop",
+        "travel_time": 2.5,
+        "fix_duration": 6.5,
+        "resume_delay": 2.5,
+        "add_reference_number": 5,
+    }
+
+    spec = {
+        "simulation_scope": {"mode": "EXPLICIT_OPERATOR_LIMITED", "lines": ["line_1", "line_2"]},
+        "simulation_config": patch["simulation_config_updates"],
+        "operator_model": {"travel_time": 5.0, "fix_duration": 8.0, "resume_delay": 0.5},
+        "tool_catalog": {f"tool_{index:02d}": {} for index in range(1, 28)},
+        "governance_metadata": {"expected_command_args": patch["simulation_config_updates"]},
+    }
+    args = build_isaac_command_args_with_sources(spec)["command_args"]
+
+    assert args["num_envs"] == 2
+    assert args["chosen_intervention_mode"] == "immediate-stop"
+    assert args["travel_time"] == 2.5
+    assert args["fix_duration"] == 6.5
+    assert args["resume_delay"] == 2.5
+    assert args["add_reference_number"] == 5

@@ -73,6 +73,17 @@ OPERATOR_CHECK_TRANSLATIONS: dict[str, dict[str, str]] = {
         "operator_impact": "Do not deploy yet. The KPI result is measuring a full-inventory condition against a partial-table simulation.",
         "recommended_action": "Update the KPI checker to evaluate the tools actually shown in the simulation, then rerun.",
     },
+    "data_quality.timing_inconsistent_with_pick_events": {
+        "operator_label": "KPI timing was inconsistent with pick timestamps",
+        "operator_impact": "Review before deployment. Throughput should be trusted only after recalculating from pick timestamps.",
+        "recommended_action": "Use the recalculated throughput and inspect the Isaac result writer before treating this as clean deployment evidence.",
+    },
+    "data_quality.tool_classification_failed": {
+        "operator_label": "Tool classification failed",
+        "operator_explanation": "Simulation result is not reliable. Tool classification failed before normal batch picking evidence was recorded.",
+        "operator_impact": "Deployment cannot be offered because the run did not produce trustworthy pick, table-batch, or timing evidence.",
+        "recommended_action": "Fix ScenarioSpec line-to-environment tool classification and rerun simulation.",
+    },
     "placement.incorrect_required_tool": {
         "operator_label": "Required tool placement warning",
         "operator_explanation": "A required ENT tool was picked and sent to the required tray, but the result database marked its placement as incorrect.",
@@ -149,6 +160,11 @@ def _line_target(line: dict[str, Any], key: str) -> float | None:
         return None
 
 
+def _scenario_line_target(scenario_spec: dict[str, Any], line_id: str, key: str) -> float | None:
+    policy = _policy_for_line(scenario_spec, line_id)
+    return _line_target(policy, key)
+
+
 def _policy_for_line(scenario_spec: dict[str, Any], line_id: str) -> dict[str, Any]:
     for policy in scenario_spec.get("line_policies") or []:
         if policy.get("line_id") == line_id:
@@ -178,6 +194,133 @@ def _format_number(value: float | int | None, suffix: str = "") -> str:
     if isinstance(value, float) and value.is_integer():
         return f"{int(value)}{suffix}"
     return f"{value:g}{suffix}" if isinstance(value, float) else f"{value}{suffix}"
+
+
+def _format_seconds(value: float | int | None) -> str:
+    if value is None:
+        return "not applicable"
+    return f"{_format_number(value)} seconds"
+
+
+def _is_truthy_event_flag(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"1", "true", "yes", "y"}
+
+
+def _placement_target_kind(event: dict[str, Any]) -> str:
+    return str(event.get("placement_target") or event.get("container_type") or "").upper()
+
+
+def _placed_events_for_line(tool_events: list[dict[str, Any]], line_id: str) -> list[dict[str, Any]]:
+    rows = []
+    for event in _rows_for_line(tool_events, line_id):
+        if _is_truthy_event_flag(event.get("placed")) or _placement_target_kind(event):
+            if _float_or_none(event.get("event_time_seconds")) is not None:
+                rows.append(event)
+    return rows
+
+
+def _event_times(events: list[dict[str, Any]]) -> list[float]:
+    return [
+        value
+        for value in (_float_or_none(event.get("event_time_seconds")) for event in events)
+        if value is not None
+    ]
+
+
+def _timing_from_tool_events(
+    *,
+    line_id: str,
+    line_kpi: dict[str, Any],
+    tool_events: list[dict[str, Any]],
+) -> dict[str, Any]:
+    completed_count = _int_or_zero(line_kpi.get("completed_count"))
+    placed_events = _placed_events_for_line(tool_events, line_id)
+    if not completed_count or len(placed_events) < completed_count:
+        return {
+            "usable": False,
+            "warnings": [],
+            "completion_durations": {},
+            "cycle_time_seconds": _float_or_none(line_kpi.get("cycle_time_seconds")),
+            "throughput_per_hour": _float_or_none(line_kpi.get("throughput_per_hour")),
+            "throughput_reliable": True,
+        }
+
+    required_events = [
+        event
+        for event in placed_events
+        if _int_or_zero(event.get("wanted")) == 1 or _placement_target_kind(event) == "REQUIRED_TRAY"
+    ]
+    unwanted_events = [
+        event
+        for event in placed_events
+        if _int_or_zero(event.get("wanted")) == 0 or _placement_target_kind(event) == "UNWANTED_BOX"
+    ]
+    required_times = _event_times(required_events)
+    unwanted_times = _event_times(unwanted_events)
+    all_times = _event_times(placed_events)
+    all_sorting_seconds = max(all_times) if all_times else None
+    cycle_seconds = all_sorting_seconds
+    throughput = None
+    throughput_reliable = False
+    if cycle_seconds is not None and cycle_seconds > 0:
+        throughput = completed_count / cycle_seconds * 3600
+        throughput_reliable = True
+
+    recorded_cycle = _float_or_none(line_kpi.get("cycle_time_seconds"))
+    recorded_throughput = _float_or_none(line_kpi.get("throughput_per_hour"))
+    warnings: list[dict[str, Any]] = []
+    if (
+        all_sorting_seconds is not None
+        and recorded_cycle is not None
+        and all_sorting_seconds > max(recorded_cycle * 10, recorded_cycle + 5)
+    ):
+        actual_text = (
+            f"recorded cycle time {_format_seconds(recorded_cycle)}, "
+            f"latest pick timestamp {_format_seconds(all_sorting_seconds)}"
+        )
+        if recorded_throughput is not None and throughput is not None:
+            actual_text += (
+                f", recorded throughput {_format_number(recorded_throughput)} tools/hr, "
+                f"recalculated throughput {_format_number(throughput)} tools/hr"
+            )
+        warnings.append(
+            _failed_check(
+                line_id=line_id,
+                check_id="data_quality.timing_inconsistent_with_pick_events",
+                expected="Line completion timing should match actual tool event timestamps.",
+                actual=actual_text,
+                actual_value=all_sorting_seconds,
+                expected_value=recorded_cycle,
+                evidence_source="tool_events.event_time_seconds",
+                operator_explanation=(
+                    f"Data-quality warning for {line_id}: the run artifact reported "
+                    f"{_format_seconds(recorded_cycle)} line completion, but actual pick timestamps show the line took "
+                    f"about {_format_seconds(all_sorting_seconds)}. Throughput was recalculated from pick timestamps and "
+                    "the original value is not treated as reliable."
+                ),
+                deployment_blocking=False,
+                severity="OPERATOR_ACK_REQUIRED",
+            )
+        )
+
+    return {
+        "usable": True,
+        "warnings": warnings,
+        "completion_durations": {
+            "required_tray_completion_seconds": max(required_times) if required_times else None,
+            "unwanted_box_completion_seconds": max(unwanted_times) if unwanted_times else None,
+            "all_sorting_completion_seconds": all_sorting_seconds,
+        },
+        "cycle_time_seconds": cycle_seconds,
+        "throughput_per_hour": throughput,
+        "throughput_reliable": throughput_reliable,
+        "recorded_cycle_time_seconds": recorded_cycle,
+        "recorded_throughput_per_hour": recorded_throughput,
+    }
 
 
 def _failed_check(
@@ -759,14 +902,23 @@ def _evaluate_line_kpi(
     trt_line = (trt.get("lines") or {}).get(line_id) or {}
     policy = _policy_for_line(scenario_spec, line_id)
     priority = policy.get("manipulator_priority") or {}
-    target_throughput = _line_target(trt_line, "min_throughput_per_hour")
-    max_downtime = _line_target(trt_line, "max_downtime_seconds")
-    throughput = _float_or_none(row.get("throughput_per_hour"))
+    target_throughput = _scenario_line_target(scenario_spec, line_id, "min_throughput_per_hour")
+    if target_throughput is None:
+        target_throughput = _line_target(trt_line, "min_throughput_per_hour")
+    deadline_minutes = _scenario_line_target(scenario_spec, line_id, "deadline_minutes")
+    if deadline_minutes is None:
+        deadline_minutes = _line_target(trt_line, "deadline_minutes")
+    max_downtime = _scenario_line_target(scenario_spec, line_id, "max_downtime_seconds")
+    if max_downtime is None:
+        max_downtime = _line_target(trt_line, "max_downtime_seconds")
+    timing = _timing_from_tool_events(line_id=line_id, line_kpi=row, tool_events=tool_events)
+    throughput = _float_or_none(timing.get("throughput_per_hour"))
     downtime = _float_or_none(row.get("downtime_seconds"))
     priority_deviation_count = _int_or_zero(row.get("priority_deviation_count"))
 
     failed_checks: list[dict[str, Any]] = []
     warnings: list[dict[str, Any]] = []
+    failed_checks.extend(timing.get("warnings") or [])
     if target_throughput is None:
         throughput_pass = True
     elif throughput is None:
@@ -911,6 +1063,30 @@ def _evaluate_line_kpi(
         if placement_status == "WARNING"
         else "No misplaced tools or placement validation warnings were recorded."
     )
+    required_tray = _container_row(container_completion_events, line_id, "REQUIRED_TRAY")
+    unwanted_box = _container_row(container_completion_events, line_id, "UNWANTED_BOX")
+    all_sorting = _container_row(container_completion_events, line_id, "ALL_SORTING")
+    timing_durations = timing.get("completion_durations") or {}
+    completion_durations = {
+        "required_tray_completion_seconds": timing_durations.get("required_tray_completion_seconds")
+        if timing.get("usable")
+        else (
+            _float_or_none((required_tray or {}).get("completion_time_seconds"))
+            or _float_or_none(row.get("required_tray_completion_seconds"))
+        ),
+        "unwanted_box_completion_seconds": timing_durations.get("unwanted_box_completion_seconds")
+        if timing.get("usable")
+        else (
+            _float_or_none((unwanted_box or {}).get("completion_time_seconds"))
+            or _float_or_none(row.get("unwanted_box_completion_seconds"))
+        ),
+        "all_sorting_completion_seconds": timing_durations.get("all_sorting_completion_seconds")
+        if timing.get("usable")
+        else (
+            _float_or_none((all_sorting or {}).get("completion_time_seconds"))
+            or _float_or_none(row.get("all_sorting_completion_seconds"))
+        ),
+    }
 
     if not line_success and not failed_checks:
         failed_checks.append(
@@ -952,6 +1128,25 @@ def _evaluate_line_kpi(
         "simulated_tools_completed": int(row.get("completed_count") or 0),
         "throughput_per_hour": throughput,
         "target_min_throughput_per_hour": target_throughput,
+        "target_kpis": {
+            "min_throughput_per_hour": target_throughput,
+            "deadline_minutes": deadline_minutes,
+            "max_downtime_seconds": max_downtime,
+        },
+        "actual_kpis": {
+            "throughput_per_hour": throughput,
+            "throughput_reliable": bool(timing.get("throughput_reliable", True)),
+            "recorded_throughput_per_hour": timing.get("recorded_throughput_per_hour"),
+            "completed_count": int(row.get("completed_count") or 0),
+            "wanted_completed_count": int(row.get("wanted_completed_count") or 0),
+            "unwanted_completed_count": int(row.get("unwanted_completed_count") or 0),
+            "misplaced_count": int(row.get("misplaced_count") or 0),
+            "entanglement_count": int(row.get("entanglement_count") or 0),
+            "downtime_seconds": downtime,
+            "cycle_time_seconds": timing.get("cycle_time_seconds"),
+            "recorded_cycle_time_seconds": timing.get("recorded_cycle_time_seconds"),
+        },
+        "completion_durations": completion_durations,
         "throughput_pass": throughput_pass,
         "downtime_seconds": downtime,
         "max_downtime_seconds": max_downtime,
@@ -1010,6 +1205,62 @@ def _failure_summary(
         "source": "output_db" if run else ("seed_sweep.sqlite3" if seed_sweep_failure else "host_runner"),
         "raw_error_message": raw_error,
         "operator_explanation": f"Simulation failed during {stage}. The recorded reason was: {raw_error}",
+        "partial_line_kpis_available": bool(run_artifact.get("line_kpis")),
+        "operator_next_action": "REQUEST_REVISION or RERUN_SIMULATION",
+    }
+
+
+def _classification_data_quality_failure(
+    run_artifact: dict[str, Any],
+    scenario_spec: dict[str, Any],
+    host_runner: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    tool_events = run_artifact.get("tool_events") or []
+    table_batch_events = run_artifact.get("table_batch_events") or []
+    batch_pick_events = run_artifact.get("batch_pick_events") or []
+    config = scenario_spec.get("simulation_config") or {}
+    expected_tooling_count = int(config.get("add_reference_number") or 0)
+    expected_line_count = int(config.get("num_envs") or len((scenario_spec.get("simulation_scope") or {}).get("lines") or []))
+    expected_total = expected_tooling_count * expected_line_count if expected_tooling_count and expected_line_count else None
+    all_zero_time = bool(tool_events) and all(float(event.get("event_time_seconds") or 0) == 0.0 for event in tool_events)
+    inflated_tool_count = expected_total is not None and len(tool_events) > expected_total
+    missing_batch_evidence = not table_batch_events and not batch_pick_events
+    raw_error = " ".join(
+        str(value or "")
+        for value in (
+            run_artifact.get("root_exception"),
+            run_artifact.get("message"),
+            (run_artifact.get("run") or {}).get("error_message"),
+            (host_runner or {}).get("stderr_tail"),
+            (host_runner or {}).get("stdout_tail"),
+        )
+    )
+    classification_error = (
+        "line_id is required when scenariospec contains multiple production lines" in raw_error.lower()
+    )
+    if not (missing_batch_evidence and all_zero_time and (inflated_tool_count or classification_error)):
+        return None
+    raw_reason = (
+        "line_id is required when ScenarioSpec contains multiple production lines"
+        if classification_error
+        else "tool events were synthesized at zero time without normal batch evidence"
+    )
+    metadata = OPERATOR_CHECK_TRANSLATIONS["data_quality.tool_classification_failed"]
+    return {
+        "failure_stage": "TOOL_CLASSIFICATION_FAILED",
+        "failure_reason": raw_reason,
+        "failure_details": {
+            "expected_tooling_count_per_line": expected_tooling_count,
+            "expected_simulated_lines": expected_line_count,
+            "expected_tool_events": expected_total,
+            "actual_tool_events": len(tool_events),
+            "table_batch_events_count": len(table_batch_events),
+            "batch_pick_events_count": len(batch_pick_events),
+            "all_tool_event_times_zero": all_zero_time,
+        },
+        "source": "run_artifact_data_quality",
+        "raw_error_message": raw_reason,
+        "operator_explanation": f"{metadata['operator_explanation']} Raw failure reason: {raw_reason}",
         "partial_line_kpis_available": bool(run_artifact.get("line_kpis")),
         "operator_next_action": "REQUEST_REVISION or RERUN_SIMULATION",
     }
@@ -1081,6 +1332,113 @@ def _operator_summary(
         f"Simulation completed, but KPI evidence does not support deployment yet. "
         f"Lines needing attention: {failed_lines or 'unknown'}."
     )
+
+
+def _dry_run_operator_summary(line_results: list[dict[str, Any]], scenario_spec: dict[str, Any]) -> str:
+    config = scenario_spec.get("simulation_config") or {}
+    lines = [
+        "Dry run completed successfully.",
+        "",
+        "Configured Time-Arrival Model:",
+        f"- Active production lines: {config.get('num_envs', len((scenario_spec.get('simulation_scope') or {}).get('lines') or []))}",
+        f"- Intervention mode: {str(config.get('chosen_intervention_mode') or 'continue-until-arrival').replace('-', ' ')}",
+        f"- Arrival time: {_format_number(_float_or_none(config.get('travel_time')), ' seconds')}",
+        f"- Entanglement fix time: {_format_number(_float_or_none(config.get('fix_duration')), ' seconds')}",
+        f"- Recovery delay: {_format_number(_float_or_none(config.get('resume_delay')), ' seconds')}",
+        f"- Simulated tooling count per line: {config.get('add_reference_number', 'not recorded')}",
+        "",
+        "Actual KPI results:",
+    ]
+    for row in line_results:
+        actual = row.get("actual_kpis") or {}
+        durations = row.get("completion_durations") or {}
+        lines.append(
+            "- "
+            f"{row.get('line_id')}: throughput {_format_number(actual.get('throughput_per_hour'), ' tools/hour')}, "
+            f"completed {actual.get('completed_count', 'not recorded')} tools, "
+            f"required tray {_format_number(durations.get('required_tray_completion_seconds'), ' seconds')}, "
+            f"unwanted box {_format_number(durations.get('unwanted_box_completion_seconds'), ' seconds')}, "
+            f"all sorting {_format_number(durations.get('all_sorting_completion_seconds'), ' seconds')}, "
+            f"downtime {_format_number(actual.get('downtime_seconds'), ' seconds')}, "
+            f"entanglements {actual.get('entanglement_count', 'not recorded')}."
+        )
+    lines.extend(
+        [
+            "",
+            "No deployment is required for this dry run. Reply RERUN_SIMULATION to run it again, REQUEST_REVISION to adjust the request, or CANCEL to end.",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _operator_detail_summary(
+    *,
+    line_results: list[dict[str, Any]],
+    scenario_spec: dict[str, Any],
+    overall_result: str,
+    deployment_recommended: bool,
+    data_quality_warnings: list[str],
+) -> str:
+    config = scenario_spec.get("simulation_config") or {}
+    scope = scenario_spec.get("simulation_scope") or {}
+    scope_lines = scope.get("lines") or [row.get("line_id") for row in line_results if row.get("line_id")]
+    tooling_count = config.get("add_reference_number") or config.get("simulated_tooling_count")
+    if deployment_recommended:
+        header = "Simulation completed. KPI evidence supports deployment, but please review the measured results first."
+    elif overall_result == "FAIL":
+        header = "Simulation completed, but KPI evidence does not support deployment yet. Review the measured results below."
+    else:
+        header = "Simulation completed with warnings. Review the measured results before deciding what to do next."
+
+    lines = [
+        header,
+        "",
+        "Simulation scope:",
+        f"- Simulated lines: {', '.join(str(line) for line in scope_lines) if scope_lines else 'not recorded'}",
+        f"- Simulated tooling count per line: {tooling_count if tooling_count is not None else 'not recorded'}",
+        f"- Intervention mode: {config.get('chosen_intervention_mode', 'not recorded')}",
+        f"- Arrival time: {_format_seconds(_float_or_none(config.get('travel_time')))}",
+        f"- Entanglement fix time: {_format_seconds(_float_or_none(config.get('fix_duration')))}",
+        f"- Recovery delay: {_format_seconds(_float_or_none(config.get('resume_delay')))}",
+        "",
+        "KPI comparison:",
+    ]
+    for row in line_results:
+        actual = row.get("actual_kpis") or {}
+        target = row.get("target_kpis") or {}
+        durations = row.get("completion_durations") or {}
+        throughput = actual.get("throughput_per_hour")
+        throughput_text = (
+            f"{_format_number(_float_or_none(throughput))} tools/hour"
+            if actual.get("throughput_reliable", True) and throughput is not None
+            else "not reliable"
+        )
+        completed = actual.get("completed_count", "not recorded")
+        wanted = actual.get("wanted_completed_count", "not recorded")
+        unwanted = actual.get("unwanted_completed_count", "not recorded")
+        result = "PASS" if row.get("status") == "PASS" else ("WARNING" if row.get("status") in {"WARNING", "OPERATOR_ACK_REQUIRED"} else "FAIL")
+        lines.extend(
+            [
+                f"{row.get('line_id')}:",
+                f"- Target minimum throughput: {_format_number(_float_or_none(target.get('min_throughput_per_hour')), ' tools/hour')}",
+                f"- Actual throughput: {throughput_text}",
+                f"- Completed: {completed}/{tooling_count if tooling_count is not None else completed} simulated tools",
+                f"- Required tray: {wanted} tools, completed in {_format_seconds(_float_or_none(durations.get('required_tray_completion_seconds')))}",
+                f"- Unwanted box: {unwanted} tools, completed in {_format_seconds(_float_or_none(durations.get('unwanted_box_completion_seconds')))}",
+                f"- All sorting completed in {_format_seconds(_float_or_none(durations.get('all_sorting_completion_seconds')))}",
+                f"- Entanglements: {actual.get('entanglement_count', 'not recorded')}",
+                f"- Downtime: {_format_seconds(_float_or_none(actual.get('downtime_seconds')))}",
+                f"- Result: {result}",
+                "",
+            ]
+        )
+
+    lines.append("Data quality:")
+    if data_quality_warnings:
+        lines.extend(f"- {warning}" for warning in data_quality_warnings)
+    else:
+        lines.append("- No data-quality warnings were recorded.")
+    return "\n".join(lines).rstrip()
 
 
 def _expected_simulation_lines(scenario_spec: dict[str, Any], trt: dict[str, Any]) -> list[str]:
@@ -1178,6 +1536,9 @@ def build_evidence_summary(
     seed_db_path = source_seed_sweep_db_path or DEFAULT_SEED_SWEEP_DB_PATH
     seed_failure = _latest_seed_sweep_failure(seed_db_path)
     failure = _failure_summary(run_artifact, seed_failure, host_runner)
+    data_quality_failure = _classification_data_quality_failure(run_artifact, scenario_spec, host_runner)
+    if data_quality_failure:
+        failure = data_quality_failure
 
     line_results = [
         _evaluate_line_kpi(
@@ -1210,10 +1571,18 @@ def build_evidence_summary(
                     "line_id": line_id,
                     "status": "FAIL",
                     "throughput_per_hour": None,
-                    "target_min_throughput_per_hour": _line_target((trt.get("lines") or {}).get(line_id) or {}, "min_throughput_per_hour"),
+                    "target_min_throughput_per_hour": (
+                        _scenario_line_target(scenario_spec, line_id, "min_throughput_per_hour")
+                        if _scenario_line_target(scenario_spec, line_id, "min_throughput_per_hour") is not None
+                        else _line_target((trt.get("lines") or {}).get(line_id) or {}, "min_throughput_per_hour")
+                    ),
                     "throughput_pass": None,
                     "downtime_seconds": None,
-                    "max_downtime_seconds": _line_target((trt.get("lines") or {}).get(line_id) or {}, "max_downtime_seconds"),
+                    "max_downtime_seconds": (
+                        _scenario_line_target(scenario_spec, line_id, "max_downtime_seconds")
+                        if _scenario_line_target(scenario_spec, line_id, "max_downtime_seconds") is not None
+                        else _line_target((trt.get("lines") or {}).get(line_id) or {}, "max_downtime_seconds")
+                    ),
                     "downtime_pass": None,
                     "wanted_completion_time_seconds": None,
                     "unwanted_completion_time_seconds": None,
@@ -1313,6 +1682,19 @@ def build_evidence_summary(
         warning_checks=warning_checks,
         line_results=line_results,
     )
+    dry_run_only = bool(
+        (scenario_spec.get("governance_metadata") or {}).get("dry_run_only")
+        or (scenario_spec.get("simulation_config") or {}).get("dry_run_only")
+    )
+    if dry_run_only:
+        risk_profile = {
+            **risk_profile,
+            "deployment_recommended": False,
+            "deployment_allowed": False,
+            "requires_operator_acknowledgement": False,
+            "operator_options": ["RERUN_SIMULATION", "REQUEST_REVISION", "CANCEL"],
+            "next_action": "POST_EVIDENCE_DECISION",
+        }
     deployment_recommended = bool(risk_profile["deployment_recommended"])
     deployment_allowed = bool(risk_profile["deployment_allowed"])
     requires_operator_acknowledgement = bool(risk_profile["requires_operator_acknowledgement"])
@@ -1324,6 +1706,27 @@ def build_evidence_summary(
         else _failure_details_message(failed_checks)
     )
     operator_next_action = ", ".join(risk_profile["operator_options"])
+    data_quality_warnings = [
+        str(check.get("operator_explanation"))
+        for check in failed_checks
+        if str(check.get("check_id") or "").startswith("data_quality.") and check.get("operator_explanation")
+    ]
+    operator_summary = (
+        _dry_run_operator_summary(line_results, scenario_spec)
+        if dry_run_only and not failure
+        else _operator_summary(overall_result, line_results, failure, failed_checks)
+    )
+    operator_detail_summary = (
+        _dry_run_operator_summary(line_results, scenario_spec)
+        if dry_run_only and not failure
+        else _operator_detail_summary(
+            line_results=line_results,
+            scenario_spec=scenario_spec,
+            overall_result=overall_result,
+            deployment_recommended=deployment_recommended,
+            data_quality_warnings=data_quality_warnings,
+        )
+    )
     summary = {
         "overall_result": overall_result,
         "deployment_recommended": deployment_recommended,
@@ -1335,7 +1738,8 @@ def build_evidence_summary(
         "line_findings": risk_profile["line_findings"],
         "technical_findings": risk_profile["technical_findings"],
         "acknowledged_risks": risk_profile["acknowledged_risks"],
-        "operator_summary": _operator_summary(overall_result, line_results, failure, failed_checks),
+        "operator_summary": operator_summary,
+        "operator_detail_summary": operator_detail_summary,
         "kpi_table": line_results,
         "line_results": line_results,
         "failed_lines": failed_lines,
@@ -1344,15 +1748,18 @@ def build_evidence_summary(
         "failed_checks": failed_checks,
         "warning_checks": warning_checks,
         "simulation_config": {
+            **(scenario_spec.get("simulation_config") or {}),
             "simulated_tooling_count": simulated_tooling_count,
             "full_environment_tooling_count": full_environment_tooling_count,
         },
+        "dry_run_only": dry_run_only,
         "kpi_evaluation_scope": "SIMULATED_TABLE_SCOPE" if scope_mismatch_checks else "FULL_ENVIRONMENT_SCOPE",
         "likely_root_cause": likely_root_cause,
         "summary_message": summary_message,
         "operator_next_action": operator_next_action,
         "failure_summary": failure,
         "warnings": warnings,
+        "data_quality_warnings": data_quality_warnings,
         "next_action": next_action,
     }
     canonical_artifact = {

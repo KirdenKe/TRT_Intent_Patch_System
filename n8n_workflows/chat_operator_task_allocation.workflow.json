@@ -99,7 +99,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const current = $input.first().json;\nconst previous = current.previous_context ?? current.context ?? {};\nconst ids = current.ids ?? {};\nconst payload = current.payload ?? {};\nfunction firstNonNull(...values) { return values.find(v => v !== undefined && v !== null && v !== ''); }\nconst source = $('Normalize Dialogue Decision').first().json;\nconst sessionId = source.context?.session_id || source.session_id || source.raw_chat_input || 'default';\nreturn [{ json: { status: current.status, context: { ...previous, ...(current.context ?? {}), ...Object.fromEntries(Object.entries(ids).filter(([_, v]) => v !== null && v !== undefined && v !== '')), release_id: firstNonNull(current.context?.release_id, ids.release_id, previous.release_id), audit_id: firstNonNull(current.context?.audit_id, ids.audit_id, previous.audit_id), trt_id: firstNonNull(current.context?.trt_id, ids.trt_id, payload.plan?.trt_id, previous.trt_id), trt_version: firstNonNull(current.context?.trt_version, ids.trt_version, payload.plan?.trt_version, previous.trt_version), reconciliation_plan_id: firstNonNull(current.context?.reconciliation_plan_id, ids.reconciliation_plan_id, payload.plan?.plan_id, previous.reconciliation_plan_id), scenario_batch_id: firstNonNull(current.context?.scenario_batch_id, ids.scenario_batch_id, previous.scenario_batch_id), scenario_spec_ids: firstNonNull(current.context?.scenario_spec_ids, ids.scenario_spec_ids, previous.scenario_spec_ids, []), session_id: sessionId, operator_id: firstNonNull(source.operator_id, current.context?.operator_id, previous.operator_id), reason: firstNonNull(source.reason, current.context?.reason, previous.reason), intent_text: firstNonNull(source.intent_text, current.context?.intent_text, previous.intent_text), pending_intent: source.context?.pending_intent || previous.pending_intent || null }, payload, errors: current.errors ?? [] } }];"
+        "jsCode": "const current = $input.first().json;\nconst previous = current.previous_context ?? current.context ?? {};\nconst ids = current.ids ?? {};\nconst payload = current.payload ?? {};\nfunction firstNonNull(...values) { return values.find(v => v !== undefined && v !== null && v !== ''); }\nconst source = $('Normalize Dialogue Decision').first().json;\nconst sessionId = source.context?.session_id || source.session_id || source.raw_chat_input || 'default';\nconst candidate = payload.candidate_patch || current.candidate_patch || {};\nconst simulationConfigUpdates = firstNonNull(current.context?.simulation_config_updates, payload.simulation_config_updates, candidate.simulation_config_updates, source.context?.simulation_config_updates, previous.simulation_config_updates, null);\nconst dryRunOnly = current.context?.dry_run_only || payload.dry_run_only || candidate.dry_run_only || source.context?.dry_run_only || previous.dry_run_only || false;\nreturn [{ json: { status: current.status, context: { ...previous, ...(current.context ?? {}), ...Object.fromEntries(Object.entries(ids).filter(([_, v]) => v !== null && v !== undefined && v !== '')), release_id: firstNonNull(current.context?.release_id, ids.release_id, previous.release_id), audit_id: firstNonNull(current.context?.audit_id, ids.audit_id, previous.audit_id), trt_id: firstNonNull(current.context?.trt_id, ids.trt_id, payload.plan?.trt_id, previous.trt_id), trt_version: firstNonNull(current.context?.trt_version, ids.trt_version, payload.plan?.trt_version, previous.trt_version), reconciliation_plan_id: firstNonNull(current.context?.reconciliation_plan_id, ids.reconciliation_plan_id, payload.plan?.plan_id, previous.reconciliation_plan_id), scenario_batch_id: firstNonNull(current.context?.scenario_batch_id, ids.scenario_batch_id, previous.scenario_batch_id), scenario_spec_ids: firstNonNull(current.context?.scenario_spec_ids, ids.scenario_spec_ids, previous.scenario_spec_ids, []), session_id: sessionId, operator_id: firstNonNull(source.operator_id, current.context?.operator_id, previous.operator_id), reason: firstNonNull(source.reason, current.context?.reason, previous.reason), intent_text: firstNonNull(source.intent_text, current.context?.intent_text, previous.intent_text), simulation_config_updates: simulationConfigUpdates, dry_run_only: dryRunOnly, pending_intent: source.context?.pending_intent || previous.pending_intent || null }, payload: { ...payload, simulation_config_updates: simulationConfigUpdates, dry_run_only: dryRunOnly }, errors: current.errors ?? [] } }];"
       },
       "id": "ec701c3a-cd8a-467d-8953-988e9982e722",
       "name": "Normalize Context After Intent Review",
@@ -129,7 +129,7 @@
             {
               "id": "0e7a19a0-061a-452c-8e34-3bcfa24daa54",
               "name": "payload",
-              "value": "={{ { candidate_patch: $json.payload.candidate_patch || null, simulation_config_updates: $json.context.simulation_config_updates || $json.payload.candidate_patch?.simulation_config_updates || $json.payload.simulation_config_updates || null, affected_lines: $json.context.affected_lines || $json.payload.affected_lines || [], candidate_patch_summary: { patch_id: $json.context.patch_id, operations: $json.payload.candidate_patch?.operations || [], intent_text: $json.payload.candidate_patch?.intent_text || null, reason: $json.payload.candidate_patch?.reason || null, simulation_config_updates: $json.payload.candidate_patch?.simulation_config_updates || null, affected_lines: $json.context.affected_lines || $json.payload.affected_lines || [] }, validation_status: $json.status, validation_results: $json.payload.validation_results || null, message: $json.status === 'REVIEWED' ? ($json.payload.candidate_patch?.message || ($json.payload.candidate_patch?.simulation_config_updates ? 'The candidate simulation configuration update is valid. Please approve, reject, or request revision.' : 'Candidate patch is valid. Confirm release approval to continue.')) : 'Candidate patch needs revision.' } }}",
+              "value": "={{ { candidate_patch: $json.payload.candidate_patch || null, simulation_config_updates: $json.context.simulation_config_updates || $json.payload.candidate_patch?.simulation_config_updates || $json.payload.simulation_config_updates || null, dry_run_only: $json.context.dry_run_only || $json.payload.candidate_patch?.dry_run_only || $json.payload.dry_run_only || false, affected_lines: $json.context.affected_lines || $json.payload.affected_lines || [], candidate_patch_summary: { patch_id: $json.context.patch_id, operations: $json.payload.candidate_patch?.operations || [], intent_text: $json.payload.candidate_patch?.intent_text || null, reason: $json.payload.candidate_patch?.reason || null, simulation_config_updates: $json.payload.candidate_patch?.simulation_config_updates || null, dry_run_only: $json.payload.candidate_patch?.dry_run_only || false, affected_lines: $json.context.affected_lines || $json.payload.affected_lines || [] }, validation_status: $json.status, validation_results: $json.payload.validation_results || null, message: $json.status === 'REVIEWED' ? ($json.payload.candidate_patch?.message || ($json.payload.candidate_patch?.simulation_config_updates ? 'The candidate simulation configuration update is valid. Please approve, reject, or request revision.' : 'Candidate patch is valid. Confirm release approval to continue.')) : 'Candidate patch needs revision.' } }}",
               "type": "object"
             },
             {
@@ -200,7 +200,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const current = $input.first().json;\nconst previous = current.previous_context ?? current.context ?? {};\nconst ids = current.ids ?? {};\nconst payload = current.payload ?? {};\nfunction firstNonNull(...values) { return values.find(v => v !== undefined && v !== null && v !== ''); }\nfunction firstArray(...values) {\n  for (const value of values) {\n    if (Array.isArray(value) && value.length) return value;\n  }\n  for (const value of values) {\n    if (Array.isArray(value)) return value;\n  }\n  return [];\n}\nconst affectedLines = firstArray(current.context?.affected_lines, payload.affected_lines, ids.affected_lines, previous.affected_lines);\nreturn [{ json: { status: current.status, context: { ...previous, ...(current.context ?? {}), ...Object.fromEntries(Object.entries(ids).filter(([_, v]) => v !== null && v !== undefined && v !== '')), release_id: firstNonNull(current.context?.release_id, ids.release_id, previous.release_id), audit_id: firstNonNull(current.context?.audit_id, ids.audit_id, previous.audit_id), trt_id: firstNonNull(current.context?.trt_id, ids.trt_id, payload.plan?.trt_id, previous.trt_id), trt_version: firstNonNull(current.context?.trt_version, ids.trt_version, payload.plan?.trt_version, previous.trt_version), reconciliation_plan_id: firstNonNull(current.context?.reconciliation_plan_id, ids.reconciliation_plan_id, payload.plan?.plan_id, previous.reconciliation_plan_id), scenario_batch_id: firstNonNull(current.context?.scenario_batch_id, ids.scenario_batch_id, previous.scenario_batch_id), scenario_spec_ids: firstNonNull(current.context?.scenario_spec_ids, ids.scenario_spec_ids, previous.scenario_spec_ids, []), affected_lines: affectedLines, simulation_config_updates: firstNonNull(current.context?.simulation_config_updates, payload.simulation_config_updates, previous.simulation_config_updates, null) }, payload: { ...payload, affected_lines: affectedLines, simulation_config_updates: firstNonNull(current.context?.simulation_config_updates, payload.simulation_config_updates, previous.simulation_config_updates, null) }, errors: current.errors ?? [] } }];"
+        "jsCode": "const current = $input.first().json;\nconst previous = current.previous_context ?? current.context ?? {};\nconst ids = current.ids ?? {};\nconst payload = current.payload ?? {};\nfunction firstNonNull(...values) { return values.find(v => v !== undefined && v !== null && v !== ''); }\nfunction firstArray(...values) {\n  for (const value of values) {\n    if (Array.isArray(value) && value.length) return value;\n  }\n  for (const value of values) {\n    if (Array.isArray(value)) return value;\n  }\n  return [];\n}\nconst affectedLines = firstArray(current.context?.affected_lines, payload.affected_lines, ids.affected_lines, previous.affected_lines);\nreturn [{ json: { status: current.status, context: { ...previous, ...(current.context ?? {}), ...Object.fromEntries(Object.entries(ids).filter(([_, v]) => v !== null && v !== undefined && v !== '')), release_id: firstNonNull(current.context?.release_id, ids.release_id, previous.release_id), audit_id: firstNonNull(current.context?.audit_id, ids.audit_id, previous.audit_id), trt_id: firstNonNull(current.context?.trt_id, ids.trt_id, payload.plan?.trt_id, previous.trt_id), trt_version: firstNonNull(current.context?.trt_version, ids.trt_version, payload.plan?.trt_version, previous.trt_version), reconciliation_plan_id: firstNonNull(current.context?.reconciliation_plan_id, ids.reconciliation_plan_id, payload.plan?.plan_id, previous.reconciliation_plan_id), scenario_batch_id: firstNonNull(current.context?.scenario_batch_id, ids.scenario_batch_id, previous.scenario_batch_id), scenario_spec_ids: firstNonNull(current.context?.scenario_spec_ids, ids.scenario_spec_ids, previous.scenario_spec_ids, []), affected_lines: affectedLines, simulation_config_updates: firstNonNull(current.context?.simulation_config_updates, payload.simulation_config_updates, previous.simulation_config_updates, null), dry_run_only: current.context?.dry_run_only || payload.dry_run_only || previous.dry_run_only || false }, payload: { ...payload, affected_lines: affectedLines, simulation_config_updates: firstNonNull(current.context?.simulation_config_updates, payload.simulation_config_updates, previous.simulation_config_updates, null), dry_run_only: current.context?.dry_run_only || payload.dry_run_only || previous.dry_run_only || false }, errors: current.errors ?? [] } }];"
       },
       "id": "2c81b672-2369-4327-80b0-f962775face3",
       "name": "Normalize Context After Release Approval",
@@ -301,7 +301,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const current = $input.first().json;\nconst previous = current.previous_context ?? current.context ?? {};\nconst ids = current.ids ?? {};\nconst payload = current.payload ?? {};\nfunction firstNonNull(...values) { return values.find(v => v !== undefined && v !== null && v !== ''); }\nfunction firstArray(...values) {\n  for (const value of values) {\n    if (Array.isArray(value) && value.length) return value;\n  }\n  for (const value of values) {\n    if (Array.isArray(value)) return value;\n  }\n  return [];\n}\nconst affectedLines = firstArray(current.context?.affected_lines, payload.affected_lines, ids.affected_lines, previous.affected_lines);\nreturn [{ json: { status: current.status, context: { ...previous, ...(current.context ?? {}), ...Object.fromEntries(Object.entries(ids).filter(([_, v]) => v !== null && v !== undefined && v !== '')), release_id: firstNonNull(current.context?.release_id, ids.release_id, previous.release_id), audit_id: firstNonNull(current.context?.audit_id, ids.audit_id, previous.audit_id), trt_id: firstNonNull(current.context?.trt_id, ids.trt_id, payload.plan?.trt_id, previous.trt_id), trt_version: firstNonNull(current.context?.trt_version, ids.trt_version, payload.plan?.trt_version, previous.trt_version), reconciliation_plan_id: firstNonNull(current.context?.reconciliation_plan_id, ids.reconciliation_plan_id, payload.plan?.plan_id, previous.reconciliation_plan_id), scenario_batch_id: firstNonNull(current.context?.scenario_batch_id, ids.scenario_batch_id, previous.scenario_batch_id), scenario_spec_ids: firstNonNull(current.context?.scenario_spec_ids, ids.scenario_spec_ids, previous.scenario_spec_ids, []), affected_lines: affectedLines, simulation_config_updates: firstNonNull(current.context?.simulation_config_updates, payload.simulation_config_updates, previous.simulation_config_updates, null) }, payload: { ...payload, affected_lines: affectedLines, simulation_config_updates: firstNonNull(current.context?.simulation_config_updates, payload.simulation_config_updates, previous.simulation_config_updates, null) }, errors: current.errors ?? [] } }];"
+        "jsCode": "const current = $input.first().json;\nconst previous = current.previous_context ?? current.context ?? {};\nconst ids = current.ids ?? {};\nconst payload = current.payload ?? {};\nfunction firstNonNull(...values) { return values.find(v => v !== undefined && v !== null && v !== ''); }\nfunction firstArray(...values) {\n  for (const value of values) {\n    if (Array.isArray(value) && value.length) return value;\n  }\n  for (const value of values) {\n    if (Array.isArray(value)) return value;\n  }\n  return [];\n}\nconst affectedLines = firstArray(current.context?.affected_lines, payload.affected_lines, ids.affected_lines, previous.affected_lines);\nreturn [{ json: { status: current.status, context: { ...previous, ...(current.context ?? {}), ...Object.fromEntries(Object.entries(ids).filter(([_, v]) => v !== null && v !== undefined && v !== '')), release_id: firstNonNull(current.context?.release_id, ids.release_id, previous.release_id), audit_id: firstNonNull(current.context?.audit_id, ids.audit_id, previous.audit_id), trt_id: firstNonNull(current.context?.trt_id, ids.trt_id, payload.plan?.trt_id, previous.trt_id), trt_version: firstNonNull(current.context?.trt_version, ids.trt_version, payload.plan?.trt_version, previous.trt_version), reconciliation_plan_id: firstNonNull(current.context?.reconciliation_plan_id, ids.reconciliation_plan_id, payload.plan?.plan_id, previous.reconciliation_plan_id), scenario_batch_id: firstNonNull(current.context?.scenario_batch_id, ids.scenario_batch_id, previous.scenario_batch_id), scenario_spec_ids: firstNonNull(current.context?.scenario_spec_ids, ids.scenario_spec_ids, previous.scenario_spec_ids, []), affected_lines: affectedLines, simulation_config_updates: firstNonNull(current.context?.simulation_config_updates, payload.simulation_config_updates, previous.simulation_config_updates, null), dry_run_only: current.context?.dry_run_only || payload.dry_run_only || previous.dry_run_only || false }, payload: { ...payload, affected_lines: affectedLines, simulation_config_updates: firstNonNull(current.context?.simulation_config_updates, payload.simulation_config_updates, previous.simulation_config_updates, null), dry_run_only: current.context?.dry_run_only || payload.dry_run_only || previous.dry_run_only || false }, errors: current.errors ?? [] } }];"
       },
       "id": "60775ea6-fbea-4d67-9818-c0ef89781ca2",
       "name": "Normalize Context After Reconciliation",
@@ -403,7 +403,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const current = $input.first().json;\nconst previous = current.previous_context ?? current.context ?? {};\nconst ids = current.ids ?? {};\nconst payload = current.payload ?? {};\nfunction firstNonNull(...values) { return values.find(v => v !== undefined && v !== null && v !== ''); }\nfunction firstArray(...values) {\n  for (const value of values) {\n    if (Array.isArray(value) && value.length) return value;\n  }\n  for (const value of values) {\n    if (Array.isArray(value)) return value;\n  }\n  return [];\n}\nconst affectedLines = firstArray(current.context?.affected_lines, payload.affected_lines, ids.affected_lines, previous.affected_lines);\nreturn [{ json: { status: current.status, context: { ...previous, ...(current.context ?? {}), ...Object.fromEntries(Object.entries(ids).filter(([_, v]) => v !== null && v !== undefined && v !== '')), release_id: firstNonNull(current.context?.release_id, ids.release_id, previous.release_id), audit_id: firstNonNull(current.context?.audit_id, ids.audit_id, previous.audit_id), trt_id: firstNonNull(current.context?.trt_id, ids.trt_id, payload.plan?.trt_id, previous.trt_id), trt_version: firstNonNull(current.context?.trt_version, ids.trt_version, payload.plan?.trt_version, previous.trt_version), reconciliation_plan_id: firstNonNull(current.context?.reconciliation_plan_id, ids.reconciliation_plan_id, payload.plan?.plan_id, previous.reconciliation_plan_id), scenario_batch_id: firstNonNull(current.context?.scenario_batch_id, ids.scenario_batch_id, previous.scenario_batch_id), scenario_spec_ids: firstNonNull(current.context?.scenario_spec_ids, ids.scenario_spec_ids, previous.scenario_spec_ids, []), affected_lines: affectedLines, simulation_config_updates: firstNonNull(current.context?.simulation_config_updates, payload.simulation_config_updates, previous.simulation_config_updates, null) }, payload: { ...payload, affected_lines: affectedLines, simulation_config_updates: firstNonNull(current.context?.simulation_config_updates, payload.simulation_config_updates, previous.simulation_config_updates, null) }, errors: current.errors ?? [] } }];"
+        "jsCode": "const current = $input.first().json;\nconst previous = current.previous_context ?? current.context ?? {};\nconst ids = current.ids ?? {};\nconst payload = current.payload ?? {};\nfunction firstNonNull(...values) { return values.find(v => v !== undefined && v !== null && v !== ''); }\nfunction firstArray(...values) {\n  for (const value of values) {\n    if (Array.isArray(value) && value.length) return value;\n  }\n  for (const value of values) {\n    if (Array.isArray(value)) return value;\n  }\n  return [];\n}\nconst affectedLines = firstArray(current.context?.affected_lines, payload.affected_lines, ids.affected_lines, previous.affected_lines);\nreturn [{ json: { status: current.status, context: { ...previous, ...(current.context ?? {}), ...Object.fromEntries(Object.entries(ids).filter(([_, v]) => v !== null && v !== undefined && v !== '')), release_id: firstNonNull(current.context?.release_id, ids.release_id, previous.release_id), audit_id: firstNonNull(current.context?.audit_id, ids.audit_id, previous.audit_id), trt_id: firstNonNull(current.context?.trt_id, ids.trt_id, payload.plan?.trt_id, previous.trt_id), trt_version: firstNonNull(current.context?.trt_version, ids.trt_version, payload.plan?.trt_version, previous.trt_version), reconciliation_plan_id: firstNonNull(current.context?.reconciliation_plan_id, ids.reconciliation_plan_id, payload.plan?.plan_id, previous.reconciliation_plan_id), scenario_batch_id: firstNonNull(current.context?.scenario_batch_id, ids.scenario_batch_id, previous.scenario_batch_id), scenario_spec_ids: firstNonNull(current.context?.scenario_spec_ids, ids.scenario_spec_ids, previous.scenario_spec_ids, []), affected_lines: affectedLines, simulation_config_updates: firstNonNull(current.context?.simulation_config_updates, payload.simulation_config_updates, previous.simulation_config_updates, null), dry_run_only: current.context?.dry_run_only || payload.dry_run_only || previous.dry_run_only || false }, payload: { ...payload, affected_lines: affectedLines, simulation_config_updates: firstNonNull(current.context?.simulation_config_updates, payload.simulation_config_updates, previous.simulation_config_updates, null), dry_run_only: current.context?.dry_run_only || payload.dry_run_only || previous.dry_run_only || false }, errors: current.errors ?? [] } }];"
       },
       "id": "9b0aa5ba-c159-4217-959a-4b657f8659d0",
       "name": "Normalize Context After ScenarioSpec Generation",
@@ -587,7 +587,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst payload = input.payload || {};\nconst context = input.context || {};\nconst errors = Array.isArray(input.errors) ? input.errors : (input.errors ? [input.errors] : []);\nfunction operatorFacing(value) {\n  return String(value || '')\n    .replace(/add_reference_number/gi, 'simulated tooling count')\n    .replace(/add reference number/gi, 'simulated tooling count')\n    .replace(/Regarding the number of tools, do you mean the simulated tooling count simulation argument\\?/gi, 'I will set the simulated tooling count from your request.')\n    .replace(/Regarding the number of tools, do you mean the simulated tooling count\\?/gi, 'I will set the simulated tooling count from your request.');\n}\nconst cleanErrors = errors.map(value => operatorFacing(value).trim()).filter(value => value && !value.startsWith('Missing required chat field:'));\nconst status = input.status || 'ERROR';\nconst missingFields = Array.isArray(input.missing_fields) ? input.missing_fields : [];\nconst fieldLabels = input.field_labels || {\n  operator_id: 'operator ID',\n  intent_text: 'task request',\n  reason: 'reason for the change'\n};\nconst example = input.example || {\n  operator_id: 'op_001',\n  reason: 'urgent trauma set deadline'\n};\nconst intentSummary = input.intent_summary || payload.intent_text || payload.raw_chat_input || payload.message || '';\nconst ids = { ...(input.ids || {}), ...context };\nconst debug = input.debug === true || context.debug === true || payload.debug === true;\nconst asksClarification = cleanErrors.some(value => value.includes('Do you mean') || value.toLowerCase().includes('please clarify')) || String(payload.message || '').toLowerCase().includes('please clarify');\nlet nextAction = 'WAIT';\nif (status === 'NEEDS_CLARIFICATION' && missingFields.length) nextAction = 'PROVIDE_MISSING_FIELDS';\nelse if (status === 'NEEDS_CLARIFICATION' || (status === 'NEEDS_REVISION' && asksClarification)) nextAction = 'PROVIDE_CLARIFICATION';\nelse if (status === 'REVIEWED') nextAction = 'CONFIRM_PATCH';\nelse if (['REJECTED', 'REJECTED_BY_OPERATOR', 'NEEDS_REVISION', 'REQUIRES_OPERATOR_RESOLUTION'].includes(status)) nextAction = 'REVISE_REQUEST';\nelse if (status === 'WAITING_FOR_DEPLOYMENT_DECISION') nextAction = 'PROVIDE_DEPLOYMENT_DECISION';\nelse if (status === 'GENERATED') nextAction = 'DONE';\nelse if (status === 'ERROR') nextAction = 'ERROR';\n\nconst sanitizedPayload = { ...payload };\nif (typeof sanitizedPayload.message === 'string') sanitizedPayload.message = operatorFacing(sanitizedPayload.message);\nif (typeof sanitizedPayload.user_message === 'string') sanitizedPayload.user_message = operatorFacing(sanitizedPayload.user_message);\nconst canonical = {\n  status,\n  next_action: nextAction,\n  intent_summary: intentSummary,\n  missing_fields: missingFields,\n  field_labels: fieldLabels,\n  example,\n  ids,\n  payload: sanitizedPayload,\n  errors: cleanErrors,\n  debug\n};\n\nconst schema = {\n  type: 'object',\n  additionalProperties: false,\n  required: ['user_message', 'suggested_reply'],\n  properties: {\n    user_message: { type: 'string' },\n    suggested_reply: { type: 'string' }\n  }\n};\n\nconst NL = String.fromCharCode(10);\nconst formatterExamples = [\n  {\n    input_status: 'NEEDS_CLARIFICATION',\n    output: {\n      user_message: 'I understood your request as: Line 1 should prioritize Trauma Set. Before I can submit this for review, I still need operator ID and reason for the change.',\n      suggested_reply: 'operator_id: op_001' + NL + 'reason: urgent trauma set deadline'\n    }\n  },\n  {\n    input_status: 'REVIEWED',\n    output: {\n      user_message: 'Candidate patch reviewed successfully. Please approve, reject, or request revision.',\n      suggested_reply: 'APPROVE: urgent trauma set deadline'\n    }\n  },\n  {\n    input_status: 'GENERATED',\n    output: {\n      user_message: 'ScenarioSpec generated at outputs/scenario_specs/example.json.',\n      suggested_reply: ''\n    }\n  },\n  {\n    input_status: 'WAITING',\n    output: {\n      user_message: 'The patch was released successfully, but the strategy cannot be switched immediately. Line 1 currently has active WIP, so the Supervisor requires the TRAY_COMPLETE checkpoint before switching. Line 2 requires no action because the released TRT does not change that line.',\n      suggested_reply: ''\n    }\n  }\n];\n\nconst userPrompt = [\n  'Format this backend result into a concise user-facing chat message.',\n  'Do not show raw JSON.',\n  'Do not invent IDs or fields.',\n  'Do not change workflow status, required fields, IDs, validation results, or rejection reasons.',\n  '',\n  'Status-specific instructions:',\n  'NEEDS_CLARIFICATION: Summarize what was understood from intent_summary. List missing_fields using field_labels. Provide a suggested reply using example values. Ask only for missing fields.',\n  'REVIEWED: Summarize that the candidate patch passed validation. Ask the operator to approve, reject, or request revision. Do not claim it has been released.',\n  'RELEASED: State that release completed. Include release_id, trt_version, and audit_id only if present in ids. Mention the next step is reconciliation or simulation preparation.',\n  'READY / DEGRADED: Summarize reconciliation status. READY means ready for ScenarioSpec generation or simulation preparation. DEGRADED means proceed with the degraded strategy and mention any degraded details if present.',\n  'WAITING: Explain that the patch was released successfully, but the strategy cannot switch immediately. Mention the specific line checkpoint from payload.required_checkpoint or payload.required_checkpoints. If line decisions are available, explain unchanged lines require no action. Preferred style: The patch was released successfully, but the strategy cannot be switched immediately. Line 1 currently has active WIP, so the Supervisor requires the TRAY_COMPLETE checkpoint before switching. Line 2 requires no action because the released TRT does not change that line.',\n  'WAITING_FOR_DEPLOYMENT_DECISION: Show the deterministic evidence summary from payload.message or payload.evidence_summary.operator_summary. Then ask the deployment question from payload.deployment_question. Do not invent KPI values.',\n  'GENERATED: If payload.message is present, use it because it contains deterministic simulation evidence. Otherwise state that ScenarioSpec generation completed and include scenario_spec_path or generated_scenario_spec_path if present.',\n  'REJECTED / NEEDS_REVISION: Explain errors or rejection reasons in plain language. Ask the operator to revise the request. Do not invent a successful release.',\n  '',\n  'Examples with valid JSON outputs matching the formatter schema:',\n  JSON.stringify(formatterExamples[0]),\n  JSON.stringify(formatterExamples[1]),\n  JSON.stringify(formatterExamples[2]),\n  JSON.stringify(formatterExamples[3]),\n  '',\n  'Backend canonical result:',\n  JSON.stringify(canonical)\n].join(NL);\n\nconst vllmBody = {\n  model: 'cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit',\n  messages: [\n    {\n      role: 'system',\n      content: [\n        'You format backend workflow results for an operator chat UI.',\n        'Return only JSON matching the schema.',\n        'You may only write user-facing wording.',\n        'Do not decide workflow state.',\n        'Do not change status, required fields, IDs, validation results, or rejection reasons.',\n        'Do not expose raw JSON.',\n        'Do not expose internal simulation argument names such as add_reference_number; say simulated tooling count instead.'\n      ].join(' ')\n    },\n    {\n      role: 'user',\n      content: userPrompt\n    }\n  ],\n  temperature: 0,\n  max_tokens: 320,\n  structured_outputs: {\n    json: schema\n  }\n};\n\nreturn [{\n  json: {\n    vllm_body: vllmBody,\n    formatter_canonical: canonical\n  }\n}];"
+        "jsCode": "const input = $input.first().json;\nconst payload = input.payload || {};\nconst context = input.context || {};\nconst errors = Array.isArray(input.errors) ? input.errors : (input.errors ? [input.errors] : []);\nfunction operatorFacing(value) {\n  return String(value || '')\n    .replace(/add_reference_number/gi, 'simulated tooling count')\n    .replace(/add reference number/gi, 'simulated tooling count')\n    .replace(/Regarding the number of tools, do you mean the simulated tooling count simulation argument\\?/gi, 'I will set the simulated tooling count from your request.')\n    .replace(/Regarding the number of tools, do you mean the simulated tooling count\\?/gi, 'I will set the simulated tooling count from your request.');\n}\nconst cleanErrors = errors.map(value => operatorFacing(value).trim()).filter(value => value && !value.startsWith('Missing required chat field:'));\nconst status = input.status || 'ERROR';\nconst missingFields = Array.isArray(input.missing_fields) ? input.missing_fields : [];\nconst fieldLabels = input.field_labels || {\n  operator_id: 'operator ID',\n  intent_text: 'task request',\n  reason: 'reason for the change'\n};\nconst example = input.example || {\n  operator_id: 'op_001',\n  reason: 'urgent trauma set deadline'\n};\nconst intentSummary = input.intent_summary || payload.intent_text || payload.raw_chat_input || payload.message || '';\nconst ids = { ...(input.ids || {}), ...context };\nconst debug = input.debug === true || context.debug === true || payload.debug === true;\nconst asksClarification = cleanErrors.some(value => value.includes('Do you mean') || value.toLowerCase().includes('please clarify')) || String(payload.message || '').toLowerCase().includes('please clarify');\nlet nextAction = 'WAIT';\nif (status === 'NEEDS_CLARIFICATION' && missingFields.length) nextAction = 'PROVIDE_MISSING_FIELDS';\nelse if (status === 'NEEDS_CLARIFICATION' || (status === 'NEEDS_REVISION' && asksClarification)) nextAction = 'PROVIDE_CLARIFICATION';\nelse if (status === 'REVIEWED') nextAction = 'CONFIRM_PATCH';\nelse if (['REJECTED', 'REJECTED_BY_OPERATOR', 'NEEDS_REVISION', 'REQUIRES_OPERATOR_RESOLUTION'].includes(status)) nextAction = 'REVISE_REQUEST';\nelse if (status === 'WAITING_FOR_DEPLOYMENT_DECISION') nextAction = 'PROVIDE_DEPLOYMENT_DECISION';\nelse if (status === 'GENERATED') nextAction = 'DONE';\nelse if (status === 'ERROR') nextAction = 'ERROR';\n\nconst sanitizedPayload = { ...payload };\nif (typeof sanitizedPayload.message === 'string') sanitizedPayload.message = operatorFacing(sanitizedPayload.message);\nif (typeof sanitizedPayload.user_message === 'string') sanitizedPayload.user_message = operatorFacing(sanitizedPayload.user_message);\nconst canonical = {\n  status,\n  next_action: nextAction,\n  intent_summary: intentSummary,\n  missing_fields: missingFields,\n  field_labels: fieldLabels,\n  example,\n  ids,\n  payload: sanitizedPayload,\n  errors: cleanErrors,\n  debug\n};\n\nconst schema = {\n  type: 'object',\n  additionalProperties: false,\n  required: ['user_message', 'suggested_reply'],\n  properties: {\n    user_message: { type: 'string' },\n    suggested_reply: { type: 'string' }\n  }\n};\n\nconst NL = String.fromCharCode(10);\nconst formatterExamples = [\n  {\n    input_status: 'NEEDS_CLARIFICATION',\n    output: {\n      user_message: 'I understood your request as: Line 1 should prioritize Trauma Set. Before I can submit this for review, I still need operator ID and reason for the change.',\n      suggested_reply: 'operator_id: op_001' + NL + 'reason: urgent trauma set deadline'\n    }\n  },\n  {\n    input_status: 'REVIEWED',\n    output: {\n      user_message: 'Candidate patch reviewed successfully. Please approve, reject, or request revision.',\n      suggested_reply: 'APPROVE: urgent trauma set deadline'\n    }\n  },\n  {\n    input_status: 'GENERATED',\n    output: {\n      user_message: 'ScenarioSpec generated at outputs/scenario_specs/example.json.',\n      suggested_reply: ''\n    }\n  },\n  {\n    input_status: 'WAITING',\n    output: {\n      user_message: 'The patch was released successfully, but the strategy cannot be switched immediately. Line 1 currently has active WIP, so the Supervisor requires the TRAY_COMPLETE checkpoint before switching. Line 2 requires no action because the released TRT does not change that line.',\n      suggested_reply: ''\n    }\n  }\n];\n\nconst userPrompt = [\n  'Format this backend result into a concise user-facing chat message.',\n  'Do not show raw JSON.',\n  'Do not invent IDs or fields.',\n  'Do not change workflow status, required fields, IDs, validation results, or rejection reasons.',\n  '',\n  'Status-specific instructions:',\n  'NEEDS_CLARIFICATION: Summarize what was understood from intent_summary. List missing_fields using field_labels. Provide a suggested reply using example values. Ask only for missing fields.',\n  'REVIEWED: Summarize that the candidate patch passed validation. Ask the operator to approve, reject, or request revision. Do not claim it has been released.',\n  'RELEASED: State that release completed. Include release_id, trt_version, and audit_id only if present in ids. Mention the next step is reconciliation or simulation preparation.',\n  'READY / DEGRADED: Summarize reconciliation status. READY means ready for ScenarioSpec generation or simulation preparation. DEGRADED means proceed with the degraded strategy and mention any degraded details if present.',\n  'WAITING: Explain that the patch was released successfully, but the strategy cannot switch immediately. Mention the specific line checkpoint from payload.required_checkpoint or payload.required_checkpoints. If line decisions are available, explain unchanged lines require no action. Preferred style: The patch was released successfully, but the strategy cannot be switched immediately. Line 1 currently has active WIP, so the Supervisor requires the TRAY_COMPLETE checkpoint before switching. Line 2 requires no action because the released TRT does not change that line.',\n  'WAITING_FOR_DEPLOYMENT_DECISION: Show a concise evidence report using payload.evidence_summary.operator_detail_summary, payload.evidence_summary.kpi_table, or payload.evidence_summary.line_results. The report must include target KPIs, actual KPIs, required tray duration, unwanted box duration, all sorting duration, simulation scope, and Time-Arrival Model settings when available. Only after that, ask the deployment question from payload.deployment_question. Do not use only payload.evidence_summary.operator_summary if detailed KPI rows exist. Do not invent KPI values. If any KPI value is marked unreliable or inconsistent, display it as a data-quality warning.',\n  'GENERATED: If payload.message is present, use it because it contains deterministic simulation evidence. Otherwise state that ScenarioSpec generation completed and include scenario_spec_path or generated_scenario_spec_path if present.',\n  'REJECTED / NEEDS_REVISION: Explain errors or rejection reasons in plain language. Ask the operator to revise the request. Do not invent a successful release.',\n  '',\n  'Examples with valid JSON outputs matching the formatter schema:',\n  JSON.stringify(formatterExamples[0]),\n  JSON.stringify(formatterExamples[1]),\n  JSON.stringify(formatterExamples[2]),\n  JSON.stringify(formatterExamples[3]),\n  '',\n  'Backend canonical result:',\n  JSON.stringify(canonical)\n].join(NL);\n\nconst vllmBody = {\n  model: 'cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit',\n  messages: [\n    {\n      role: 'system',\n      content: [\n        'You format backend workflow results for an operator chat UI.',\n        'Return only JSON matching the schema.',\n        'You may only write user-facing wording.',\n        'Do not decide workflow state.',\n        'Do not change status, required fields, IDs, validation results, or rejection reasons.',\n        'Do not expose raw JSON.',\n        'Do not expose internal simulation argument names such as add_reference_number; say simulated tooling count instead.'\n      ].join(' ')\n    },\n    {\n      role: 'user',\n      content: userPrompt\n    }\n  ],\n  temperature: 0,\n  max_tokens: 4000,\n  structured_outputs: {\n    json: schema\n  }\n};\n\nreturn [{\n  json: {\n    vllm_body: vllmBody,\n    formatter_canonical: canonical\n  }\n}];"
       },
       "id": "2e2f6678-26f6-48ef-9446-f35a211d8bf9",
       "name": "Build vLLM User Response Format Body",
@@ -629,7 +629,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const llmResponse = $input.first().json;\nconst canonical = $('Build vLLM User Response Format Body').first().json.formatter_canonical;\nlet content = null;\nif (llmResponse.choices?.[0]?.message?.content) {\n  content = llmResponse.choices[0].message.content;\n} else if (llmResponse.user_message !== undefined) {\n  content = llmResponse;\n} else {\n  content = llmResponse;\n}\n\nlet parsed = {};\nif (typeof content === 'string') {\n  try {\n    parsed = JSON.parse(content);\n  } catch (error) {\n    parsed = {};\n  }\n} else if (typeof content === 'object' && content !== null) {\n  parsed = content;\n}\n\nfunction fallbackMessage() {\n  if (canonical.status === 'NEEDS_CLARIFICATION') {\n    const labels = canonical.field_labels || {};\n    const example = canonical.example || {};\n    const bullets = (canonical.missing_fields || []).map(field => `- ${labels[field] || field}`).join(String.fromCharCode(10));\n    const reply = (canonical.missing_fields || []).map(field => `${field}: ${example[field] || '<value>'}`).join(String.fromCharCode(10));\n    return `I understood your request as: ${canonical.intent_summary || ''}${String.fromCharCode(10)}${String.fromCharCode(10)}Before I can submit this for review, I still need:${String.fromCharCode(10)}${bullets}${String.fromCharCode(10)}${String.fromCharCode(10)}You can reply with:${String.fromCharCode(10)}${reply}`;\n  }\n  if (canonical.payload?.user_message || canonical.payload?.message && ['EVIDENCE_READY', 'EVIDENCE_FAILED', 'SIMULATION_FAILED'].includes(canonical.status)) return canonical.payload.message;\n  if (canonical.status === 'REVIEWED') return 'Candidate patch reviewed successfully. Please approve, reject, or request revision.';\n  if (canonical.status === 'WAITING_FOR_DEPLOYMENT_DECISION') return `${canonical.payload?.user_message || canonical.payload?.message || canonical.payload?.evidence_summary?.operator_summary || 'Simulation evidence is ready.'}${String.fromCharCode(10)}${String.fromCharCode(10)}${canonical.payload?.deployment_question || 'Do you want to deploy this to the simulated physical production line? Reply DEPLOY, DO_NOT_DEPLOY, or REQUEST_REVISION.'}`;\n  if (canonical.status === 'GENERATED' && canonical.payload?.user_message || canonical.payload?.message) return canonical.payload.message;\n  if (canonical.status === 'GENERATED') return `ScenarioSpec generated at ${canonical.payload?.generated_scenario_spec_path || canonical.payload?.scenario_spec_path || 'the configured output path'}.`;\n  if (canonical.errors?.length) return `The request cannot continue yet: ${canonical.errors.join('; ')}. Please revise the request.`;\n  return `Workflow status: ${canonical.status}.`;\n}\n\nconst userMessage = parsed.user_message && !parsed.user_message.includes('{') ? parsed.user_message : fallbackMessage();\nconst suggestedReply = parsed.suggested_reply || (canonical.status === 'NEEDS_CLARIFICATION'\n  ? (canonical.missing_fields || []).map(field => `${field}: ${(canonical.example || {})[field] || '<value>'}`).join(String.fromCharCode(10))\n  : '');\n\nreturn [{\n  json: {\n    user_message: userMessage,\n    next_action: canonical.next_action,\n    required_fields: canonical.missing_fields || [],\n    suggested_reply: suggestedReply,\n    debug_json: canonical.debug === true ? canonical : null,\n    status: canonical.status,\n    context: canonical.ids || {},\n    payload: canonical.payload || {},\n    errors: canonical.errors || []\n  }\n}];"
+        "jsCode": "const llmResponse = $input.first().json;\nconst canonical = $('Build vLLM User Response Format Body').first().json.formatter_canonical;\nlet content = null;\nif (llmResponse.choices?.[0]?.message?.content) {\n  content = llmResponse.choices[0].message.content;\n} else if (llmResponse.user_message !== undefined) {\n  content = llmResponse;\n} else {\n  content = llmResponse;\n}\n\nlet parsed = {};\nif (typeof content === 'string') {\n  try {\n    parsed = JSON.parse(content);\n  } catch (error) {\n    parsed = {};\n  }\n} else if (typeof content === 'object' && content !== null) {\n  parsed = content;\n}\n\nfunction fallbackMessage() {\n  if (canonical.status === 'NEEDS_CLARIFICATION') {\n    const labels = canonical.field_labels || {};\n    const example = canonical.example || {};\n    const bullets = (canonical.missing_fields || []).map(field => `- ${labels[field] || field}`).join(String.fromCharCode(10));\n    const reply = (canonical.missing_fields || []).map(field => `${field}: ${example[field] || '<value>'}`).join(String.fromCharCode(10));\n    return `I understood your request as: ${canonical.intent_summary || ''}${String.fromCharCode(10)}${String.fromCharCode(10)}Before I can submit this for review, I still need:${String.fromCharCode(10)}${bullets}${String.fromCharCode(10)}${String.fromCharCode(10)}You can reply with:${String.fromCharCode(10)}${reply}`;\n  }\n  if (canonical.payload?.user_message || canonical.payload?.message && ['EVIDENCE_READY', 'EVIDENCE_FAILED', 'SIMULATION_FAILED'].includes(canonical.status)) return canonical.payload.message;\n  if (canonical.status === 'REVIEWED') return 'Candidate patch reviewed successfully. Please approve, reject, or request revision.';\n  if (canonical.status === 'WAITING_FOR_DEPLOYMENT_DECISION') return `${canonical.payload?.user_message || canonical.payload?.message || canonical.payload?.evidence_summary?.operator_detail_summary || canonical.payload?.evidence_summary?.operator_summary || 'Simulation evidence is ready.'}${String.fromCharCode(10)}${String.fromCharCode(10)}${canonical.payload?.deployment_question || 'Do you want to deploy this to the simulated physical production line? Reply DEPLOY, DO_NOT_DEPLOY, or REQUEST_REVISION.'}`;\n  if (canonical.status === 'GENERATED' && canonical.payload?.user_message || canonical.payload?.message) return canonical.payload.message;\n  if (canonical.status === 'GENERATED') return `ScenarioSpec generated at ${canonical.payload?.generated_scenario_spec_path || canonical.payload?.scenario_spec_path || 'the configured output path'}.`;\n  if (canonical.errors?.length) return `The request cannot continue yet: ${canonical.errors.join('; ')}. Please revise the request.`;\n  return `Workflow status: ${canonical.status}.`;\n}\n\nconst userMessage = parsed.user_message && !parsed.user_message.includes('{') ? parsed.user_message : fallbackMessage();\nconst suggestedReply = parsed.suggested_reply || (canonical.status === 'NEEDS_CLARIFICATION'\n  ? (canonical.missing_fields || []).map(field => `${field}: ${(canonical.example || {})[field] || '<value>'}`).join(String.fromCharCode(10))\n  : '');\n\nreturn [{\n  json: {\n    user_message: userMessage,\n    next_action: canonical.next_action,\n    required_fields: canonical.missing_fields || [],\n    suggested_reply: suggestedReply,\n    debug_json: canonical.debug === true ? canonical : null,\n    status: canonical.status,\n    context: canonical.ids || {},\n    payload: canonical.payload || {},\n    errors: canonical.errors || []\n  }\n}];"
       },
       "id": "3d0eaebf-39ac-4843-a566-443b8d482766",
       "name": "Normalize Formatted User Response",
@@ -754,7 +754,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const decision = $input.first().json || {};\nconst source = $('Build vLLM Dialogue Decision Body').first().json;\nconst normalized = decision.normalized_request || {};\nconst payload = decision.payload || {};\nconst context = decision.context || {};\nconst loadedSession = source.loaded_session || {};\nconst loadedState = loadedSession.state || 'IDLE';\nconst deploymentPending = loadedState === 'WAITING_FOR_DEPLOYMENT_DECISION' || decision.dialogue_state === 'DEPLOYMENT_DECISION' || decision.turn_type === 'DEPLOYMENT_DECISION';\nconst allowedTurns = ['SMALL_TALK', 'TASK_REQUEST', 'CLARIFICATION_VALUES', 'APPROVAL_DECISION', 'DEPLOYMENT_DECISION', 'CANCEL', 'CONFUSED', 'UNKNOWN'];\nlet turnType = allowedTurns.includes(decision.turn_type) ? decision.turn_type : null;\nif (deploymentPending) turnType = 'DEPLOYMENT_DECISION';\nelse if (!turnType && decision.dialogue_state === 'CANCELLED') turnType = 'CANCEL';\nelse if (!turnType && decision.dialogue_state === 'APPROVAL_DECISION') turnType = 'APPROVAL_DECISION';\nelse if (!turnType && decision.dialogue_state === 'DEPLOYMENT_DECISION') turnType = 'DEPLOYMENT_DECISION';\nelse if (!turnType && decision.dialogue_state === 'UNKNOWN') turnType = 'UNKNOWN';\nelse if (!turnType && decision.dialogue_state === 'READY_FOR_REVIEW') turnType = 'TASK_REQUEST';\nelse if (!turnType && decision.dialogue_state === 'NEEDS_CLARIFICATION') turnType = 'CLARIFICATION_VALUES';\nelse if (!turnType) turnType = 'UNKNOWN';\nconst sessionId = decision.session_id || source.session_id || 'default';\nconst pendingIntent = loadedSession.pending_intent || null;\nconst operatorMessage = String(decision.operator_message || payload.message || '')\n  .replace(/add_reference_number/gi, 'simulated tooling count')\n  .replace(/add reference number/gi, 'simulated tooling count')\n  .replace(/request_type/gi, 'task change')\n  .replace(/request type/gi, 'task change');\nconst intentText = turnType === 'SMALL_TALK' || turnType === 'CONFUSED' || turnType === 'UNKNOWN'\n  ? null\n  : (normalized.intent_text || context.intent_text || pendingIntent?.intent_text || pendingIntent?.original_intent_text || source.active_request?.original_user_request || source.raw_chat_input || null);\nconst operatorId = normalized.operator_id || context.operator_id || pendingIntent?.operator_id || loadedSession.normalized_request?.operator_id || null;\nconst reason = normalized.reason || context.reason || pendingIntent?.reason || loadedSession.normalized_request?.reason || null;\nreturn [{\n  json: {\n    ...decision,\n    turn_type: turnType,\n    deployment_pending: deploymentPending,\n    pending_deployment: loadedSession.pending_deployment || payload.pending_deployment || null,\n    loaded_session: loadedSession,\n    operator_id: operatorId,\n    intent_text: intentText,\n    reason,\n    decision: decision.approval_decision || decision.deployment_decision || null,\n    comment: null,\n    raw_chat_input: source.raw_chat_input || '',\n    debug: false,\n    reviewed_patch_exists: !!(turnType === 'APPROVAL_DECISION' && source.loaded_session?.candidate_patch_summary),\n    reviewed_context: source.loaded_session?.candidate_patch_summary || null,\n    chat_session_state: loadedState,\n    pending_intent: pendingIntent,\n    operator_message: operatorMessage,\n    context: {\n      ...context,\n      session_id: sessionId,\n      operator_id: operatorId,\n      reason,\n      intent_text: intentText,\n      affected_lines: context.affected_lines || payload.candidate_patch?.affected_lines || normalized.target_lines || [],\n      simulation_config_updates: context.simulation_config_updates || payload.candidate_patch?.simulation_config_updates || normalized.simulation_config_updates || null,\n      pending_deployment: loadedSession.pending_deployment || null,\n      pending_intent: pendingIntent,\n      kpi_updates: normalized.kpi_updates || context.kpi_updates || null\n    },\n    payload: {\n      ...payload,\n      pending_deployment: loadedSession.pending_deployment || payload.pending_deployment || null,\n      message: operatorMessage || payload.message,\n      user_message: operatorMessage || payload.user_message,\n      kpi_updates: normalized.kpi_updates || payload.kpi_updates || null\n    },\n    body: {\n      operator_id: operatorId,\n      intent_text: intentText,\n      reason\n    },\n    errors: decision.errors || []\n  }\n}];"
+        "jsCode": "const decision = $input.first().json || {};\nconst source = $('Build vLLM Dialogue Decision Body').first().json;\nconst normalized = decision.normalized_request || {};\nconst payload = decision.payload || {};\nconst context = decision.context || {};\nconst loadedSession = source.loaded_session || {};\nconst loadedState = loadedSession.state || 'IDLE';\nconst deploymentPending = loadedState === 'WAITING_FOR_DEPLOYMENT_DECISION' || decision.dialogue_state === 'DEPLOYMENT_DECISION' || decision.turn_type === 'DEPLOYMENT_DECISION';\nconst allowedTurns = ['SMALL_TALK', 'TASK_REQUEST', 'CLARIFICATION_VALUES', 'APPROVAL_DECISION', 'DEPLOYMENT_DECISION', 'HELP', 'CONFIG_QUERY', 'CANCEL', 'CONFUSED', 'UNKNOWN'];\nlet turnType = allowedTurns.includes(decision.turn_type) ? decision.turn_type : null;\nif (deploymentPending) turnType = 'DEPLOYMENT_DECISION';\nelse if (!turnType && decision.dialogue_state === 'CANCELLED') turnType = 'CANCEL';\nelse if (!turnType && decision.dialogue_state === 'APPROVAL_DECISION') turnType = 'APPROVAL_DECISION';\nelse if (!turnType && decision.dialogue_state === 'DEPLOYMENT_DECISION') turnType = 'DEPLOYMENT_DECISION';\nelse if (!turnType && decision.dialogue_state === 'HELP') turnType = 'HELP';\nelse if (!turnType && decision.dialogue_state === 'CONFIG_QUERY') turnType = 'CONFIG_QUERY';\nelse if (!turnType && decision.dialogue_state === 'UNKNOWN') turnType = 'UNKNOWN';\nelse if (!turnType && decision.dialogue_state === 'READY_FOR_REVIEW') turnType = 'TASK_REQUEST';\nelse if (!turnType && decision.dialogue_state === 'NEEDS_CLARIFICATION') turnType = 'CLARIFICATION_VALUES';\nelse if (!turnType) turnType = 'UNKNOWN';\nconst sessionId = decision.session_id || source.session_id || 'default';\nconst pendingIntent = loadedSession.pending_intent || null;\nconst operatorMessage = String(decision.operator_message || payload.message || '')\n  .replace(/add_reference_number/gi, 'simulated tooling count')\n  .replace(/add reference number/gi, 'simulated tooling count')\n  .replace(/request_type/gi, 'task change')\n  .replace(/request type/gi, 'task change');\nconst intentText = turnType === 'SMALL_TALK' || turnType === 'HELP' || turnType === 'CONFIG_QUERY' || turnType === 'CONFUSED' || turnType === 'UNKNOWN'\n  ? null\n  : (normalized.intent_text || context.intent_text || pendingIntent?.intent_text || pendingIntent?.original_intent_text || source.active_request?.original_user_request || source.raw_chat_input || null);\nconst operatorId = normalized.operator_id || context.operator_id || pendingIntent?.operator_id || loadedSession.normalized_request?.operator_id || null;\nconst reason = normalized.reason || context.reason || pendingIntent?.reason || loadedSession.normalized_request?.reason || null;\nreturn [{\n  json: {\n    ...decision,\n    turn_type: turnType,\n    deployment_pending: deploymentPending,\n    pending_deployment: loadedSession.pending_deployment || payload.pending_deployment || null,\n    loaded_session: loadedSession,\n    operator_id: operatorId,\n    intent_text: intentText,\n    reason,\n    decision: decision.approval_decision || decision.deployment_decision || null,\n    comment: null,\n    raw_chat_input: source.raw_chat_input || '',\n    debug: false,\n    reviewed_patch_exists: !!(turnType === 'APPROVAL_DECISION' && source.loaded_session?.candidate_patch_summary),\n    reviewed_context: source.loaded_session?.candidate_patch_summary || null,\n    chat_session_state: loadedState,\n    pending_intent: pendingIntent,\n    operator_message: operatorMessage,\n    context: {\n      ...context,\n      session_id: sessionId,\n      operator_id: operatorId,\n      reason,\n      intent_text: intentText,\n      affected_lines: context.affected_lines || payload.candidate_patch?.affected_lines || normalized.target_lines || [],\n      simulation_config_updates: context.simulation_config_updates || payload.candidate_patch?.simulation_config_updates || normalized.simulation_config_updates || null,\n      dry_run_only: context.dry_run_only || payload.candidate_patch?.dry_run_only || normalized.dry_run_only || false,\n      query_targets: decision.query_targets || [],\n      line_ids: decision.line_ids || payload.line_ids || [],\n      scenario_spec_id: decision.scenario_spec_id || payload.scenario_spec_id || null,\n      run_id: decision.run_id || payload.run_id || null,\n      pending_deployment: loadedSession.pending_deployment || null,\n      pending_intent: pendingIntent,\n      kpi_updates: normalized.kpi_updates || context.kpi_updates || null\n    },\n    payload: {\n      ...payload,\n      pending_deployment: loadedSession.pending_deployment || payload.pending_deployment || null,\n      message: operatorMessage || payload.message,\n      user_message: operatorMessage || payload.user_message,\n      kpi_updates: normalized.kpi_updates || payload.kpi_updates || null,\n      dry_run_only: context.dry_run_only || payload.candidate_patch?.dry_run_only || normalized.dry_run_only || false,\n      query_targets: decision.query_targets || [],\n      line_ids: decision.line_ids || payload.line_ids || [],\n      scenario_spec_id: decision.scenario_spec_id || payload.scenario_spec_id || null,\n      run_id: decision.run_id || payload.run_id || null\n    },\n    body: {\n      operator_id: operatorId,\n      intent_text: intentText,\n      reason\n    },\n    errors: decision.errors || []\n  }\n}];"
       },
       "id": "084cda5d-e6cf-4f79-b7b4-4a68794455ba",
       "name": "Normalize Dialogue Decision",
@@ -957,7 +957,7 @@
     },
     {
       "parameters": {
-        "jsCode": "return [{ json: { user_message: \"Hi. I can help prepare a task allocation change for review. Tell me the line, target goal, any instrument constraints, your operator_id, and the reason for the change.\", next_action: 'WAIT', required_fields: [], suggested_reply: '', debug_json: null, status: $json.turn_type, context: $json.context || {}, payload: {}, errors: [] } }];"
+        "jsCode": "const message = \"Hi. I can help prepare task allocation changes, answer configuration questions, or review simulation evidence. Type help for examples, or describe the production-line change you want.\";\nreturn [{ json: { user_message: message, next_action: 'WAIT', required_fields: [], suggested_reply: '', debug_json: null, status: $json.turn_type, context: $json.context || {}, payload: { ...($json.payload || {}), message, user_message: message }, errors: [] } }];"
       },
       "id": "0342aeac-0bb1-47c8-bb71-62f333000001",
       "name": "Return Small Talk Message",
@@ -970,7 +970,7 @@
     },
     {
       "parameters": {
-        "jsCode": "return [{ json: { user_message: \"Cancelled. No task allocation workflow was submitted.\", next_action: 'WAIT', required_fields: [], suggested_reply: '', debug_json: null, status: $json.turn_type || 'CANCEL', context: $json.context || {}, payload: {}, errors: [] } }];"
+        "jsCode": "return [{ json: { user_message: \"Cancelled. The pending request was cleared. No release, simulation, or deployment was performed.\", next_action: 'WAIT', required_fields: [], suggested_reply: '', debug_json: null, status: $json.turn_type || 'CANCEL', context: $json.context || {}, payload: {}, errors: [] } }];"
       },
       "id": "0342aeac-0bb1-47c8-bb71-62f333000002",
       "name": "Return Cancelled Message",
@@ -1177,7 +1177,7 @@
           "conditions": [
             {
               "id": "3741f97f-9402-4736-bc24-5b027215359b",
-              "leftValue": "={{ $json.dialogue_state === 'NEEDS_CLARIFICATION' && !['TASK_REQUEST', 'SMALL_TALK', 'CONFUSED', 'UNKNOWN'].includes($json.turn_type) }}",
+              "leftValue": "={{ $json.turn_type === 'CLARIFICATION_VALUES' && $json.dialogue_state === 'NEEDS_CLARIFICATION' }}",
               "rightValue": true,
               "operator": {
                 "type": "boolean",
@@ -1201,7 +1201,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\n\nfunction affectedLinesFromOperations(operations = []) {\n  const lines = new Set();\n  for (const operation of operations || []) {\n    const path = String(operation.path || \"\");\n    const match = path.match(/^\\/lines\\/([^/]+)/);\n    if (match) lines.add(match[1]);\n  }\n  return Array.from(lines).sort();\n}\n\nconst existingCandidate =\n  input.payload?.candidate_patch ||\n  input.body?.candidate_patch ||\n  input.candidate_patch ||\n  null;\n\nconst reconstructedCandidate =\n  existingCandidate ||\n  (\n    input.patch_id && Array.isArray(input.operations)\n      ? {\n          patch_id: input.patch_id,\n          trt_id: input.trt_id,\n          base_version: input.base_version,\n          operator_id: input.operator_id,\n          intent_text: input.intent_text,\n          reason: input.reason,\n          request_types: input.request_types || [],\n          operations: input.operations,\n          status: input.status || \"REVIEWED\",\n          simulation_config_updates: input.simulation_config_updates || null\n        }\n      : null\n  );\n\nconst affectedLines =\n  (Array.isArray(input.context?.affected_lines) && input.context.affected_lines.length ? input.context.affected_lines : null) ||\n  (Array.isArray(input.payload?.affected_lines) && input.payload.affected_lines.length ? input.payload.affected_lines : null) ||\n  (Array.isArray(input.affected_lines) && input.affected_lines.length ? input.affected_lines : null) ||\n  (reconstructedCandidate ? affectedLinesFromOperations(reconstructedCandidate.operations) : []);\n\nconst simulationConfigUpdates =\n  input.context?.simulation_config_updates ||\n  input.payload?.simulation_config_updates ||\n  input.body?.simulation_config_updates ||\n  input.simulation_config_updates ||\n  reconstructedCandidate?.simulation_config_updates ||\n  null;\n\nconst candidateWithContext = reconstructedCandidate\n  ? {\n      ...reconstructedCandidate,\n      affected_lines: Array.isArray(reconstructedCandidate.affected_lines) && reconstructedCandidate.affected_lines.length\n        ? reconstructedCandidate.affected_lines\n        : affectedLines,\n      ...(reconstructedCandidate.simulation_config_updates || simulationConfigUpdates\n        ? { simulation_config_updates: reconstructedCandidate.simulation_config_updates || simulationConfigUpdates }\n        : {})\n    }\n  : null;\n\nif (candidateWithContext && !candidateWithContext.simulation_config_updates) {\n  delete candidateWithContext.simulation_config_updates;\n}\n\nconst output = {\n  ...input,\n  candidate_patch: candidateWithContext,\n  context: {\n    ...(input.context || {}),\n    patch_id: candidateWithContext?.patch_id || input.context?.patch_id || null,\n    trt_id: candidateWithContext?.trt_id || input.context?.trt_id || null,\n    trt_version: candidateWithContext?.base_version || input.context?.trt_version || null,\n    affected_lines: affectedLines,\n    simulation_config_updates: simulationConfigUpdates\n  },\n  body: {\n    ...(input.body || {}),\n    candidate_patch: candidateWithContext,\n    affected_lines: affectedLines,\n    simulation_config_updates: simulationConfigUpdates,\n    decision: input.body?.decision || input.decision || input.operator_decision?.decision || null,\n    comment: input.body?.comment || input.comment || input.operator_decision?.comment || \"\"\n  },\n  payload: {\n    ...(input.payload || {}),\n    candidate_patch: candidateWithContext,\n    affected_lines: affectedLines,\n    simulation_config_updates: simulationConfigUpdates,\n    decision: input.payload?.decision || input.decision || input.operator_decision?.decision || null,\n    comment: input.payload?.comment || input.comment || input.operator_decision?.comment || \"\",\n    raw_release_decision_reply:\n      input.payload?.raw_release_decision_reply ||\n      input.operator_decision?.raw_reply ||\n      input.raw_release_decision_reply ||\n      null\n  }\n};\n\nif (!output.payload?.candidate_patch && !output.body?.candidate_patch && !output.candidate_patch) {\n  throw new Error(`Approval path invariant failed: candidate_patch is missing after canonicalization. Available top-level keys: ${Object.keys(input).sort().join(', ')}`);\n}\n\nreturn [{ json: output }];"
+        "jsCode": "const input = $input.first().json;\n\nfunction affectedLinesFromOperations(operations = []) {\n  const lines = new Set();\n  for (const operation of operations || []) {\n    const path = String(operation.path || \"\");\n    const match = path.match(/^\\/lines\\/([^/]+)/);\n    if (match) lines.add(match[1]);\n  }\n  return Array.from(lines).sort();\n}\n\nconst existingCandidate =\n  input.payload?.candidate_patch ||\n  input.body?.candidate_patch ||\n  input.candidate_patch ||\n  null;\n\nconst reconstructedCandidate =\n  existingCandidate ||\n  (\n    input.patch_id && Array.isArray(input.operations)\n      ? {\n          patch_id: input.patch_id,\n          trt_id: input.trt_id,\n          base_version: input.base_version,\n          operator_id: input.operator_id,\n          intent_text: input.intent_text,\n          reason: input.reason,\n          request_types: input.request_types || [],\n          operations: input.operations,\n          status: input.status || \"REVIEWED\",\n          simulation_config_updates: input.simulation_config_updates || null,\n          dry_run_only: input.dry_run_only || input.context?.dry_run_only || input.payload?.dry_run_only || false\n        }\n      : null\n  );\n\nconst affectedLines =\n  (Array.isArray(input.context?.affected_lines) && input.context.affected_lines.length ? input.context.affected_lines : null) ||\n  (Array.isArray(input.payload?.affected_lines) && input.payload.affected_lines.length ? input.payload.affected_lines : null) ||\n  (Array.isArray(input.affected_lines) && input.affected_lines.length ? input.affected_lines : null) ||\n  (reconstructedCandidate ? affectedLinesFromOperations(reconstructedCandidate.operations) : []);\n\nconst simulationConfigUpdates =\n  input.context?.simulation_config_updates ||\n  input.payload?.simulation_config_updates ||\n  input.body?.simulation_config_updates ||\n  input.simulation_config_updates ||\n  reconstructedCandidate?.simulation_config_updates ||\n  null;\n\nconst dryRunOnly = reconstructedCandidate?.dry_run_only === true || input.context?.dry_run_only === true || input.payload?.dry_run_only === true || input.dry_run_only === true;\n\nconst candidateWithContext = reconstructedCandidate\n  ? {\n      ...reconstructedCandidate,\n      affected_lines: Array.isArray(reconstructedCandidate.affected_lines) && reconstructedCandidate.affected_lines.length\n        ? reconstructedCandidate.affected_lines\n        : affectedLines,\n      ...(reconstructedCandidate.simulation_config_updates || simulationConfigUpdates\n        ? { simulation_config_updates: reconstructedCandidate.simulation_config_updates || simulationConfigUpdates }\n        : {}),\n      dry_run_only: dryRunOnly\n    }\n  : null;\n\nif (candidateWithContext && !candidateWithContext.simulation_config_updates) {\n  delete candidateWithContext.simulation_config_updates;\n}\n\nconst output = {\n  ...input,\n  candidate_patch: candidateWithContext,\n  context: {\n    ...(input.context || {}),\n    patch_id: candidateWithContext?.patch_id || input.context?.patch_id || null,\n    trt_id: candidateWithContext?.trt_id || input.context?.trt_id || null,\n    trt_version: candidateWithContext?.base_version || input.context?.trt_version || null,\n    affected_lines: affectedLines,\n    simulation_config_updates: simulationConfigUpdates,\n    dry_run_only: dryRunOnly\n  },\n  body: {\n    ...(input.body || {}),\n    candidate_patch: candidateWithContext,\n    affected_lines: affectedLines,\n    simulation_config_updates: simulationConfigUpdates,\n    dry_run_only: dryRunOnly,\n    decision: input.body?.decision || input.decision || input.operator_decision?.decision || null,\n    comment: input.body?.comment || input.comment || input.operator_decision?.comment || \"\"\n  },\n  payload: {\n    ...(input.payload || {}),\n    candidate_patch: candidateWithContext,\n    affected_lines: affectedLines,\n    simulation_config_updates: simulationConfigUpdates,\n    dry_run_only: dryRunOnly,\n    decision: input.payload?.decision || input.decision || input.operator_decision?.decision || null,\n    comment: input.payload?.comment || input.comment || input.operator_decision?.comment || \"\",\n    raw_release_decision_reply:\n      input.payload?.raw_release_decision_reply ||\n      input.operator_decision?.raw_reply ||\n      input.raw_release_decision_reply ||\n      null\n  }\n};\n\nif (!output.payload?.candidate_patch && !output.body?.candidate_patch && !output.candidate_patch) {\n  throw new Error(`Approval path invariant failed: candidate_patch is missing after canonicalization. Available top-level keys: ${Object.keys(input).sort().join(', ')}`);\n}\n\nreturn [{ json: output }];"
       },
       "id": "a90e22c7-91c3-4878-ad5d-da1795c91ce1",
       "name": "Canonicalize Candidate Patch For Approval",
@@ -1738,6 +1738,308 @@
         2180,
         -1060
       ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "chat-turn-help",
+              "leftValue": "={{ $json.turn_type === 'HELP' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "19f898ab-ad3a-499d-b825-4da6702873f2",
+      "name": "Chat Turn Help?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1480,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "chat-turn-config-query",
+              "leftValue": "={{ $json.turn_type === 'CONFIG_QUERY' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c1b6f0e7-b798-4b5c-91da-36adad5d4842",
+      "name": "Chat Turn Config Query?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1700,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = `I can help with four kinds of requests:\n\n1. Change production-line requirements\n   Example: set all production lines throughput/hr to at least 60.\n\n2. Change tooling targets or picking order\n   Example: set lines 2 and 4 to target retractors.\n   Example: make lines 1 and 3 pick non-forceps tools first.\n\n3. Ask about current configuration\n   Example: what are the current Time-Arrival Model parameters?\n   Example: show the state record for line 1.\n   Example: how are the KPIs currently set?\n\n4. Review simulation and deployment results\n   Example: show the latest run artifact.\n   Example: why did the KPI check fail?\n\nFor a change request, include operator_id and reason when you are ready.`;\nreturn [{ json: { user_message: message, next_action: 'WAIT', required_fields: [], suggested_reply: '', debug_json: null, status: 'HELP', context: $json.context || {}, payload: { ...($json.payload || {}), message, user_message: message }, errors: [] } }];"
+      },
+      "id": "886af591-fb33-4bfa-be19-8287f8404fa8",
+      "name": "Return Help Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://trt-api:8000/chat/config-query",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { query_targets: $json.payload?.query_targets || $json.context?.query_targets || $json.query_targets || [], line_ids: $json.payload?.line_ids || $json.context?.line_ids || $json.line_ids || [], scenario_spec_id: $json.payload?.scenario_spec_id || $json.context?.scenario_spec_id || $json.scenario_spec_id || null, run_id: $json.payload?.run_id || $json.context?.run_id || $json.run_id || null, session_id: $json.context?.session_id || $json.session_id || null, raw_chat_input: $json.raw_chat_input || '' } }}",
+        "options": {}
+      },
+      "id": "42a98ed4-3b70-4f08-8e67-5e12c87b175c",
+      "name": "Execute Config Query",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json || {};\nconst formatted = input.formatted_answer || {};\nconst structured = input.structured_answer || input.payload?.structured_answer || {};\nconst requested = new Set(input.line_ids || input.requested_line_ids || input.payload?.line_ids || []);\nconst taskRows = structured.task_requirement_table || [];\nif (requested.size) {\n  const leaked = taskRows.filter(row => row?.line_id && !requested.has(row.line_id));\n  if (leaked.length) {\n    throw new Error(`Config query leaked unrequested lines: ${leaked.map(row => row.line_id).join(', ')}`);\n  }\n}\nfunction deterministicKpiMessage() {\n  const rows = structured.kpi_targets || [];\n  const trt = structured.current_trt || {};\n  const lines = [`Current KPI settings for TRT ${trt.trt_id || 'unknown'} version ${trt.version || 'unknown'}:`];\n  for (const row of rows) {\n    lines.push('');\n    lines.push(`${row.line_id}:`);\n    lines.push(`- Minimum throughput: ${row.min_throughput_per_hour ?? 'not configured'} tools/hour`);\n    lines.push(`- Deadline: ${row.deadline_minutes ?? 'none configured'}`);\n    lines.push(`- Maximum downtime: ${row.max_downtime_seconds ?? 'none configured'}`);\n    lines.push(`- Priority: ${row.priority ?? 'not configured'}`);\n    lines.push(`- Goal: ${row.goal ?? 'not configured'}`);\n    lines.push(`- Abnormal strategy: ${row.abnormal_strategy ?? 'not configured'}`);\n  }\n  if (Array.isArray(input.sources) && input.sources.length) {\n    lines.push('');\n    lines.push(`Source: ${input.sources.join(', ')}`);\n  }\n  return lines.join('\\n');\n}\nfunction isIncompleteKpiAnswer(message) {\n  const rows = structured.kpi_targets || [];\n  if (!rows.length) return false;\n  const text = String(message || '');\n  return rows.some(row => !text.includes(row.line_id)) ||\n    !/minimum throughput/i.test(text) ||\n    !/deadline/i.test(text) ||\n    !/maximum downtime/i.test(text) ||\n    !/priority/i.test(text) ||\n    !/goal/i.test(text) ||\n    !/abnormal strategy/i.test(text);\n}\nlet message = formatted.operator_message || input.operator_message || input.payload?.message || 'I found configuration data, but no formatted answer was produced.';\nif (isIncompleteKpiAnswer(message)) {\n  message = deterministicKpiMessage();\n}\nreturn [{ json: { user_message: message, next_action: 'WAIT', required_fields: [], suggested_reply: '', debug_json: null, status: input.status || 'ANSWER_READY', context: input.context || {}, payload: { ...(input.payload || {}), message, user_message: message, structured_answer: structured, sources: input.sources || [], formatted_answer: formatted }, errors: input.errors || [] } }];"
+      },
+      "id": "3dcff206-b84e-4470-ab78-36dd79693c27",
+      "name": "Return Config Query Answer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2140,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "loaded-required-fields-pending",
+              "leftValue": "={{ $json.state === 'WAITING_FOR_REQUIRED_FIELDS' && !!$json.pending_intent }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3b1cbd60-8f8f-44c3-ab30-8b1d7ead2868",
+      "name": "Loaded Required Fields Pending?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        760,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const session = $input.first().json || {};\nconst input = $('Extract Session ID').first().json || {};\nconst pending = session.pending_intent || {};\nconst controlText = String(input.raw_chat_input || '').trim().toLowerCase();\nconst controlCommands = ['cancel','stop','abort','never mind','nevermind','approve','reject','request_revision','request revision','deploy','deploy now','do_not_deploy','do not deploy','rerun_simulation','rerun simulation'];\nif (controlCommands.some(command => controlText === command || controlText.startsWith(command + ':'))) {\n  throw new Error(`Control command ${controlText} reached required-field merge; routing order is wrong.`);\n}\nconst reply = String(input.raw_chat_input || '');\nfunction extractOperatorId(text) {\n  const match = text.match(/operator[_\\s-]*id\\s*:\\s*([^\\s\\n]+)/i);\n  return match ? match[1].trim() : null;\n}\nfunction extractReason(text) {\n  const match = text.match(/reason\\s*:\\s*([\\s\\S]+)$/i);\n  return match ? match[1].trim() : null;\n}\nconst originalIntent = pending.intent_text || pending.original_intent_text || session.normalized_request?.intent_text || '';\nconst operatorId = extractOperatorId(reply) || pending.operator_id || session.normalized_request?.operator_id || null;\nconst reason = extractReason(reply) || pending.reason || session.normalized_request?.reason || null;\nreturn [{\n  json: {\n    status: 'READY_FOR_REQUIRED_FIELD_CHECK',\n    session_id: input.session_id || session.session_id || 'default',\n    raw_chat_input: originalIntent,\n    operator_id: operatorId,\n    reason,\n    intent_text: originalIntent,\n    merge_required_fields_before_dialogue_called: true,\n    loaded_session: session,\n    pending_intent: pending,\n    context: {\n      ...(session.context || {}),\n      session_id: input.session_id || session.session_id || 'default',\n      operator_id: operatorId,\n      reason,\n      intent_text: originalIntent,\n      pending_intent: pending\n    },\n    body: {\n      operator_id: operatorId,\n      reason,\n      intent_text: originalIntent\n    },\n    payload: {\n      pending_intent: pending,\n      raw_required_field_reply: reply\n    },\n    errors: []\n  }\n}];"
+      },
+      "id": "e5c5926f-7045-43f0-9916-beef006749b3",
+      "name": "Merge Required Fields Before Dialogue Decision",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        980,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "global-cancel-requested",
+              "leftValue": "={{ ['cancel','stop','abort','never mind','nevermind','forget it','no cancel','cancel this','cancel workflow'].includes(String($('Extract Session ID').first().json.raw_chat_input || '').trim().toLowerCase()) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "850870ce-1e82-4c6c-9ca9-386a88da3809",
+      "name": "Global Cancel Requested?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        560,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "loaded-approval-pending",
+              "leftValue": "={{ ['WAITING_FOR_APPROVAL', 'WAITING_FOR_APPROVAL_DECISION'].includes($json.state) && !!$json.candidate_patch_summary }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e1932a71-d1c1-49ee-947d-8864db239570",
+      "name": "Loaded Approval Pending?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        980,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const session = $input.first().json || {};\nconst input = $('Extract Session ID').first().json || {};\nconst raw = String(input.raw_chat_input || '');\nconst text = raw.trim().toUpperCase();\nlet decision = 'REQUEST_REVISION';\nif (text.startsWith('APPROVE')) decision = 'APPROVE';\nelse if (text.startsWith('REJECT')) decision = 'REJECT';\nelse if (text.startsWith('REQUEST_REVISION') || text.startsWith('REQUEST REVISION')) decision = 'REQUEST_REVISION';\nconst commentMatch = raw.match(/^[^:]+:\\s*([\\s\\S]+)$/);\nconst comment = commentMatch ? commentMatch[1].trim() : raw;\nreturn [{\n  json: {\n    turn_type: 'APPROVAL_DECISION',\n    dialogue_state: 'APPROVAL_DECISION',\n    decision,\n    comment,\n    raw_chat_input: raw,\n    reviewed_patch_exists: !!session.candidate_patch_summary,\n    reviewed_context: session.candidate_patch_summary || null,\n    loaded_session: session,\n    context: {\n      ...(session.normalized_request || {}),\n      session_id: input.session_id || session.session_id || 'default'\n    },\n    payload: {\n      candidate_patch_summary: session.candidate_patch_summary || null\n    },\n    errors: []\n  }\n}];"
+      },
+      "id": "92a4e4d3-98a1-4565-9e07-3f643e3477a6",
+      "name": "Build Direct Approval Decision Turn",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const formatted = $input.first().json || {};\nconst reviewed = $('Chat Candidate Patch Summary').first().json || {};\nconst sessionId = reviewed.context?.session_id || formatted.context?.session_id || $('Extract Session ID').first().json.session_id;\nif (!sessionId || sessionId === 'default') {\n  throw new Error('Cannot save reviewed candidate state without real session_id.');\n}\nconst candidate = reviewed.payload?.candidate_patch || reviewed.candidate_patch || null;\nif (!candidate) {\n  throw new Error('Cannot save reviewed candidate state without candidate_patch.');\n}\nconst savePayload = {\n  state: 'WAITING_FOR_APPROVAL',\n  conversation: [\n    ...(reviewed.context?.conversation || []),\n    { role: 'assistant', content: formatted.user_message || reviewed.payload?.message || 'Candidate patch is ready for approval.' }\n  ],\n  candidate_patch_summary: {\n    status: reviewed.status,\n    context: reviewed.context || {},\n    payload: reviewed.payload || {},\n    body: {\n      ...(reviewed.body || {}),\n      candidate_patch: candidate\n    }\n  },\n  normalized_request: {\n    operator_id: reviewed.context?.operator_id || candidate.operator_id || null,\n    reason: reviewed.context?.reason || candidate.reason || null,\n    intent_text: reviewed.context?.intent_text || candidate.intent_text || null,\n    affected_lines: reviewed.context?.affected_lines || reviewed.payload?.affected_lines || candidate.affected_lines || [],\n    simulation_config_updates: reviewed.context?.simulation_config_updates || reviewed.payload?.simulation_config_updates || candidate.simulation_config_updates || null,\n    dry_run_only: reviewed.context?.dry_run_only || reviewed.payload?.dry_run_only || candidate.dry_run_only || false\n  },\n  review_status: 'REVIEWED'\n};\nreturn [{ json: { ...formatted, session_id: sessionId, session_save_payload: savePayload } }];"
+      },
+      "id": "c38318d4-6c1f-47eb-ac0b-23b51e243ba4",
+      "name": "Save Reviewed Candidate Session State",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3080,
+        880
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://trt-api:8000/chat/session/{{$json.session_id}}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.session_save_payload }}"
+      },
+      "id": "d8cf9c79-1c18-4fe4-8d2f-b18919ddf5f1",
+      "name": "Persist Reviewed Candidate Session State",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3300,
+        880
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prior = $('Save Reviewed Candidate Session State').first().json;\nreturn [{ json: prior }];"
+      },
+      "id": "f1b6709f-8c21-4d8d-873f-d4453da7813d",
+      "name": "Restore Candidate Summary After Approval State Save",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3520,
+        880
+      ]
     }
   ],
   "connections": {
@@ -2077,7 +2379,7 @@
       "main": [
         [
           {
-            "node": "Ask Release Decision",
+            "node": "Save Reviewed Candidate Session State",
             "type": "main",
             "index": 0
           }
@@ -2095,7 +2397,7 @@
       "main": [
         [
           {
-            "node": "Chat Turn Small Talk?",
+            "node": "Chat Turn Help?",
             "type": "main",
             "index": 0
           }
@@ -2262,7 +2564,7 @@
       "main": [
         [
           {
-            "node": "Loaded Deployment Decision Pending?",
+            "node": "Global Cancel Requested?",
             "type": "main",
             "index": 0
           }
@@ -2579,7 +2881,7 @@
         ],
         [
           {
-            "node": "Build vLLM Dialogue Decision Body",
+            "node": "Loaded Approval Pending?",
             "type": "main",
             "index": 0
           }
@@ -2733,6 +3035,184 @@
         [
           {
             "node": "Send Chat Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Turn Help?": {
+      "main": [
+        [
+          {
+            "node": "Return Help Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chat Turn Config Query?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return Help Message": {
+      "main": [
+        [
+          {
+            "node": "Send Chat Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Turn Config Query?": {
+      "main": [
+        [
+          {
+            "node": "Execute Config Query",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chat Turn Small Talk?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Config Query": {
+      "main": [
+        [
+          {
+            "node": "Return Config Query Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return Config Query Answer": {
+      "main": [
+        [
+          {
+            "node": "Send Chat Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loaded Required Fields Pending?": {
+      "main": [
+        [
+          {
+            "node": "Merge Required Fields Before Dialogue Decision",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build vLLM Dialogue Decision Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Required Fields Before Dialogue Decision": {
+      "main": [
+        [
+          {
+            "node": "Check Required Chat Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Global Cancel Requested?": {
+      "main": [
+        [
+          {
+            "node": "Clear Chat Session State",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loaded Deployment Decision Pending?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loaded Approval Pending?": {
+      "main": [
+        [
+          {
+            "node": "Build Direct Approval Decision Turn",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loaded Required Fields Pending?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Direct Approval Decision Turn": {
+      "main": [
+        [
+          {
+            "node": "Normalize Classified Approval Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Reviewed Candidate Session State": {
+      "main": [
+        [
+          {
+            "node": "Persist Reviewed Candidate Session State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Reviewed Candidate Session State": {
+      "main": [
+        [
+          {
+            "node": "Restore Candidate Summary After Approval State Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Candidate Summary After Approval State Save": {
+      "main": [
+        [
+          {
+            "node": "Ask Release Decision",
             "type": "main",
             "index": 0
           }

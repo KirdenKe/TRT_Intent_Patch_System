@@ -22,6 +22,7 @@ REQUEST_TYPES = [
     "ABNORMAL_STRATEGY_UPDATE",
     "TOOLING_POLICY_UPDATE",
     "SIMULATION_CONFIG_UPDATE",
+    "DRY_RUN_ONLY",
     "MULTI_LINE_POLICY_UPDATE",
     "single_line_patch",
     "multi_line_request",
@@ -128,6 +129,11 @@ SUB_REQUEST_SCHEMA: dict[str, Any] = {
                 "deadline_minutes": {"type": ["integer", "null"]},
                 "max_downtime_seconds": {"type": ["integer", "null"]},
                 "min_throughput_per_hour": {"type": ["integer", "null"]},
+                "target_scope": {"type": ["string", "null"], "enum": ["SINGLE_LINE", "MULTIPLE_LINES", "ALL_LINES", None]},
+                "target_lines": {
+                    "type": ["array", "null"],
+                    "items": {"type": "string", "enum": ["line_1", "line_2", "line_3", "line_4"]},
+                },
             },
             "additionalProperties": False,
         },
@@ -160,6 +166,8 @@ SUB_REQUEST_SCHEMA: dict[str, Any] = {
             "type": ["object", "null"],
             "properties": {
                 "headless": {"type": ["boolean", "null"]},
+                "dry_run_only": {"type": ["boolean", "null"]},
+                "num_envs": {"type": ["integer", "null"], "minimum": 1},
                 "global_seed": {"type": ["integer", "null"], "minimum": 0},
                 "reuse_verified_seed": {"type": ["boolean", "null"]},
                 "add_reference_number": {"type": ["integer", "null"], "minimum": 0},
@@ -181,7 +189,6 @@ SUB_REQUEST_SCHEMA: dict[str, Any] = {
         },
         "operator_text": {"type": ["string", "null"]},
         "clarification_questions": {"type": ["array", "null"], "items": {"type": "string"}},
-        "unsupported_terms": {"type": ["array", "null"], "items": {"type": "string"}},
     },
     "additionalProperties": False,
 }
@@ -257,6 +264,8 @@ LLM_EXTRACTED_FIELDS_SCHEMA: dict[str, Any] = {
             "type": ["object", "null"],
             "properties": {
                 "headless": {"type": ["boolean", "null"]},
+                "dry_run_only": {"type": ["boolean", "null"]},
+                "num_envs": {"type": ["integer", "null"], "minimum": 1},
                 "global_seed": {"type": ["integer", "null"], "minimum": 0},
                 "reuse_verified_seed": {"type": ["boolean", "null"]},
                 "add_reference_number": {"type": ["integer", "null"], "minimum": 0},
@@ -278,8 +287,51 @@ LLM_EXTRACTED_FIELDS_SCHEMA: dict[str, Any] = {
                 "deadline_minutes": {"type": ["integer", "null"]},
                 "max_downtime_seconds": {"type": ["integer", "null"]},
                 "min_throughput_per_hour": {"type": ["integer", "null"]},
+                "target_scope": {"type": ["string", "null"], "enum": ["SINGLE_LINE", "MULTIPLE_LINES", "ALL_LINES", None]},
+                "target_lines": {
+                    "type": ["array", "null"],
+                    "items": {"type": "string", "enum": ["line_1", "line_2", "line_3", "line_4"]},
+                },
             },
             "additionalProperties": False,
+        },
+        "tooling_policy_updates": {
+            "type": ["array", "null"],
+            "items": {
+                "type": "object",
+                "properties": {
+                    "target_scope": {"type": ["string", "null"], "enum": ["SINGLE_LINE", "MULTIPLE_LINES", "ALL_LINES", None]},
+                    "target_lines": {
+                        "type": ["array", "null"],
+                        "items": {"type": "string", "enum": ["line_1", "line_2", "line_3", "line_4"]},
+                    },
+                    "target_set_id": {"type": ["string", "null"]},
+                    "selected_normalized_types": {"type": ["array", "null"], "items": {"type": "string"}},
+                    "target_normalized_types": {"type": ["array", "null"], "items": {"type": "string"}},
+                },
+                "additionalProperties": False,
+            },
+        },
+        "manipulator_priority_updates": {
+            "type": ["array", "null"],
+            "items": {
+                "type": "object",
+                "properties": {
+                    "target_scope": {"type": ["string", "null"], "enum": ["SINGLE_LINE", "MULTIPLE_LINES", "ALL_LINES", None]},
+                    "target_lines": {
+                        "type": ["array", "null"],
+                        "items": {"type": "string", "enum": ["line_1", "line_2", "line_3", "line_4"]},
+                    },
+                    "policy": {"type": "string", "enum": IMPLEMENTED_MANIPULATOR_PRIORITY_POLICIES},
+                    "prioritize": {"type": ["string", "null"], "enum": [NON_MATCHING_TYPES_FIRST, None]},
+                    "prioritize_excluding_normalized_types": {"type": ["array", "null"], "items": {"type": "string"}},
+                    "reference_normalized_types": {"type": ["array", "null"], "items": {"type": "string"}},
+                    "ordered_normalized_types": {"type": ["array", "null"], "items": {"type": "string"}},
+                    "ordered_tool_ids": {"type": ["array", "null"], "items": {"type": "string", "enum": SUPPORTED_TOOL_IDS}},
+                    "tie_breaker": {"type": ["string", "null"], "enum": ["FCFS", None]},
+                },
+                "additionalProperties": False,
+            },
         },
         "tooling_policy": {
             "type": ["object", "null"],
@@ -303,6 +355,9 @@ LLM_EXTRACTED_FIELDS_SCHEMA: dict[str, Any] = {
             "type": "array",
             "items": {"type": "string", "enum": REQUEST_TYPES},
         },
+        "dry_run_only": {"type": ["boolean", "null"]},
+        "deployment_allowed_after_success": {"type": ["boolean", "null"]},
+        "failure_action_hint": {"type": ["string", "null"]},
         "sub_requests": {"type": ["array", "null"], "items": SUB_REQUEST_SCHEMA},
     },
     "required": [
@@ -351,6 +406,9 @@ DOMAIN_CANDIDATE_SCHEMA: dict[str, Any] = {
             "items": {"type": "string", "enum": ["line_1", "line_2", "line_3", "line_4"]},
         },
         "request_types": {"type": ["array", "null"], "items": {"type": "string", "enum": REQUEST_TYPES}},
+        "dry_run_only": {"type": ["boolean", "null"]},
+        "deployment_allowed_after_success": {"type": ["boolean", "null"]},
+        "failure_action_hint": {"type": ["string", "null"]},
         "sub_requests": {"type": ["array", "null"], "items": SUB_REQUEST_SCHEMA},
         "goal": {
             "type": ["string", "null"],
@@ -412,6 +470,8 @@ DOMAIN_CANDIDATE_SCHEMA: dict[str, Any] = {
             "type": ["object", "null"],
             "properties": {
                 "headless": {"type": ["boolean", "null"]},
+                "dry_run_only": {"type": ["boolean", "null"]},
+                "num_envs": {"type": ["integer", "null"], "minimum": 1},
                 "global_seed": {"type": ["integer", "null"], "minimum": 0},
                 "reuse_verified_seed": {"type": ["boolean", "null"]},
                 "add_reference_number": {"type": ["integer", "null"], "minimum": 0},
@@ -433,9 +493,16 @@ DOMAIN_CANDIDATE_SCHEMA: dict[str, Any] = {
                 "deadline_minutes": {"type": ["integer", "null"]},
                 "max_downtime_seconds": {"type": ["integer", "null"]},
                 "min_throughput_per_hour": {"type": ["integer", "null"]},
+                "target_scope": {"type": ["string", "null"], "enum": ["SINGLE_LINE", "MULTIPLE_LINES", "ALL_LINES", None]},
+                "target_lines": {
+                    "type": ["array", "null"],
+                    "items": {"type": "string", "enum": ["line_1", "line_2", "line_3", "line_4"]},
+                },
             },
             "additionalProperties": False,
         },
+        "tooling_policy_updates": {"type": ["array", "null"], "items": {"type": "object"}},
+        "manipulator_priority_updates": {"type": ["array", "null"], "items": {"type": "object"}},
         "tooling_policy": {
             "type": ["object", "null"],
             "required": ["required_scope"],
@@ -542,7 +609,14 @@ def schema_for_current_trt(schema: dict[str, Any], current_trt: dict[str, Any]) 
     return scoped
 
 
-def normalize_domain_candidate(candidate: dict[str, Any], current_trt: dict[str, Any]) -> dict[str, Any]:
+def normalize_domain_candidate(
+    candidate: dict[str, Any],
+    current_trt: dict[str, Any],
+    *,
+    expand_compact: bool = True,
+) -> dict[str, Any]:
+    if expand_compact:
+        candidate = _expand_compact_candidate(candidate)
     if candidate.get("sub_requests"):
         return _normalize_composite_domain_candidate(candidate, current_trt)
     candidate = _coerce_domain_candidate_v2(candidate, current_trt)
@@ -591,6 +665,21 @@ def normalize_domain_candidate(candidate: dict[str, Any], current_trt: dict[str,
             "affected_lines": line_ids,
             "message": _simulation_config_review_message(simulation_config_updates),
             "status": "REVIEWED",
+            **(
+                {"dry_run_only": True}
+                if candidate.get("dry_run_only") is True
+                else {}
+            ),
+            **(
+                {"deployment_allowed_after_success": bool(candidate.get("deployment_allowed_after_success"))}
+                if candidate.get("deployment_allowed_after_success") is not None
+                else {}
+            ),
+            **(
+                {"failure_action_hint": candidate.get("failure_action_hint")}
+                if candidate.get("failure_action_hint")
+                else {}
+            ),
         }
     for line_id in line_ids:
         if candidate.get("manipulator_priority") is not None:
@@ -728,11 +817,107 @@ def normalize_domain_candidate(candidate: dict[str, Any], current_trt: dict[str,
     }
     if simulation_config_updates:
         patch["simulation_config_updates"] = simulation_config_updates
+    if candidate.get("dry_run_only") is True:
+        patch["dry_run_only"] = True
+    if candidate.get("deployment_allowed_after_success") is not None:
+        patch["deployment_allowed_after_success"] = bool(candidate.get("deployment_allowed_after_success"))
+    if candidate.get("failure_action_hint"):
+        patch["failure_action_hint"] = candidate["failure_action_hint"]
     if candidate.get("kpi_updates"):
         patch["message"] = _kpi_update_review_message(candidate, line_ids)
     if candidate.get("manipulator_priority"):
         patch["message"] = _manipulator_priority_review_message(candidate)
     return patch
+
+
+def _compact_target_scope(update: dict[str, Any], fallback: str | None = None) -> str | None:
+    if update.get("target_scope"):
+        return update.get("target_scope")
+    if update.get("target_lines"):
+        return "MULTIPLE_LINES" if len(update.get("target_lines") or []) > 1 else "SINGLE_LINE"
+    return fallback
+
+
+def _expand_compact_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
+    if candidate.get("simulation_config_updates"):
+        candidate = deepcopy(candidate)
+        candidate["simulation_config_updates"] = _coerce_time_arrival_updates_from_text(
+            candidate.get("simulation_config_updates") or {},
+            str(candidate.get("intent_text") or ""),
+        )
+    if candidate.get("sub_requests"):
+        return candidate
+    compact_sub_requests: list[dict[str, Any]] = []
+    kpi_updates = deepcopy(candidate.get("kpi_updates") or {})
+    kpi_target_scope = kpi_updates.pop("target_scope", None)
+    kpi_target_lines = kpi_updates.pop("target_lines", None)
+    if any(value is not None for value in kpi_updates.values()):
+        compact_sub_requests.append(
+            {
+                "request_type": "KPI_UPDATE",
+                "target_scope": kpi_target_scope or candidate.get("target_scope") or "ALL_LINES",
+                "target_lines": kpi_target_lines if kpi_target_lines is not None else candidate.get("target_lines"),
+                "kpi_updates": kpi_updates,
+            }
+        )
+
+    for update in candidate.get("tooling_policy_updates") or []:
+        if not isinstance(update, dict):
+            continue
+        compact_sub_requests.append(
+            {
+                "request_type": "TOOLING_POLICY_UPDATE",
+                "target_scope": _compact_target_scope(update),
+                "target_lines": update.get("target_lines"),
+                "target_set_id": update.get("target_set_id"),
+                "selected_normalized_types": update.get("selected_normalized_types"),
+                "target_normalized_types": update.get("target_normalized_types"),
+            }
+        )
+
+    for update in candidate.get("manipulator_priority_updates") or []:
+        if not isinstance(update, dict):
+            continue
+        reference_types = (
+            update.get("prioritize_excluding_normalized_types")
+            or update.get("reference_normalized_types")
+            or []
+        )
+        compact_sub_requests.append(
+            {
+                "request_type": "MANIPULATOR_PRIORITY_UPDATE",
+                "target_scope": _compact_target_scope(update),
+                "target_lines": update.get("target_lines"),
+                "manipulator_priority": {
+                    "enabled": True,
+                    "policy": update.get("policy") or "EXPLICIT_TYPE_ORDER",
+                    "prioritize": update.get("prioritize") or (NON_MATCHING_TYPES_FIRST if reference_types else None),
+                    "reference_normalized_types": reference_types,
+                    "ordered_normalized_types": update.get("ordered_normalized_types") or [],
+                    "ordered_tool_ids": update.get("ordered_tool_ids") or [],
+                    "tie_breaker": update.get("tie_breaker") or "FCFS",
+                },
+            }
+        )
+
+    if not compact_sub_requests:
+        return candidate
+    expanded = deepcopy(candidate)
+    expanded["sub_requests"] = compact_sub_requests
+    expanded["request_types"] = _dedupe_values(
+        [
+            *(candidate.get("request_types") or []),
+            *[
+                request.get("request_type")
+                for request in compact_sub_requests
+                if request.get("request_type")
+            ],
+        ]
+    )
+    expanded.pop("tooling_policy_updates", None)
+    expanded.pop("manipulator_priority_updates", None)
+    expanded["kpi_updates"] = {}
+    return expanded
 
 
 def _normalize_composite_domain_candidate(candidate: dict[str, Any], current_trt: dict[str, Any]) -> dict[str, Any]:
@@ -743,14 +928,17 @@ def _normalize_composite_domain_candidate(candidate: dict[str, Any], current_trt
     operations: list[dict[str, Any]] = []
     request_types: list[str] = []
     affected_lines: list[str] = []
-    simulation_config_updates: dict[str, Any] = {}
+    simulation_config_updates: dict[str, Any] = _coerce_time_arrival_updates_from_text(
+        dict(candidate.get("simulation_config_updates") or {}),
+        str(candidate.get("intent_text") or ""),
+    )
     normalized_sub_requests: list[dict[str, Any]] = []
 
     for index, sub_request in enumerate(sub_requests, start=1):
         if not isinstance(sub_request, dict):
             raise ValueError(f"sub_requests[{index}] must be an object.")
         sub_candidate = _candidate_from_sub_request(candidate, sub_request, index)
-        sub_patch = normalize_domain_candidate(sub_candidate, current_trt)
+        sub_patch = normalize_domain_candidate(sub_candidate, current_trt, expand_compact=False)
         operations.extend(sub_patch.get("operations") or [])
         request_types = _dedupe_values([*request_types, *(sub_patch.get("request_types") or [])])
         affected_lines = _dedupe_values([*affected_lines, *(sub_patch.get("affected_lines") or [])])
@@ -785,6 +973,12 @@ def _normalize_composite_domain_candidate(candidate: dict[str, Any], current_trt
     }
     if simulation_config_updates:
         patch["simulation_config_updates"] = simulation_config_updates
+    if candidate.get("dry_run_only") is True:
+        patch["dry_run_only"] = True
+    if candidate.get("deployment_allowed_after_success") is not None:
+        patch["deployment_allowed_after_success"] = bool(candidate.get("deployment_allowed_after_success"))
+    if candidate.get("failure_action_hint"):
+        patch["failure_action_hint"] = candidate["failure_action_hint"]
     return patch
 
 
@@ -804,13 +998,27 @@ def _candidate_from_sub_request(candidate: dict[str, Any], sub_request: dict[str
     if selected_normalized_types or selected_tool_ids:
         request_types = _dedupe_values([*request_types, "INSTRUMENT_SCOPE_UPDATE", "TOOLING_POLICY_UPDATE"])
         tooling_policy = tooling_policy or {"required_scope": "SELECTED_TOOLING"}
+    if any(value in {"KPI_UPDATE", "KPI_LIMIT_UPDATE"} for value in request_types) and not sub_request.get("kpi_updates"):
+        raise ValueError(
+            "KPI sub-request is missing concrete kpi_updates; ask the intent model to extract values such as "
+            "min_throughput_per_hour before generating a patch."
+        )
+
+    sub_intent_text = str(sub_request.get("operator_text") or "")
+    if "SIMULATION_CONFIG_UPDATE" in request_types:
+        simulation_config_updates = _coerce_time_arrival_updates_from_text(
+            dict(sub_request.get("simulation_config_updates") or {}),
+            sub_intent_text or str(candidate.get("intent_text") or ""),
+        )
+    else:
+        simulation_config_updates = sub_request.get("simulation_config_updates")
 
     sub_candidate = {
         "patch_id": f"{candidate['patch_id']}_sub_{index}",
         "trt_id": candidate["trt_id"],
         "base_version": candidate["base_version"],
         "operator_id": candidate["operator_id"],
-        "intent_text": sub_request.get("operator_text") or candidate["intent_text"],
+        "intent_text": sub_intent_text,
         "reason": candidate["reason"],
         "line_id": sub_request.get("line_id"),
         "action": "PROPOSE_PATCH",
@@ -828,12 +1036,12 @@ def _candidate_from_sub_request(candidate: dict[str, Any], sub_request: dict[str
         "required_tool_ids": sub_request.get("required_tool_ids"),
         "target_set_id": target_set_id,
         "manipulator_priority": sub_request.get("manipulator_priority"),
-        "simulation_config_updates": sub_request.get("simulation_config_updates"),
+        "simulation_config_updates": simulation_config_updates,
         "kpi_updates": sub_request.get("kpi_updates") or {},
         "tooling_policy": tooling_policy,
         "abnormal_strategy": sub_request.get("abnormal_strategy"),
         "clarification_questions": sub_request.get("clarification_questions") or [],
-        "unsupported_terms": sub_request.get("unsupported_terms") or [],
+        "unsupported_terms": [],
         "detected_request_types": request_types,
         "status": "REVIEWED",
     }
@@ -927,9 +1135,15 @@ def _is_priority_clarification_question(question: str) -> bool:
 def _coerce_domain_candidate_v2(candidate: dict[str, Any], current_trt: dict[str, Any]) -> dict[str, Any]:
     coerced = dict(candidate)
     _coerce_simulation_config_intent(coerced)
-    _coerce_manipulator_priority_intent(coerced, current_trt)
-    _coerce_target_set_intent(coerced, current_trt)
-    _coerce_remove_tooling_intent(coerced, current_trt)
+    explicit_request_types = _normalize_request_type_aliases(coerced.get("request_types") or [])
+    simulation_only = bool(explicit_request_types) and set(explicit_request_types) <= {
+        "SIMULATION_CONFIG_UPDATE",
+        "DRY_RUN_ONLY",
+    }
+    if not simulation_only:
+        _coerce_manipulator_priority_intent(coerced, current_trt)
+        _coerce_target_set_intent(coerced, current_trt)
+        _coerce_remove_tooling_intent(coerced, current_trt)
     tooling_policy = _coerce_tooling_policy(coerced, current_trt)
     if tooling_policy is not None:
         coerced["tooling_policy"] = tooling_policy
@@ -1251,6 +1465,9 @@ def parse_tooling_count_request(text: str) -> dict[str, int] | None:
         r"tooling count.*?(\d+)",
         r"show\s+(\d+)\s+tools",
         r"limit.*?(\d+)\s+tools",
+        r"number of tooling per production line to\s+(\d+)",
+        r"tooling per production line to\s+(\d+)",
+        r"tools? per production line to\s+(\d+)",
     ]
     for pattern in patterns:
         match = re.search(pattern, normalized)
@@ -1259,16 +1476,112 @@ def parse_tooling_count_request(text: str) -> dict[str, int] | None:
     return None
 
 
+NUMBER_WORDS = {
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+    "seven": 7,
+    "eight": 8,
+    "nine": 9,
+    "ten": 10,
+}
+
+
+def _number_from_match(value: str | None) -> float | None:
+    if value is None:
+        return None
+    normalized = value.strip().lower()
+    if normalized in NUMBER_WORDS:
+        return float(NUMBER_WORDS[normalized])
+    try:
+        return float(normalized)
+    except ValueError:
+        return None
+
+
+def _coerce_time_arrival_updates_from_text(updates: dict[str, Any], text: str) -> dict[str, Any]:
+    """Repair Time-Arrival numeric fields from model-extracted simulation intent text."""
+    normalized = text.lower()
+    if not normalized:
+        return updates
+    repaired = dict(updates)
+
+    line_match = re.search(
+        r"\b(?P<count>\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+production lines?\s+remaining\b",
+        normalized,
+    )
+    if line_match:
+        count = _number_from_match(line_match.group("count"))
+        if count is not None:
+            repaired["num_envs"] = int(count)
+
+    travel_match = re.search(
+        r"\b(?:arrival|travel)\s+time\b.*?\breduc(?:ed|e)\b.*?\b(?:by\s+)?(?:about\s+)?(?P<seconds>\d+(?:\.\d+)?)\s*seconds?\b",
+        normalized,
+    )
+    if travel_match:
+        seconds = _number_from_match(travel_match.group("seconds"))
+        if seconds is not None:
+            repaired["travel_time"] = max(0.0, round(5.0 - seconds, 3))
+
+    fix_match = re.search(
+        r"\b(?:time\s+to\s+resolve\s+entanglements|entanglement\s+fix\s+(?:time|duration)|fix\s+duration)\b.*?\breduc(?:ed|e)\b.*?\b(?:by\s+)?(?:about\s+)?(?P<seconds>\d+(?:\.\d+)?)\s*seconds?\b",
+        normalized,
+    )
+    if fix_match:
+        seconds = _number_from_match(fix_match.group("seconds"))
+        if seconds is not None:
+            repaired["fix_duration"] = max(0.0, round(8.0 - seconds, 3))
+
+    slower_match = re.search(
+        r"\b(?:recovery\s+time|resume\s+delay|recovery\s+delay)\b.*?\b(?P<seconds>\d+(?:\.\d+)?)\s*seconds?\s+slower\b",
+        normalized,
+    )
+    if slower_match:
+        seconds = _number_from_match(slower_match.group("seconds"))
+        if seconds is not None:
+            repaired["resume_delay"] = round(0.5 + seconds, 3)
+
+    faster_match = re.search(
+        r"\b(?:recovery\s+time|resume\s+delay|recovery\s+delay)\b.*?\b(?P<seconds>\d+(?:\.\d+)?)\s*seconds?\s+faster\b",
+        normalized,
+    )
+    if faster_match:
+        seconds = _number_from_match(faster_match.group("seconds"))
+        if seconds is not None:
+            repaired["resume_delay"] = max(0.0, round(0.5 - seconds, 3))
+
+    if (
+        re.search(r"\bstop\b.*?\b(?:robotic\s+arms?|robots?|arms?)\b.*?\bimmediately\b", normalized)
+        or re.search(r"\bimmediately\b.*?\b(?:detecting|detected|detect)\b.*?\b(?:anomaly|abnormal|entanglement)\b", normalized)
+    ):
+        repaired["chosen_intervention_mode"] = "immediate-stop"
+
+    tooling_count_update = parse_tooling_count_request(normalized)
+    if tooling_count_update:
+        repaired.update(tooling_count_update)
+    return repaired
+
+
 def _coerce_simulation_config_intent(candidate: dict[str, Any]) -> None:
     intent_text = str(candidate.get("intent_text") or "").lower()
     if not intent_text:
         return
     updates = dict(candidate.get("simulation_config_updates") or {})
+    updates = _coerce_time_arrival_updates_from_text(updates, intent_text)
     if re.search(r"\bheadless\b", intent_text):
         updates["headless"] = not re.search(r"\b(headless\s+false|not\s+headless|disable\s+headless)\b", intent_text)
     if "rendering enabled" in intent_text or "with rendering" in intent_text:
         updates["headless"] = False
     number_patterns = {
+        "num_envs": [
+            r"\bnum_envs\b[^\d]*(\d+)\b",
+            r"\bactive production lines?\b[^\d]*(\d+)\b",
+            r"\b(\d+)\s+production lines?\s+remaining\b",
+        ],
         "global_seed": [
             r"\bglobal_seed\b[^\d]*(\d+)\b",
             r"\bglobal seed\b[^\d]*(\d+)\b",
@@ -1350,12 +1663,25 @@ def _coerce_simulation_config_intent(candidate: dict[str, Any]) -> None:
 
 
 def _simulation_config_review_message(updates: dict[str, Any]) -> str:
-    if updates.get("add_reference_number") is not None:
+    labels = {
+        "num_envs": "active simulated production lines",
+        "chosen_intervention_mode": "intervention mode",
+        "travel_time": "operator arrival time",
+        "fix_duration": "entanglement fix time",
+        "resume_delay": "recovery delay",
+        "add_reference_number": "simulated tooling count",
+    }
+    parts = []
+    for key in ("num_envs", "chosen_intervention_mode", "travel_time", "fix_duration", "resume_delay", "add_reference_number"):
+        if updates.get(key) is not None:
+            parts.append(f"{labels[key]} to {updates[key]}")
+    if parts:
         return (
             "The candidate simulation configuration update is valid. It will set "
-            f"the simulated tooling count to {updates['add_reference_number']} for the full-system simulation."
+            + ", ".join(parts)
+            + ". Please approve, reject, or request revision."
         )
-    fields = ", ".join(sorted(updates))
+    fields = ", ".join(labels.get(key, key) for key in sorted(updates))
     return f"The candidate simulation configuration update is valid. It will update {fields} for the simulation."
 
 

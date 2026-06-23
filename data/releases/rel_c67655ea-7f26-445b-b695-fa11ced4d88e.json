@@ -1,0 +1,178 @@
+{
+  "audit_id": "audit-519c317d-dc2c-4b9f-82c0-125846741675",
+  "base_version": "v64",
+  "candidate_patch": {
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "base_version": "v64",
+    "dry_run_only": false,
+    "intent_text": "okay, two production lines fucked up today. i want to confirm that with only two production lines remaining, my arrival time can be reduced by about 2.5 seconds, and the time to resolve entanglements can be reduced by 1.5 seconds. however, to ensure the remaining production lines operate normally, pls stop the robotic arms immediately upon detecting an anomaly. because of this, pls adjust the recovery time to be 2 second slower, and set the number of tooling per production line to 5. adjust the throughput/hr for all production lines to at least 100; set the tooling picking target for production lines 2 to knife handle; and adjust the tooling picking order for production lines 1 to prioritize picking tooling other than scissors.",
+    "message": "The candidate patch passed validation. It will apply the requested composite changes across 4 sub-requests. Please approve, reject, or request revision.",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_1/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "SCISSORS"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "patch-1782219179410",
+    "reason": "test for milestone 11.6",
+    "request_types": [
+      "KPI_LIMIT_UPDATE",
+      "ABNORMAL_STRATEGY_UPDATE",
+      "TOOLING_POLICY_UPDATE",
+      "MANIPULATOR_PRIORITY_UPDATE"
+    ],
+    "simulation_config_updates": {
+      "add_reference_number": 5,
+      "chosen_intervention_mode": "immediate-stop",
+      "fix_duration": 6.5,
+      "num_envs": 2,
+      "resume_delay": 2.5,
+      "travel_time": 2.5
+    },
+    "status": "REVIEWED",
+    "sub_requests": [
+      {
+        "affected_lines": [
+          "line_1",
+          "line_2",
+          "line_3",
+          "line_4"
+        ],
+        "operation_paths": [],
+        "operator_text": "adjust the throughput/hr for all production lines to at least 100",
+        "request_type": "KPI_LIMIT_UPDATE",
+        "request_types": [
+          "KPI_LIMIT_UPDATE"
+        ],
+        "simulation_config_updates": {},
+        "target_lines": [],
+        "target_scope": "ALL_LINES",
+        "unsupported_terms": [
+          "arrival time can be reduced by about 2.5 seconds",
+          "time to resolve entanglements can be reduced by 1.5 seconds",
+          "recovery time to be 2 second slower",
+          "set the number of tooling per production line to 5"
+        ]
+      },
+      {
+        "affected_lines": [
+          "line_1",
+          "line_2",
+          "line_3",
+          "line_4"
+        ],
+        "operation_paths": [],
+        "operator_text": "stop the robotic arms immediately upon detecting an anomaly",
+        "request_type": "ABNORMAL_STRATEGY_UPDATE",
+        "request_types": [
+          "ABNORMAL_STRATEGY_UPDATE"
+        ],
+        "simulation_config_updates": {},
+        "target_lines": [],
+        "target_scope": "ALL_LINES",
+        "unsupported_terms": [
+          "arrival time can be reduced by about 2.5 seconds",
+          "time to resolve entanglements can be reduced by 1.5 seconds",
+          "recovery time to be 2 second slower",
+          "set the number of tooling per production line to 5"
+        ]
+      },
+      {
+        "affected_lines": [
+          "line_2"
+        ],
+        "operation_paths": [],
+        "operator_text": "set the tooling picking target for production lines 2 to knife handle",
+        "request_type": "TOOLING_POLICY_UPDATE",
+        "request_types": [
+          "TOOLING_POLICY_UPDATE"
+        ],
+        "simulation_config_updates": {},
+        "target_lines": [
+          "line_2"
+        ],
+        "target_scope": "SINGLE_LINE",
+        "unsupported_terms": [
+          "arrival time can be reduced by about 2.5 seconds",
+          "time to resolve entanglements can be reduced by 1.5 seconds",
+          "recovery time to be 2 second slower",
+          "set the number of tooling per production line to 5"
+        ]
+      },
+      {
+        "affected_lines": [
+          "line_1"
+        ],
+        "operation_paths": [
+          "/lines/line_1/manipulator_priority"
+        ],
+        "operator_text": "adjust the tooling picking order for production lines 1 to prioritize picking tooling other than scissors",
+        "request_type": "MANIPULATOR_PRIORITY_UPDATE",
+        "request_types": [
+          "MANIPULATOR_PRIORITY_UPDATE"
+        ],
+        "simulation_config_updates": {},
+        "target_lines": [
+          "line_1"
+        ],
+        "target_scope": "SINGLE_LINE",
+        "unsupported_terms": [
+          "arrival time can be reduced by about 2.5 seconds",
+          "time to resolve entanglements can be reduced by 1.5 seconds",
+          "recovery time to be 2 second slower",
+          "set the number of tooling per production line to 5"
+        ]
+      }
+    ],
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [
+      "/lines/line_1/manipulator_priority"
+    ],
+    "affected_lines": [
+      "line_1"
+    ],
+    "intent_text": "okay, two production lines fucked up today. i want to confirm that with only two production lines remaining, my arrival time can be reduced by about 2.5 seconds, and the time to resolve entanglements can be reduced by 1.5 seconds. however, to ensure the remaining production lines operate normally, pls stop the robotic arms immediately upon detecting an anomaly. because of this, pls adjust the recovery time to be 2 second slower, and set the number of tooling per production line to 5. adjust the throughput/hr for all production lines to at least 100; set the tooling picking target for production lines 2 to knife handle; and adjust the tooling picking order for production lines 1 to prioritize picking tooling other than scissors.",
+    "reason": "test for milestone 11.6"
+  },
+  "created_at_utc": "2026-06-23T12:53:20.123460Z",
+  "current_trt_path": "/app/data/trt/current_trt.json",
+  "operator_decision": {
+    "comment": "Test for the Milestone 11.6",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-06-23T12:53:20.282804Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1782219179410",
+  "previous_trt_version": "v64",
+  "release_id": "rel_c67655ea-7f26-445b-b695-fa11ced4d88e",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "trt_version": "v65",
+  "updated_at_utc": "2026-06-23T12:53:20.282804Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  },
+  "version_path": "/app/data/trt_versions/trt-demo_v65.json"
+}

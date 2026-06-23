@@ -16,6 +16,7 @@ CHAT_SESSION_STATES = {
     "IDLE",
     "WAITING_FOR_REQUIRED_FIELDS",
     "WAITING_FOR_CLARIFICATION",
+    "WAITING_FOR_APPROVAL",
     "WAITING_FOR_APPROVAL_DECISION",
     "WAITING_FOR_DEPLOYMENT_DECISION",
     "WAITING_FOR_POST_EVIDENCE_DECISION",
@@ -441,7 +442,7 @@ def resolve_priority_clarification_with_vllm(
             {"role": "user", "content": json.dumps(resolver_input, sort_keys=True)},
         ],
         "temperature": 0,
-        "max_tokens": 180,
+        "max_tokens": 2000,
         "structured_outputs": {"json": schema},
     }
     url = os.getenv("VLLM_CHAT_COMPLETIONS_URL", DEFAULT_VLLM_CHAT_COMPLETIONS_URL)
@@ -490,3 +491,4 @@ def resolve_priority_clarification_with_vllm(
         "reason": str(resolved.get("reason") or "vLLM did not resolve the closed-choice clarification."),
         "vllm_resolution": resolved,
     }
+

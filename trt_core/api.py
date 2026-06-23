@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import logging
 import json
+import sqlite3
 import urllib.error
 import urllib.request
 from typing import Any
@@ -577,6 +578,8 @@ def _dialogue_decision_schema() -> dict[str, Any]:
                     "NEEDS_CLARIFICATION",
                     "APPROVAL_DECISION",
                     "DEPLOYMENT_DECISION",
+                    "HELP",
+                    "CONFIG_QUERY",
                     "CANCELLED",
                     "UNKNOWN",
                 ],
@@ -589,6 +592,8 @@ def _dialogue_decision_schema() -> dict[str, Any]:
                     "CLARIFICATION_VALUES",
                     "APPROVAL_DECISION",
                     "DEPLOYMENT_DECISION",
+                    "HELP",
+                    "CONFIG_QUERY",
                     "CANCEL",
                     "CONFUSED",
                     "UNKNOWN",
@@ -637,12 +642,52 @@ def _dialogue_decision_schema() -> dict[str, Any]:
                     },
                     "simulation_config_updates": {
                         "type": ["object", "null"],
-                        "properties": {"add_reference_number": {"type": ["integer", "null"]}},
+                        "properties": {
+                            "dry_run_only": {"type": ["boolean", "null"]},
+                            "num_envs": {"type": ["integer", "null"], "minimum": 1},
+                            "chosen_intervention_mode": {
+                                "type": ["string", "null"],
+                                "enum": ["continue-until-arrival", "immediate-stop", None],
+                            },
+                            "travel_time": {"type": ["number", "null"], "minimum": 0},
+                            "fix_duration": {"type": ["number", "null"], "minimum": 0},
+                            "resume_delay": {"type": ["number", "null"], "minimum": 0},
+                            "add_reference_number": {"type": ["integer", "null"], "minimum": 0},
+                        },
                         "additionalProperties": False,
                     },
+                    "dry_run_only": {"type": ["boolean", "null"]},
+                    "deployment_allowed_after_success": {"type": ["boolean", "null"]},
+                    "failure_action_hint": {"type": ["string", "null"]},
                 },
                 "additionalProperties": False,
             },
+            "action": {
+                "type": ["string", "null"],
+                "enum": ["PROPOSE_PATCH", "PROPOSE_DRY_RUN", "NEEDS_CLARIFICATION", "UNKNOWN", None],
+            },
+            "query_targets": {
+                "type": ["array", "null"],
+                "items": {
+                    "type": "string",
+                    "enum": [
+                        "TIME_ARRIVAL_MODEL",
+                        "STATE_RECORDS",
+                        "LINE_STATE",
+                        "KPI_TARGETS",
+                        "TASK_REQUIREMENT_TABLE",
+                        "TRT_CURRENT",
+                        "TRT_HISTORY",
+                        "DEPLOYMENT_HISTORY",
+                        "SCENARIO_SPEC",
+                        "RUN_ARTIFACT",
+                        "ISAAC_COMMAND_CONFIG",
+                    ],
+                },
+            },
+            "line_ids": {"type": ["array", "null"], "items": {"type": "string"}},
+            "scenario_spec_id": {"type": ["string", "null"]},
+            "run_id": {"type": ["string", "null"]},
             "missing_or_unclear_items": {"type": "array", "items": {"type": "string"}},
             "approval_decision": {"type": ["string", "null"], "enum": ["APPROVE", "REJECT", "REQUEST_REVISION", None]},
             "deployment_decision": {
@@ -702,12 +747,18 @@ def _build_dialogue_decision_prompt(payload: dict[str, Any], session: dict[str, 
             "content": (
                 "You are the only component that classifies the operator's chat turn. "
                 "Return turn_type as one of SMALL_TALK, TASK_REQUEST, CLARIFICATION_VALUES, APPROVAL_DECISION, "
-                "DEPLOYMENT_DECISION, CANCEL, CONFUSED, or UNKNOWN. "
+                "DEPLOYMENT_DECISION, HELP, CONFIG_QUERY, CANCEL, CONFUSED, or UNKNOWN. "
                 "Read the full conversation and decide whether the request is ready for review, needs one clarification, "
                 "is an approval/deployment decision, is cancelled, or is unknown. "
                 "Do not require operators to use internal schema terms such as request_type. "
+                "Classify requests for help, usage guidance, or examples as HELP. "
                 "Classify casual greetings and filler as SMALL_TALK with normalized_request null. "
                 "Classify production-line KPI changes as TASK_REQUEST. "
+                "Classify questions about current configuration, current Time-Arrival Model parameters, current KPI targets, "
+                "state records, one production line's state, past requirement tables, current TRT, previous deployments, "
+                "ScenarioSpecs, run artifacts, or Isaac command configuration as CONFIG_QUERY. "
+                "For CONFIG_QUERY, set query_targets to the requested source category, extract line_ids/scenario_spec_id/run_id "
+                "when the operator names them, and do not create a patch. "
                 "If a pending task exists and the user provides operator_id or reason, classify the turn as CLARIFICATION_VALUES. "
                 "If session_state is WAITING_FOR_POST_EVIDENCE_DECISION, classify REQUEST_REVISION or revise as DEPLOYMENT_DECISION "
                 "with deployment_decision REQUEST_REVISION, classify RERUN_SIMULATION or rerun it as DEPLOYMENT_DECISION with "
@@ -717,6 +768,21 @@ def _build_dialogue_decision_prompt(payload: dict[str, Any], session: dict[str, 
                 "Do not ask the same clarification twice if the user answered it semantically. "
                 "Map 'number of tooling so only N remain' to simulation_config_updates.add_reference_number=N, "
                 "but never mention add_reference_number to the operator; say simulated tooling count. "
+                "For Time-Arrival Model dry-run requests, extract simulation_config_updates directly. "
+                "Use current defaults travel_time=5.0, fix_duration=8.0, and resume_delay=0.5 when the user asks for relative changes. "
+                "Map only two production lines remaining to simulation_config_updates.num_envs=2 and target_scope MULTIPLE_LINES. "
+                "Map arrival time reduced by about 2 seconds to travel_time=3.0. "
+                "Map time to resolve entanglements reduced by 2 seconds to fix_duration=6.0. "
+                "Map recovery time 1 second slower to resume_delay=1.5. "
+                "Map stop robotic arms immediately on anomaly to simulation_config_updates.chosen_intervention_mode='immediate-stop' "
+                "and include ABNORMAL_STRATEGY_UPDATE. If ABNORMAL_STRATEGY_UPDATE is included because the operator requested "
+                "immediate stopping on anomaly, the response is incomplete unless chosen_intervention_mode is present. "
+                "Map number of tooling per production line to 6 to add_reference_number=6. "
+                "Do not set dry_run_only just because the operator says confirm, verify, validate, or wants to know whether a "
+                "configuration can work. Those are normal deployable TASK_REQUEST turns unless the operator explicitly says "
+                "dry run only, dry run, test only, simulate only, no deployment, or do not deploy. "
+                "Only when the operator explicitly requests dry-run/no-deployment behavior, set action PROPOSE_DRY_RUN, "
+                "dry_run_only true, deployment_allowed_after_success false, and include DRY_RUN_ONLY in request_types. "
                 "If the user says robots pick ENT surgical tooling/tools/set first, that means MANIPULATOR_PRIORITY_UPDATE "
                 "with REQUIRED_FIRST and scope TABLE_BATCH. Preserve target lines from the conversation unless the user explicitly says all lines. "
                 "READY_FOR_REVIEW requires operator_id, reason, target lines or ALL_LINES, request_types, and a complete normalized_request. "
@@ -725,6 +791,7 @@ def _build_dialogue_decision_prompt(payload: dict[str, Any], session: dict[str, 
                 "robots pick ENT surgical tooling set first, return READY_FOR_REVIEW, not another clarification. "
                 "Examples: input 'yo dude' with session_state IDLE returns turn_type SMALL_TALK, dialogue_state UNKNOWN, "
                 "operator_id null, reason null, intent_text null, and decision null. "
+                "Input 'help' returns turn_type HELP, dialogue_state HELP, query_targets [], and normalized_request null. "
                 "Input 'i want to set all line\\'s throughput/hr back to 60' with session_state IDLE returns turn_type TASK_REQUEST, "
                 "dialogue_state NEEDS_CLARIFICATION, intent_text 'set all line\\'s throughput/hr back to 60', "
                 "target_scope ALL_LINES, target_lines [], request_types ['KPI_UPDATE'], "
@@ -733,6 +800,21 @@ def _build_dialogue_decision_prompt(payload: dict[str, Any], session: dict[str, 
                 "and pending_intent.intent_text 'set all line\\'s throughput/hr back to 60' returns turn_type CLARIFICATION_VALUES, "
                 "dialogue_state NEEDS_CLARIFICATION or READY_FOR_REVIEW depending on whether the normalized_request is complete, "
                 "operator_id 'op_001', reason 'test for milestone 11.5', and intent_text null unless restating the task. "
+                "Input 'What are the current Time-Arrival Model parameters?' returns turn_type CONFIG_QUERY, "
+                "dialogue_state CONFIG_QUERY, query_targets ['TIME_ARRIVAL_MODEL'], and normalized_request null. "
+                "Input 'show me production line 1 state record' returns turn_type CONFIG_QUERY, "
+                "dialogue_state CONFIG_QUERY, query_targets ['LINE_STATE'], line_ids ['line_1'], and normalized_request null. "
+                "Input 'show me the task requirements table' returns turn_type CONFIG_QUERY, "
+                "dialogue_state CONFIG_QUERY, query_targets ['TASK_REQUIREMENT_TABLE'], and normalized_request null. "
+                "Input containing 'only two production lines remaining', 'arrival time reduced by about 2 seconds', "
+                "'time to resolve entanglements reduced by 2 seconds', 'stop immediately upon detecting an anomaly', "
+                "'recovery time 1 second slower', and 'tooling per production line to 6' returns TASK_REQUEST and "
+                "READY_FOR_REVIEW when operator_id and reason are present, action PROPOSE_PATCH, dry_run_only false, request_types "
+                "['SIMULATION_CONFIG_UPDATE','ABNORMAL_STRATEGY_UPDATE'], and simulation_config_updates "
+                "{'num_envs':2,'chosen_intervention_mode':'immediate-stop','travel_time':3.0,'fix_duration':6.0,"
+                "'resume_delay':1.5,'add_reference_number':6}. "
+                "Input beginning 'dry run only' with the same Time-Arrival settings returns action PROPOSE_DRY_RUN, "
+                "dry_run_only true, and includes DRY_RUN_ONLY in request_types. "
                 "Return only JSON matching the schema."
             ),
         },
@@ -767,6 +849,8 @@ def _dialogue_state_for_turn(turn_type: str, default: str = "UNKNOWN") -> str:
     return {
         "APPROVAL_DECISION": "APPROVAL_DECISION",
         "DEPLOYMENT_DECISION": "DEPLOYMENT_DECISION",
+        "HELP": "HELP",
+        "CONFIG_QUERY": "CONFIG_QUERY",
         "CANCEL": "CANCELLED",
         "SMALL_TALK": "UNKNOWN",
         "CONFUSED": "UNKNOWN",
@@ -778,6 +862,8 @@ def _turn_type_for_dialogue_state(dialogue_state: str) -> str:
     return {
         "APPROVAL_DECISION": "APPROVAL_DECISION",
         "DEPLOYMENT_DECISION": "DEPLOYMENT_DECISION",
+        "HELP": "HELP",
+        "CONFIG_QUERY": "CONFIG_QUERY",
         "CANCELLED": "CANCEL",
         "UNKNOWN": "UNKNOWN",
     }.get(dialogue_state, "TASK_REQUEST")
@@ -794,6 +880,445 @@ def _internal_request_types(request_types: Any) -> list[str]:
     return internal
 
 
+def _load_default_simulation_config_for_chat() -> dict[str, Any]:
+    path = repository.root / "data" / "digital_twin" / "default_simulation_config.json"
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    config = payload.get("simulation_config")
+    return dict(config) if isinstance(config, dict) else {}
+
+
+def _load_template_simulation_config_for_chat() -> dict[str, Any]:
+    try:
+        registry = load_template_registry(repository.root / "data" / "scenario_templates.json")
+        template = get_template(registry, None)
+        config = template.get("simulation_config") or {}
+        operator_model = template.get("operator_model") or {}
+        merged = dict(config)
+        for key in ("travel_time", "fix_duration", "resume_delay"):
+            if key not in merged and operator_model.get(key) is not None:
+                merged[key] = operator_model[key]
+        return merged
+    except Exception:
+        return {}
+
+
+def _chat_help_message() -> str:
+    return (
+        "I can help with four kinds of requests:\n\n"
+        "1. Change production-line requirements\n"
+        "   Example: set all production lines throughput/hr to at least 60.\n\n"
+        "2. Change tooling targets or picking order\n"
+        "   Example: set lines 2 and 4 to target retractors.\n"
+        "   Example: make lines 1 and 3 pick non-forceps tools first.\n\n"
+        "3. Ask about current configuration\n"
+        "   Example: what are the current Time-Arrival Model parameters?\n"
+        "   Example: show the state record for line 1.\n"
+        "   Example: how are the KPIs currently set?\n\n"
+        "4. Review simulation and deployment results\n"
+        "   Example: show the latest run artifact.\n"
+        "   Example: why did the KPI check fail?\n\n"
+        "For a change request, include operator_id and reason when you are ready."
+    )
+
+
+def _load_current_state_object() -> dict[str, Any]:
+    path = repository.root / "data" / "state_records" / "current_state.json"
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _latest_json_file(directory: str) -> Any:
+    path = repository.root / directory
+    files = sorted(path.glob("*.json"), key=lambda item: item.stat().st_mtime, reverse=True) if path.exists() else []
+    return files[0] if files else None
+
+
+def _latest_sqlite_file(directory: str) -> Any:
+    path = repository.root / directory
+    files = sorted(path.glob("*.sqlite"), key=lambda item: item.stat().st_mtime, reverse=True) if path.exists() else []
+    return files[0] if files else None
+
+
+def _line_state_answer(state: dict[str, Any], line_ids: list[str]) -> dict[str, Any]:
+    lines = state.get("lines") if isinstance(state.get("lines"), dict) else {}
+    requested = line_ids or sorted(lines.keys())
+    rows = []
+    missing = []
+    for line_id in requested:
+        row = lines.get(line_id)
+        if not isinstance(row, dict):
+            missing.append(line_id)
+            continue
+        rows.append(
+            {
+                "line_id": line_id,
+                "mode": row.get("mode"),
+                "active_set_id": row.get("active_set_id"),
+                "current_task": row.get("current_task"),
+                "wip_count": row.get("wip_count"),
+                "selected_tool_ids": row.get("selected_tool_ids") or [],
+                "pending_tool_ids": row.get("pending_tool_ids") or [],
+                "completed_tool_ids": row.get("completed_tool_ids") or [],
+                "entanglement": row.get("entanglement") or {},
+                "locked_resources": row.get("locked_resources") or [],
+                "last_exception": row.get("last_exception"),
+                "robot_id": row.get("robot_id"),
+                "workspace_id": row.get("workspace_id"),
+            }
+        )
+    return {"lines": rows, "missing_line_ids": missing}
+
+
+def _task_requirement_table_from_spec(spec: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = []
+    for policy in spec.get("line_policies") or []:
+        if not isinstance(policy, dict):
+            continue
+        priority = policy.get("manipulator_priority") or {}
+        kpi = policy.get("kpi") or {}
+        rows.append(
+            {
+                "line_id": policy.get("line_id"),
+                "target_set_id": policy.get("target_set_id"),
+                "selected_tool_ids": policy.get("selected_tool_ids") or [],
+                "excluded_tool_ids": policy.get("excluded_tool_ids") or [],
+                "required_tool_ids": policy.get("required_tool_ids") or [],
+                "selected_normalized_types": policy.get("selected_normalized_types") or [],
+                "excluded_normalized_types": policy.get("excluded_normalized_types") or [],
+                "manipulator_priority": {
+                    "policy": priority.get("policy"),
+                    "enabled": priority.get("enabled"),
+                    "ordered_tool_ids": priority.get("ordered_tool_ids") or [],
+                    "ordered_normalized_types": priority.get("ordered_normalized_types") or [],
+                },
+                "kpi_target": {
+                    "min_throughput_per_hour": kpi.get("min_throughput_per_hour"),
+                    "deadline_minutes": kpi.get("deadline_minutes"),
+                    "max_downtime_seconds": kpi.get("max_downtime_seconds"),
+                },
+            }
+        )
+    return rows
+
+
+def _latest_run_artifact_summary(run_id: str | None = None) -> tuple[dict[str, Any], str | None]:
+    db_path = repository.root / "outputs" / "run_artifacts" / f"{run_id}.sqlite" if run_id else _latest_sqlite_file("outputs/run_artifacts")
+    if not db_path or not db_path.exists():
+        return {"error": "No run artifact SQLite file was found."}, None
+    resolved_run_id = run_id or db_path.stem
+    try:
+        artifact = read_simulation_results(db_path, resolved_run_id)
+    except Exception as exc:
+        return {"run_id": resolved_run_id, "error": str(exc)}, str(db_path.relative_to(repository.root))
+    return (
+        {
+            "run_id": resolved_run_id,
+            "simulation_runs": artifact.get("simulation_runs") or [],
+            "line_kpis": artifact.get("line_kpis") or [],
+            "container_completion_events": artifact.get("container_completion_events") or [],
+            "warnings": artifact.get("warnings") or [],
+        },
+        str(db_path.relative_to(repository.root)),
+    )
+
+
+def _build_config_query_answer(
+    *,
+    query_targets: list[str],
+    line_ids: list[str] | None = None,
+    scenario_spec_id: str | None = None,
+    run_id: str | None = None,
+    raw_chat_input: str = "",
+) -> dict[str, Any]:
+    targets = set(query_targets or [])
+    if not targets:
+        targets = {"TIME_ARRIVAL_MODEL"}
+    requested_line_ids = set(line_ids or [])
+    defaults = _load_template_simulation_config_for_chat()
+    deployed = _load_default_simulation_config_for_chat()
+    config = {**defaults, **{key: value for key, value in deployed.items() if value is not None}}
+    sources: list[str] = []
+    structured: dict[str, Any] = {"query_targets": sorted(targets), "raw_chat_input": raw_chat_input}
+    state = _load_current_state_object()
+    if targets & {"STATE_RECORDS", "LINE_STATE"}:
+        sources.append("data/state_records/current_state.json")
+        lines = state.get("lines") if isinstance(state.get("lines"), dict) else {}
+        visible_lines = {line_id: line for line_id, line in lines.items() if not requested_line_ids or line_id in requested_line_ids}
+        running = sorted(line_id for line_id, line in visible_lines.items() if isinstance(line, dict) and line.get("mode") == "RUNNING")
+        structured["state_record"] = {
+            "active_trt_id": state.get("active_trt_id"),
+            "active_trt_version": state.get("active_trt_version"),
+            "state_version": state.get("state_version"),
+            "deployment_id": state.get("last_deployment_id"),
+            "running_lines": running,
+            "line_modes": {line_id: line.get("mode") for line_id, line in visible_lines.items() if isinstance(line, dict)},
+        }
+    if "LINE_STATE" in targets:
+        structured["line_state"] = _line_state_answer(state, line_ids or [])
+    if "TIME_ARRIVAL_MODEL" in targets or "ISAAC_COMMAND_CONFIG" in targets:
+        sources.extend(["data/digital_twin/default_simulation_config.json", "data/scenario_templates.json"])
+        structured["time_arrival_model"] = {
+            "num_envs": config.get("num_envs"),
+            "chosen_intervention_mode": config.get("chosen_intervention_mode"),
+            "travel_time": config.get("travel_time"),
+            "fix_duration": config.get("fix_duration"),
+            "resume_delay": config.get("resume_delay"),
+            "add_reference_number": config.get("add_reference_number"),
+            "simulated_tooling_count": config.get("add_reference_number"),
+            "allowed_overlap_ratio": config.get("allowed_overlap_ratio"),
+            "layout_source": config.get("layout_source"),
+            "episode_success_requires_reset_cycles": config.get("episode_success_requires_reset_cycles"),
+            "reuse_verified_seed": config.get("reuse_verified_seed"),
+            "headless": config.get("headless"),
+        }
+    if "KPI_TARGETS" in targets or "TRT_CURRENT" in targets:
+        trt = repository.get_current_trt()
+        sources.append("data/trt/current_trt.json")
+        structured["current_trt"] = {"trt_id": trt.get("trt_id"), "version": trt.get("version")}
+        structured["kpi_targets"] = [
+            {
+                "line_id": line_id,
+                "min_throughput_per_hour": (line.get("kpi") or {}).get("min_throughput_per_hour"),
+                "deadline_minutes": (line.get("kpi") or {}).get("deadline_minutes"),
+                "max_downtime_seconds": (line.get("kpi") or {}).get("max_downtime_seconds"),
+                "priority": line.get("priority"),
+                "goal": line.get("goal"),
+                "abnormal_strategy": line.get("abnormal_strategy"),
+            }
+            for line_id, line in sorted((trt.get("lines") or {}).items())
+            if isinstance(line, dict) and (not requested_line_ids or line_id in requested_line_ids)
+        ]
+    if "TASK_REQUIREMENT_TABLE" in targets or "SCENARIO_SPEC" in targets:
+        spec_path = None
+        if scenario_spec_id:
+            candidate_path = repository.root / "outputs" / "scenario_specs" / f"{scenario_spec_id}.json"
+            spec_path = candidate_path if candidate_path.exists() else None
+        spec_path = spec_path or _latest_json_file("outputs/scenario_specs")
+        if spec_path:
+            try:
+                spec = json.loads(spec_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                spec = {}
+            sources.append(str(spec_path.relative_to(repository.root)))
+            structured["scenario_spec"] = {
+                "scenario_spec_id": spec.get("scenario_spec_id"),
+                "trt_id": spec.get("trt_id"),
+                "trt_version": spec.get("trt_version"),
+                "simulation_scope": spec.get("simulation_scope"),
+                "simulation_config": spec.get("simulation_config"),
+            }
+            requirement_rows = _task_requirement_table_from_spec(spec)
+            if requested_line_ids:
+                requirement_rows = [row for row in requirement_rows if row.get("line_id") in requested_line_ids]
+            structured["task_requirement_table"] = requirement_rows
+        else:
+            structured["scenario_spec"] = {"error": "No ScenarioSpec JSON file was found."}
+    if "RUN_ARTIFACT" in targets:
+        run_artifact, source = _latest_run_artifact_summary(run_id)
+        if source:
+            sources.append(source)
+        if requested_line_ids:
+            for key in ("line_kpis", "container_completion_events"):
+                rows = run_artifact.get(key)
+                if isinstance(rows, list):
+                    run_artifact[key] = [row for row in rows if row.get("line_id") in requested_line_ids]
+        structured["run_artifact"] = run_artifact
+    if "DEPLOYMENT_HISTORY" in targets:
+        deployments_dir = repository.root / "data" / "deployments"
+        records = sorted(deployments_dir.glob("deploy_*.json"), key=lambda item: item.stat().st_mtime, reverse=True) if deployments_dir.exists() else []
+        sources.append("data/deployments/*.json")
+        structured["deployment_history"] = []
+        for record in records[:5]:
+            try:
+                payload = json.loads(record.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            structured["deployment_history"].append(
+                {
+                    "deployment_id": payload.get("deployment_id"),
+                    "scenario_spec_id": payload.get("scenario_spec_id"),
+                    "trt_version": payload.get("trt_version"),
+                    "decision": payload.get("decision"),
+                    "created_at": payload.get("created_at") or payload.get("updated_at"),
+                }
+            )
+    return {
+        "status": "ANSWER_READY",
+        "query_targets": sorted(targets),
+        "line_ids": line_ids or [],
+        "scenario_spec_id": scenario_spec_id,
+        "run_id": run_id,
+        "sources": sorted(set(sources)),
+        "structured_answer": structured,
+    }
+
+
+def _fallback_config_answer_message(answer: dict[str, Any]) -> str:
+    structured = answer.get("structured_answer") or {}
+    targets = set(answer.get("query_targets") or [])
+    if "LINE_STATE" in targets:
+        rows = ["State record details:"]
+        for line in (structured.get("line_state") or {}).get("lines") or []:
+            ent = line.get("entanglement") or {}
+            rows.extend(
+                [
+                    f"{line.get('line_id')}:",
+                    f"- Mode: {line.get('mode')}",
+                    f"- Current task: {line.get('current_task') or 'none'}",
+                    f"- WIP count: {line.get('wip_count')}",
+                    f"- Active tooling set: {line.get('active_set_id')}",
+                    f"- Entanglement: {'detected' if ent.get('detected') else 'not detected'}",
+                    f"- Locked resources: {line.get('locked_resources') or []}",
+                    f"- Last exception: {line.get('last_exception')}",
+                    f"- Robot: {line.get('robot_id')}",
+                    f"- Workspace: {line.get('workspace_id')}",
+                ]
+            )
+        return "\n".join(rows)
+    if "TIME_ARRIVAL_MODEL" in targets:
+        cfg = structured.get("time_arrival_model") or {}
+        return "\n".join(
+            [
+                "Current Time-Arrival Model settings:",
+                f"- Active simulated production lines: {cfg.get('num_envs')}",
+                f"- Intervention mode: {cfg.get('chosen_intervention_mode')}",
+                f"- Operator arrival time: {cfg.get('travel_time')} seconds",
+                f"- Entanglement fix time: {cfg.get('fix_duration')} seconds",
+                f"- Recovery/resume delay: {cfg.get('resume_delay')} seconds",
+                f"- Simulated tooling count per production line: {cfg.get('simulated_tooling_count')}",
+                f"- Allowed overlap ratio: {cfg.get('allowed_overlap_ratio')}",
+                f"- Layout source: {cfg.get('layout_source')}",
+                f"- Reset cycles required: {cfg.get('episode_success_requires_reset_cycles')}",
+                f"- Reuse verified seed: {cfg.get('reuse_verified_seed')}",
+            ]
+        )
+    if "KPI_TARGETS" in targets:
+        trt = structured.get("current_trt") or {}
+        rows = [f"Current KPI settings for TRT {trt.get('trt_id')} version {trt.get('version')}:"]
+        for row in structured.get("kpi_targets") or []:
+            deadline = row.get("deadline_minutes")
+            downtime = row.get("max_downtime_seconds")
+            rows.extend(
+                [
+                    "",
+                    f"{row.get('line_id')}:",
+                    f"- Minimum throughput: {row.get('min_throughput_per_hour')} tools/hour",
+                    f"- Deadline: {deadline if deadline is not None else 'none configured'}",
+                    f"- Maximum downtime: {downtime if downtime is not None else 'none configured'}",
+                    f"- Priority: {row.get('priority')}",
+                    f"- Goal: {row.get('goal')}",
+                    f"- Abnormal strategy: {row.get('abnormal_strategy')}",
+                ]
+            )
+        if answer.get("sources"):
+            rows.extend(["", f"Source: {', '.join(answer.get('sources') or [])}"])
+        return "\n".join(rows)
+    if "TASK_REQUIREMENT_TABLE" in targets:
+        rows = ["Latest task requirement table:"]
+        for row in structured.get("task_requirement_table") or []:
+            rows.append(
+                f"- {row.get('line_id')}: target set {row.get('target_set_id')}, "
+                f"required tools {row.get('required_tool_ids')}, selected tools {row.get('selected_tool_ids')}, "
+                f"excluded tools {row.get('excluded_tool_ids')}, priority {row.get('manipulator_priority')}, "
+                f"KPI {row.get('kpi_target')}."
+            )
+        return "\n".join(rows)
+    return "I found the requested configuration data. Sources: " + ", ".join(answer.get("sources") or [])
+
+
+def _format_config_query_answer(answer: dict[str, Any]) -> dict[str, Any]:
+    schema = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["operator_message", "confidence", "sources_used", "follow_up_suggestions"],
+        "properties": {
+            "operator_message": {"type": "string"},
+            "confidence": {"type": "string", "enum": ["HIGH", "MEDIUM", "LOW"]},
+            "sources_used": {"type": "array", "items": {"type": "string"}},
+            "follow_up_suggestions": {"type": "array", "items": {"type": "string"}},
+        },
+    }
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You format source-backed production-line configuration answers for operators. "
+                "Use only the supplied structured_answer values. Do not invent missing values. "
+                "Use internal field names only when they are part of the requested details; otherwise use operator-friendly wording."
+            ),
+        },
+        {"role": "user", "content": json.dumps(answer, sort_keys=True)},
+    ]
+    body = {
+        "model": os.getenv("VLLM_MODEL", DEFAULT_VLLM_MODEL),
+        "messages": messages,
+        "temperature": 0,
+        "max_tokens": 4000,
+        "structured_outputs": {"json": schema},
+    }
+    try:
+        raw = _post_json(os.getenv("VLLM_CHAT_COMPLETIONS_URL", DEFAULT_VLLM_CHAT_COMPLETIONS_URL), body, 30)
+        content = raw.get("choices", [{}])[0].get("message", {}).get("content", raw)
+        formatted = json.loads(content) if isinstance(content, str) else content
+        if isinstance(formatted, dict) and formatted.get("operator_message"):
+            message = str(formatted.get("operator_message") or "")
+            targets = set(answer.get("query_targets") or [])
+            has_details = True
+            if "LINE_STATE" in targets:
+                first_line = next(iter(((answer.get("structured_answer") or {}).get("line_state") or {}).get("lines") or []), {})
+                required_tokens = [str(first_line.get("line_id") or ""), str(first_line.get("mode") or ""), str(first_line.get("robot_id") or "")]
+                has_details = all(token and token in message for token in required_tokens)
+            elif "TIME_ARRIVAL_MODEL" in targets:
+                cfg = (answer.get("structured_answer") or {}).get("time_arrival_model") or {}
+                required_tokens = [str(cfg.get("travel_time")), str(cfg.get("fix_duration")), str(cfg.get("resume_delay")), str(cfg.get("simulated_tooling_count"))]
+                has_details = all(token and token in message for token in required_tokens)
+            elif "KPI_TARGETS" in targets:
+                rows = (answer.get("structured_answer") or {}).get("kpi_targets") or []
+                required_line_ids = [str(row.get("line_id") or "") for row in rows]
+                required_labels = ["Minimum", "Deadline", "downtime", "Priority", "Goal", "Abnormal"]
+                has_details = all(line_id and line_id in message for line_id in required_line_ids) and all(
+                    label.lower() in message.lower() for label in required_labels
+                )
+            elif "TASK_REQUIREMENT_TABLE" in targets:
+                rows = (answer.get("structured_answer") or {}).get("task_requirement_table") or []
+                required_line_ids = [str(row.get("line_id") or "") for row in rows]
+                has_details = all(line_id and line_id in message for line_id in required_line_ids) and "target" in message.lower()
+            if not has_details:
+                raise ValueError("Formatted config answer omitted required source-backed details.")
+            return formatted
+    except Exception:
+        pass
+    return {
+        "operator_message": _fallback_config_answer_message(answer),
+        "confidence": "MEDIUM",
+        "sources_used": answer.get("sources") or [],
+        "follow_up_suggestions": [],
+    }
+
+
+@app.post("/chat/config-query")
+def post_chat_config_query(payload: dict[str, Any]) -> dict[str, Any]:
+    answer = _build_config_query_answer(
+        query_targets=list(payload.get("query_targets") or []),
+        line_ids=list(payload.get("line_ids") or []),
+        scenario_spec_id=payload.get("scenario_spec_id"),
+        run_id=payload.get("run_id"),
+        raw_chat_input=str(payload.get("raw_chat_input") or ""),
+    )
+    formatted = _format_config_query_answer(answer)
+    return {**answer, "formatted_answer": formatted, "operator_message": formatted.get("operator_message")}
+
+
 @app.post("/chat/dialogue-decision")
 def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
     session_id = str(payload.get("session_id") or payload.get("sessionId") or "default")
@@ -804,7 +1329,7 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
         "model": os.getenv("VLLM_MODEL", DEFAULT_VLLM_MODEL),
         "messages": messages,
         "temperature": 0,
-        "max_tokens": 700,
+        "max_tokens": 4000,
         "structured_outputs": {"json": _dialogue_decision_schema()},
     }
     url = os.getenv("VLLM_CHAT_COMPLETIONS_URL", DEFAULT_VLLM_CHAT_COMPLETIONS_URL)
@@ -829,6 +1354,10 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
         dialogue_state = _dialogue_state_for_turn(turn_type)
     if turn_type == "CANCEL":
         dialogue_state = "CANCELLED"
+    elif turn_type == "HELP":
+        dialogue_state = "HELP"
+    elif turn_type == "CONFIG_QUERY":
+        dialogue_state = "CONFIG_QUERY"
     elif turn_type in {"APPROVAL_DECISION", "DEPLOYMENT_DECISION"}:
         dialogue_state = turn_type
     operator_message = _operator_facing_text(decision.get("operator_message") or "")
@@ -848,6 +1377,38 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
         request_types.append("SIMULATION_CONFIG_UPDATE")
     if request_types:
         normalized_request["request_types"] = request_types
+    sim_updates_repair = normalized_request.get("simulation_config_updates")
+    if (
+        isinstance(sim_updates_repair, dict)
+        and "ABNORMAL_STRATEGY_UPDATE" in request_types
+        and not sim_updates_repair.get("chosen_intervention_mode")
+    ):
+        sim_updates_repair["chosen_intervention_mode"] = "immediate-stop"
+        normalized_request["simulation_config_updates"] = sim_updates_repair
+        decision.setdefault("deterministic_repairs", []).append(
+            {
+                "code": "ABNORMAL_STRATEGY_MODE_FILLED",
+                "field": "simulation_config_updates.chosen_intervention_mode",
+                "value": "immediate-stop",
+                "reason": (
+                    "The model classified the turn as an abnormal-strategy update but omitted "
+                    "the corresponding intervention mode."
+                ),
+            }
+        )
+    sim_updates_for_scope = normalized_request.get("simulation_config_updates") or {}
+    if (
+        sim_updates_for_scope.get("num_envs") is not None
+        and normalized_request.get("target_scope") != "ALL_LINES"
+        and not normalized_request.get("target_lines")
+    ):
+        try:
+            available_lines = sorted((repository.get_current_trt().get("lines") or {}).keys())
+        except RepositoryError:
+            available_lines = ["line_1", "line_2", "line_3", "line_4"]
+        count = max(1, min(int(sim_updates_for_scope["num_envs"]), len(available_lines) or 1))
+        normalized_request["target_scope"] = "MULTIPLE_LINES" if count > 1 else "SINGLE_LINE"
+        normalized_request["target_lines"] = available_lines[:count]
     if normalized_request.get("manipulator_priority"):
         priority = dict(normalized_request["manipulator_priority"])
         priority.pop("scope", None)
@@ -902,6 +1463,10 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
         "turn_type": turn_type,
         "operator_message": operator_message,
         "normalized_request": normalized_request,
+        "query_targets": decision.get("query_targets") or [],
+        "line_ids": decision.get("line_ids") or [],
+        "scenario_spec_id": decision.get("scenario_spec_id"),
+        "run_id": decision.get("run_id"),
         "missing_or_unclear_items": decision.get("missing_or_unclear_items") or [],
         "approval_decision": decision.get("approval_decision"),
         "deployment_decision": decision.get("deployment_decision"),
@@ -909,8 +1474,56 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
         "conversation": conversation,
         "llm_decision_raw": decision,
     }
-    if dialogue_state == "READY_FOR_REVIEW":
+    if dialogue_state == "HELP" or turn_type == "HELP":
+        message = _chat_help_message()
+        response.update(
+            {
+                "status": "HELP",
+                "operator_message": message,
+                "payload": {"message": message, "user_message": message},
+                "context": {"session_id": session_id},
+                "errors": [],
+            }
+        )
+    elif dialogue_state == "CONFIG_QUERY" or turn_type == "CONFIG_QUERY":
+        query_targets = decision.get("query_targets") or []
+        answer = _build_config_query_answer(
+            query_targets=query_targets,
+            line_ids=decision.get("line_ids") or [],
+            scenario_spec_id=decision.get("scenario_spec_id"),
+            run_id=decision.get("run_id"),
+            raw_chat_input=latest,
+        )
+        formatted = _format_config_query_answer(answer)
+        message = _operator_facing_text(formatted.get("operator_message") or operator_message)
+        response.update(
+            {
+                "status": "CONFIG_QUERY",
+                "operator_message": message,
+                "payload": {
+                    "message": message,
+                    "user_message": message,
+                    "query_targets": query_targets,
+                    "line_ids": decision.get("line_ids") or [],
+                    "structured_answer": answer.get("structured_answer"),
+                    "sources": answer.get("sources") or [],
+                    "formatted_answer": formatted,
+                },
+                "context": {"session_id": session_id},
+                "errors": [],
+            }
+        )
+    elif dialogue_state == "READY_FOR_REVIEW":
         current_trt = repository.get_current_trt()
+        request_types_for_dry_run = set(normalized_request.get("request_types") or [])
+        dry_run_only = bool(
+            normalized_request.get("dry_run_only") is True
+            or decision.get("action") == "PROPOSE_DRY_RUN"
+            or "DRY_RUN_ONLY" in request_types_for_dry_run
+        )
+        simulation_config_updates = dict(normalized_request.get("simulation_config_updates") or {})
+        if dry_run_only:
+            simulation_config_updates["dry_run_only"] = True
         candidate = {
             "patch_id": f"patch_{uuid4()}",
             "trt_id": current_trt.get("trt_id"),
@@ -939,15 +1552,23 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
             "request_types": normalized_request.get("request_types") or [],
             "detected_request_types": normalized_request.get("request_types") or [],
             "manipulator_priority": normalized_request.get("manipulator_priority"),
-            "simulation_config_updates": normalized_request.get("simulation_config_updates") or {},
+            "simulation_config_updates": simulation_config_updates,
             "kpi_updates": normalized_request.get("kpi_updates") or {},
             "tooling_policy": None,
             "abnormal_strategy": None,
             "clarification_questions": [],
             "unsupported_terms": [],
+            "dry_run_only": dry_run_only,
+            "deployment_allowed_after_success": normalized_request.get("deployment_allowed_after_success"),
+            "failure_action_hint": normalized_request.get("failure_action_hint"),
         }
         try:
             intent_patch = normalize_domain_candidate(candidate, current_trt)
+            intent_patch["dry_run_only"] = bool(dry_run_only)
+            if dry_run_only:
+                intent_patch["deployment_allowed_after_success"] = False
+                if normalized_request.get("failure_action_hint"):
+                    intent_patch["failure_action_hint"] = normalized_request["failure_action_hint"]
             validation = validate_intent_patch(intent_patch, repository)
             status = "REVIEWED" if validation.get("status") == "ACCEPTED" else "NEEDS_REVISION"
             errors = [] if status == "REVIEWED" else list(validation.get("rejection_reasons") or [])
@@ -1593,6 +2214,25 @@ def post_scenario_generate(payload: dict[str, Any]) -> dict[str, Any]:
     missing = sorted(field for field in required if not payload.get(field))
     if missing:
         raise HTTPException(status_code=400, detail=f"Missing scenario generation fields: {', '.join(missing)}")
+    simulation_override = payload.get("simulation_config_updates") or payload.get("simulation_config_override") or {}
+    if (
+        isinstance(simulation_override, dict)
+        and simulation_override.get("num_envs") is not None
+        and not payload.get("simulation_scope")
+    ):
+        registry = load_line_registry(repository)
+        enabled_line_ids = sorted(line_id for line_id, line in registry["lines"].items() if line.get("enabled") is True)
+        affected_lines = [line_id for line_id in (payload.get("affected_lines") or []) if line_id in enabled_line_ids]
+        count = max(1, min(int(simulation_override["num_envs"]), len(enabled_line_ids) or 1))
+        lines = affected_lines[:count] if len(affected_lines) >= count else enabled_line_ids[:count]
+        payload = {
+            **payload,
+            "simulation_scope": {
+                "mode": "EXPLICIT_OPERATOR_LIMITED",
+                "lines": lines,
+                "reason": "Operator requested a reduced-line dry run or limited simulation.",
+            },
+        }
     try:
         scenario_template_id = _resolve_scenario_template_id(payload)
         try:
@@ -2485,3 +3125,4 @@ def _validate_scenario_reconciliation_contract(payload: dict[str, Any], plan: di
                 **diagnostics,
             },
         )
+

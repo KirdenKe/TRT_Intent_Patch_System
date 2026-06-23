@@ -1,0 +1,39 @@
+{
+  "audit_id": "audit-46e068bd-0732-4ac9-83ba-3f6d5edc76dd",
+  "intent_text": "okay, two production lines fucked up today. i want to confirm that with only two production lines remaining, my arrival time can be reduced by about 2.5 seconds, and the time to resolve entanglements can be reduced by 1.5 seconds. however, to ensure the remaining production lines operate normally, pls stop the robotic arms immediately upon detecting an anomaly. because of this, pls adjust the recovery time to be 2 second slower, and set the number of tooling per production line to 5. adjust the throughput/hr for all production lines to at least 100; set the tooling picking target for production lines 2 to knife handle; and adjust the tooling picking order for production lines 1 to prioritize picking tooling other than scissors.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [
+          "SCISSORS"
+        ],
+        "ordered_tool_ids": [],
+        "policy": "EXPLICIT_TYPE_ORDER",
+        "tie_breaker": "FCFS"
+      }
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1782220626266",
+  "reason": "test for milestone 11.6",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-23T13:17:12.843482Z",
+  "trt_after_hash": "23ec6514b55cfd990c22190e83221f11fce253b3e1b4e5bbd0025a07a226b7a0",
+  "trt_after_version": "v66",
+  "trt_before_hash": "f2bb9dc4e06d0bea849c0d212d05098e5fa70c2c42c63c70c9a03e142688b33f",
+  "trt_before_version": "v65",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

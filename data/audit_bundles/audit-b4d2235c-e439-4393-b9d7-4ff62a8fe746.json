@@ -1,0 +1,98 @@
+{
+  "audit_id": "audit-b4d2235c-e439-4393-b9d7-4ff62a8fe746",
+  "intent_text": "okay, two production lines fucked up today. i want to confirm that with only two production lines remaining, my arrival time can be reduced by about 2.5 seconds, and the time to resolve entanglements can be reduced by 1.5 seconds. however, to ensure the remaining production lines operate normally, pls stop the robotic arms immediately upon detecting an anomaly. because of this, pls adjust the recovery time to be 2 second slower, and set the number of tooling per production line to 5. adjust the throughput/hr for all production lines to at least 90; set the tooling picking target for production lines 2 to knife handle; and adjust the tooling picking order for production lines 1 to prioritize picking tooling other than ent tooling set.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/abnormal_strategy",
+      "value": "STOP_LINE"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/abnormal_strategy",
+      "value": "STOP_LINE"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/abnormal_strategy",
+      "value": "STOP_LINE"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/abnormal_strategy",
+      "value": "STOP_LINE"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/min_throughput_per_hour",
+      "value": 90
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/kpi/min_throughput_per_hour",
+      "value": 90
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/kpi/min_throughput_per_hour",
+      "value": 90
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/kpi/min_throughput_per_hour",
+      "value": 90
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/tooling_policy/required_scope",
+      "value": "SELECTED_TOOLING"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/selected_tool_ids",
+      "value": [
+        "tool_16",
+        "tool_17",
+        "tool_18"
+      ]
+    },
+    {
+      "op": "add",
+      "path": "/lines/line_2/selected_normalized_types",
+      "value": [
+        "KNIFE_HANDLE"
+      ]
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "FCFS",
+        "tie_breaker": "FCFS"
+      }
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1782228476981",
+  "reason": "test for milestone 11.6",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-23T15:28:08.278726Z",
+  "trt_after_hash": "f0a57256ec926c78da1a2be7d92a2eaaea6cd6acd295d5af1c9c7cb983b7e2cd",
+  "trt_after_version": "v68",
+  "trt_before_hash": "afcdd62c2e580016429e2d2f0a2a24bcdc16cdc162657c05e83d03ddb30f6f1e",
+  "trt_before_version": "v67",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

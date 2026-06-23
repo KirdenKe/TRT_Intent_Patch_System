@@ -1,0 +1,25 @@
+{
+  "audit_id": "audit-7ad25bf9-9e87-4cb6-9bae-7b630397f448",
+  "intent_text": "Set the simulated tooling count to 6.",
+  "operations": [],
+  "operator_id": "op_001",
+  "patch_id": "patch_a3146721-6dab-410b-877f-41c0d843f76c",
+  "reason": "test for milestone 11.6",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-23T11:05:50.645095Z",
+  "trt_after_hash": "7ad6aaf9baad879d4350e36e0f1decc98ddf0c9d410922024e20d5069b99b093",
+  "trt_after_version": "v64",
+  "trt_before_hash": "2adfc0d6484444e8dba1cf219b3d4bc086c899ebc78960b08fbd1c0aef696f60",
+  "trt_before_version": "v63",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

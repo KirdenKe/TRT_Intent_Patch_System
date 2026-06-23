@@ -1,9 +1,9 @@
 {
-  "audit_id": "audit-b4d2235c-e439-4393-b9d7-4ff62a8fe746",
+  "audit_id": "audit-46e068bd-0732-4ac9-83ba-3f6d5edc76dd",
   "experiment_id": "ent_surgical_tooling_sorting_demo",
   "lines": {
     "line_1": {
-      "abnormal_strategy": "STOP_LINE",
+      "abnormal_strategy": "CONTINUE_FEASIBLE_TASKS",
       "allowed_instruments": [],
       "digital_twin": {
         "active_set_id": "ENT_SURGICAL_TOOLING_SET",
@@ -26,13 +26,15 @@
       "kpi": {
         "deadline_minutes": null,
         "max_downtime_seconds": null,
-        "min_throughput_per_hour": 90
+        "min_throughput_per_hour": 80
       },
       "manipulator_priority": {
         "enabled": true,
-        "ordered_normalized_types": [],
+        "ordered_normalized_types": [
+          "SCISSORS"
+        ],
         "ordered_tool_ids": [],
-        "policy": "FCFS",
+        "policy": "EXPLICIT_TYPE_ORDER",
         "tie_breaker": "FCFS"
       },
       "priority": 3,
@@ -40,11 +42,11 @@
       "selected_tool_ids": [],
       "target_set_id": "ENT_SURGICAL_TOOLING_SET",
       "tooling_policy": {
-        "required_scope": "SELECTED_TOOLING"
+        "required_scope": "NONE"
       }
     },
     "line_2": {
-      "abnormal_strategy": "STOP_LINE",
+      "abnormal_strategy": "CONTINUE_FEASIBLE_TASKS",
       "allowed_instruments": [],
       "digital_twin": {
         "active_set_id": "ENT_SURGICAL_TOOLING_SET",
@@ -67,12 +69,12 @@
       "kpi": {
         "deadline_minutes": null,
         "max_downtime_seconds": null,
-        "min_throughput_per_hour": 90
+        "min_throughput_per_hour": 80
       },
       "manipulator_priority": {
         "enabled": true,
         "ordered_normalized_types": [
-          "KNIFE_HANDLE"
+          "NEEDLE_HOLDER"
         ],
         "ordered_tool_ids": [],
         "policy": "EXPLICIT_TYPE_ORDER",
@@ -80,21 +82,14 @@
       },
       "priority": 3,
       "required_tool_ids": [],
-      "selected_normalized_types": [
-        "KNIFE_HANDLE"
-      ],
-      "selected_tool_ids": [
-        "tool_16",
-        "tool_17",
-        "tool_18"
-      ],
+      "selected_tool_ids": [],
       "target_set_id": "ENT_SURGICAL_TOOLING_SET",
       "tooling_policy": {
-        "required_scope": "SELECTED_TOOLING"
+        "required_scope": "NONE"
       }
     },
     "line_3": {
-      "abnormal_strategy": "STOP_LINE",
+      "abnormal_strategy": "CONTINUE_FEASIBLE_TASKS",
       "allowed_instruments": [],
       "digital_twin": {
         "active_set_id": "ENT_SURGICAL_TOOLING_SET",
@@ -121,12 +116,12 @@
       "kpi": {
         "deadline_minutes": null,
         "max_downtime_seconds": null,
-        "min_throughput_per_hour": 90
+        "min_throughput_per_hour": 80
       },
       "manipulator_priority": {
         "enabled": true,
         "ordered_normalized_types": [
-          "KNIFE_HANDLE"
+          "NEEDLE_HOLDER"
         ],
         "ordered_tool_ids": [],
         "policy": "EXPLICIT_TYPE_ORDER",
@@ -137,11 +132,11 @@
       "selected_tool_ids": [],
       "target_set_id": "ENT_SURGICAL_TOOLING_SET",
       "tooling_policy": {
-        "required_scope": "SELECTED_TOOLING"
+        "required_scope": "NONE"
       }
     },
     "line_4": {
-      "abnormal_strategy": "STOP_LINE",
+      "abnormal_strategy": "CONTINUE_FEASIBLE_TASKS",
       "allowed_instruments": [],
       "digital_twin": {
         "active_set_id": "ENT_SURGICAL_TOOLING_SET",
@@ -168,12 +163,12 @@
       "kpi": {
         "deadline_minutes": null,
         "max_downtime_seconds": null,
-        "min_throughput_per_hour": 90
+        "min_throughput_per_hour": 80
       },
       "manipulator_priority": {
         "enabled": true,
         "ordered_normalized_types": [
-          "KNIFE_HANDLE"
+          "NEEDLE_HOLDER"
         ],
         "ordered_tool_ids": [],
         "policy": "EXPLICIT_TYPE_ORDER",
@@ -184,13 +179,13 @@
       "selected_tool_ids": [],
       "target_set_id": "ENT_SURGICAL_TOOLING_SET",
       "tooling_policy": {
-        "required_scope": "SELECTED_TOOLING"
+        "required_scope": "NONE"
       }
     }
   },
-  "previous_version": "v67",
-  "release_id": "rel_c48d9135-f4ea-443b-8147-adc4d11a7fe4",
-  "released_at": "2026-06-23T15:28:08.273150Z",
+  "previous_version": "v65",
+  "release_id": "rel_14bc9878-2271-4189-abb2-5d9fb9ba90bd",
+  "released_at": "2026-06-23T13:17:12.837388Z",
   "tool_catalog": {
     "tool_01": {
       "belongs_to_ent_set": false,
@@ -473,5 +468,5 @@
     }
   },
   "trt_id": "trt-demo",
-  "version": "v68"
+  "version": "v66"
 }

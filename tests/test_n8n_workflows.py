@@ -262,11 +262,14 @@ def test_intent_candidate_vllm_budget_and_length_guard():
     code = normalizer["parameters"]["jsCode"]
     retry_code = retry_normalizer["parameters"]["jsCode"]
 
-    assert "max_tokens: 768" in body
-    assert "max_tokens: 1024" in retry_body
+    assert "max_tokens: 20000" in body
+    assert "max_tokens: 200000" in retry_body
     assert "temperature: 0.0" in body
     assert "structured_outputs" in body
     assert "Extract compact domain intent JSON only." in body
+    assert "Time-Arrival Model language is supported" in body
+    assert "Use top-level unsupported_terms only" in body
+    assert "Do not duplicate unsupported_terms inside sub_requests" in body
     assert "Allowed lines come from Get Intent Context valid_line_ids." in body
     assert "Allowed goals: ROUTINE_CLASSIFICATION,TRAUMA_SET_PRIORITY,BACKLOG_CLEARING." in body
     assert "Allowed normalized tooling types are:" in body
@@ -285,8 +288,15 @@ def test_intent_candidate_vllm_budget_and_length_guard():
     assert "retry_needed: true" in code
     assert "Please retry with a shorter request" not in code
     assert "JSON.parse(content)" in code
-    assert "Intent candidate generation failed after retry." in retry_code
-    assert "llm_action: 'NEEDS_REVISION'" in retry_code
+    assert "INTENT_LLM_TRUNCATED_AFTER_RETRIES" in retry_code
+    assert "llm_action: 'ERROR'" in retry_code
+    assert "This is a system issue, not an operator request issue" in retry_code
+    assert "endpoint_url: 'http://192.168.50.168:29987/v1/chat/completions'" in retry_code
+    assert "requested_max_tokens: 200000" in retry_code
+    assert "tooling_policy_updates: extracted.tooling_policy_updates || null" in code
+    assert "manipulator_priority_updates: extracted.manipulator_priority_updates || null" in code
+    assert "tooling_policy_updates: extracted.tooling_policy_updates || null" in retry_code
+    assert "manipulator_priority_updates: extracted.manipulator_priority_updates || null" in retry_code
 
 
 def test_intent_candidate_retry_branch_reaches_python_normalization_on_success():
@@ -347,7 +357,7 @@ def test_intent_candidate_retry_supports_old_and_all_lines_requests_without_user
     assert "excluded_normalized_types: extracted.excluded_normalized_types ?? null" in normalizer_code
     assert "tooling_policy.all_required" not in body
     assert "tooling_policy.all_required" not in retry_body
-    assert retry_body.count("max_tokens: 1024") == 1
+    assert retry_body.count("max_tokens: 200000") == 1
     assert "Please retry with a shorter request" not in normalizer_code
 
 
@@ -827,6 +837,23 @@ def test_milestone11_subworkflows_call_evidence_and_deployment_endpoints():
     assert workflow_connection_target(evidence_workflow, "Build Evidence Summary Response") == "Return Evidence Summary"
     assert assignment_value(node_by_name(evidence_workflow, "Return Evidence Summary"), "payload") == "={{ $json.payload || {} }}"
     assert node_by_name(deploy_workflow, "Simulated Physical Deployment")["parameters"]["url"] == "http://trt-api:8000/deployment/simulated-deploy"
+
+
+def test_evidence_workflows_preserve_detailed_kpi_summary_before_deployment_prompt():
+    evidence_workflow = load_workflow("run_artifact_to_evidence_summary.workflow.json")
+    scenario_workflow = load_workflow("generate_scenario_spec.workflow.json")
+    chat_workflow = load_workflow("chat_operator_task_allocation.workflow.json")
+
+    evidence_code = node_by_name(evidence_workflow, "Build Evidence Summary Response")["parameters"]["jsCode"]
+    scenario_code = node_by_name(scenario_workflow, "Build Evidence Summary Response")["parameters"]["jsCode"]
+    formatter_code = node_by_name(chat_workflow, "Build vLLM User Response Format Body")["parameters"]["jsCode"]
+    fallback_code = node_by_name(chat_workflow, "Normalize Formatted User Response")["parameters"]["jsCode"]
+
+    assert "evidence.operator_detail_summary" in evidence_code
+    assert "evidence.operator_detail_summary" in scenario_code
+    assert "payload.evidence_summary.operator_detail_summary" in formatter_code
+    assert "Do not use only payload.evidence_summary.operator_summary if detailed KPI rows exist" in formatter_code
+    assert "canonical.payload?.evidence_summary?.operator_detail_summary" in fallback_code
 
 
 def test_chat_classifier_supports_deployment_decision_turns():

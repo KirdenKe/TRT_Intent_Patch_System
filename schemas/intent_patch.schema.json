@@ -41,11 +41,16 @@
       "items": { "type": "object" }
     },
     "message": { "type": "string" },
+    "dry_run_only": { "type": "boolean" },
+    "deployment_allowed_after_success": { "type": "boolean" },
+    "failure_action_hint": { "type": "string" },
     "simulation_config_updates": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "headless": { "type": ["boolean", "null"] },
+        "dry_run_only": { "type": ["boolean", "null"] },
+        "num_envs": { "type": ["integer", "null"], "minimum": 1 },
         "global_seed": { "type": ["integer", "null"], "minimum": 0 },
         "reuse_verified_seed": { "type": ["boolean", "null"] },
         "add_reference_number": { "type": ["integer", "null"], "minimum": 0 },

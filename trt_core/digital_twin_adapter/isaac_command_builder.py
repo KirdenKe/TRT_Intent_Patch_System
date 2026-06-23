@@ -365,6 +365,21 @@ def build_isaac_command(
     command_arg_resolution = build_isaac_command_args_with_sources(scenario_spec)
     command_args = command_arg_resolution["command_args"]
     resolved_from = command_arg_resolution["resolved_from"]
+    expected_args = (scenario_spec.get("governance_metadata") or {}).get("expected_command_args") or {}
+    for key in ("num_envs", "chosen_intervention_mode", "travel_time", "fix_duration", "resume_delay", "add_reference_number"):
+        if key not in expected_args or expected_args.get(key) is None:
+            continue
+        actual = command_args.get(key)
+        expected = expected_args[key]
+        if isinstance(expected, float) or isinstance(actual, float):
+            mismatch = abs(float(actual) - float(expected)) > 1e-9
+        else:
+            mismatch = actual != expected
+        if mismatch:
+            validation_errors.append(
+                "ScenarioSpec compilation failed: requested "
+                f"{key}={expected!r} but Isaac command resolved {key}={actual!r}."
+            )
     if not command_args.get("seed_db_path") and runtime_config.get("seed_db_path"):
         command_args["seed_db_path"] = runtime_config["seed_db_path"]
         resolved_from["seed_db_path"] = "host_config.seed_db_path"

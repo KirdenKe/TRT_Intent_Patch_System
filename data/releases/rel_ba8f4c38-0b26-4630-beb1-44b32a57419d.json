@@ -1,0 +1,732 @@
+{
+  "audit_id": "audit-85c984ed-8e75-41c4-8189-a94539863f48",
+  "base_version": "v66",
+  "candidate_patch": {
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "base_version": "v66",
+    "dry_run_only": false,
+    "intent_text": "okay, two production lines fucked up today. i want to confirm that with only two production lines remaining, my arrival time can be reduced by about 2.5 seconds, and the time to resolve entanglements can be reduced by 1.5 seconds. however, to ensure the remaining production lines operate normally, pls stop the robotic arms immediately upon detecting an anomaly. because of this, pls adjust the recovery time to be 2 second slower, and set the number of tooling per production line to 5. adjust the throughput/hr for all production lines to at least 90; set the tooling picking target for production lines 2 to knife handle; and adjust the tooling picking order for production lines 1 to prioritize picking tooling other than ent tooling set.",
+    "message": "The candidate patch passed validation. It will apply the requested composite changes across 5 sub-requests. Please approve, reject, or request revision.",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_1/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "KNIFE_HANDLE"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/abnormal_strategy",
+        "value": "STOP_LINE"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "KNIFE_HANDLE"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/abnormal_strategy",
+        "value": "STOP_LINE"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "KNIFE_HANDLE"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/abnormal_strategy",
+        "value": "STOP_LINE"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "KNIFE_HANDLE"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/abnormal_strategy",
+        "value": "STOP_LINE"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "KNIFE_HANDLE"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "KNIFE_HANDLE"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "KNIFE_HANDLE"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "KNIFE_HANDLE"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "KNIFE_HANDLE"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/kpi/min_throughput_per_hour",
+        "value": 90
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "KNIFE_HANDLE"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/kpi/min_throughput_per_hour",
+        "value": 90
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "KNIFE_HANDLE"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/kpi/min_throughput_per_hour",
+        "value": 90
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "KNIFE_HANDLE"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/kpi/min_throughput_per_hour",
+        "value": 90
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "KNIFE_HANDLE"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/tooling_policy/required_scope",
+        "value": "SELECTED_TOOLING"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "KNIFE_HANDLE"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/tooling_policy/required_scope",
+        "value": "SELECTED_TOOLING"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "KNIFE_HANDLE"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/tooling_policy/required_scope",
+        "value": "SELECTED_TOOLING"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "KNIFE_HANDLE"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/tooling_policy/required_scope",
+        "value": "SELECTED_TOOLING"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "KNIFE_HANDLE"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "KNIFE_HANDLE"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "KNIFE_HANDLE"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "KNIFE_HANDLE"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "patch-1782225473237",
+    "reason": "test for milestone 11.6",
+    "request_types": [
+      "SIMULATION_CONFIG_UPDATE",
+      "KPI_LIMIT_UPDATE",
+      "INSTRUMENT_SCOPE_UPDATE",
+      "MANIPULATOR_PRIORITY_UPDATE",
+      "TOOLING_POLICY_UPDATE"
+    ],
+    "simulation_config_updates": {
+      "add_reference_number": 5,
+      "episode_success_requires_reset_cycles": null,
+      "fix_duration": 6.5,
+      "num_envs": 2,
+      "resume_delay": 0,
+      "travel_time": 2.5
+    },
+    "status": "REVIEWED",
+    "sub_requests": [
+      {
+        "abnormal_strategy": "STOP_LINE",
+        "affected_lines": [
+          "line_1",
+          "line_2",
+          "line_3",
+          "line_4"
+        ],
+        "clarification_questions": null,
+        "operation_paths": [
+          "/lines/line_1/manipulator_priority",
+          "/lines/line_1/target_set_id",
+          "/lines/line_1/abnormal_strategy",
+          "/lines/line_2/manipulator_priority",
+          "/lines/line_2/target_set_id",
+          "/lines/line_2/abnormal_strategy",
+          "/lines/line_3/manipulator_priority",
+          "/lines/line_3/target_set_id",
+          "/lines/line_3/abnormal_strategy",
+          "/lines/line_4/manipulator_priority",
+          "/lines/line_4/target_set_id",
+          "/lines/line_4/abnormal_strategy"
+        ],
+        "request_type": "SIMULATION_CONFIG_UPDATE",
+        "request_types": [
+          "SIMULATION_CONFIG_UPDATE",
+          "MANIPULATOR_PRIORITY_UPDATE",
+          "TOOLING_POLICY_UPDATE"
+        ],
+        "simulation_config_updates": {
+          "add_reference_number": 5,
+          "episode_success_requires_reset_cycles": null,
+          "fix_duration": 6.5,
+          "num_envs": 2,
+          "resume_delay": 0,
+          "travel_time": 2.5
+        },
+        "target_lines": [],
+        "target_scope": "ALL_LINES"
+      },
+      {
+        "affected_lines": [
+          "line_1",
+          "line_2",
+          "line_3",
+          "line_4"
+        ],
+        "operation_paths": [
+          "/lines/line_1/manipulator_priority",
+          "/lines/line_1/target_set_id",
+          "/lines/line_2/manipulator_priority",
+          "/lines/line_2/target_set_id",
+          "/lines/line_3/manipulator_priority",
+          "/lines/line_3/target_set_id",
+          "/lines/line_4/manipulator_priority",
+          "/lines/line_4/target_set_id"
+        ],
+        "request_type": "SIMULATION_CONFIG_UPDATE",
+        "request_types": [
+          "SIMULATION_CONFIG_UPDATE",
+          "MANIPULATOR_PRIORITY_UPDATE",
+          "TOOLING_POLICY_UPDATE"
+        ],
+        "simulation_config_updates": {
+          "add_reference_number": 5
+        },
+        "target_lines": [],
+        "target_scope": "ALL_LINES"
+      },
+      {
+        "affected_lines": [
+          "line_1",
+          "line_2",
+          "line_3",
+          "line_4"
+        ],
+        "kpi_updates": {
+          "min_throughput_per_hour": 90
+        },
+        "operation_paths": [
+          "/lines/line_1/manipulator_priority",
+          "/lines/line_1/target_set_id",
+          "/lines/line_1/kpi/min_throughput_per_hour",
+          "/lines/line_2/manipulator_priority",
+          "/lines/line_2/target_set_id",
+          "/lines/line_2/kpi/min_throughput_per_hour",
+          "/lines/line_3/manipulator_priority",
+          "/lines/line_3/target_set_id",
+          "/lines/line_3/kpi/min_throughput_per_hour",
+          "/lines/line_4/manipulator_priority",
+          "/lines/line_4/target_set_id",
+          "/lines/line_4/kpi/min_throughput_per_hour"
+        ],
+        "request_type": "KPI_LIMIT_UPDATE",
+        "request_types": [
+          "KPI_LIMIT_UPDATE",
+          "SIMULATION_CONFIG_UPDATE",
+          "MANIPULATOR_PRIORITY_UPDATE",
+          "TOOLING_POLICY_UPDATE"
+        ],
+        "simulation_config_updates": {
+          "add_reference_number": 5
+        },
+        "target_lines": [],
+        "target_scope": "ALL_LINES"
+      },
+      {
+        "affected_lines": [
+          "line_1",
+          "line_2",
+          "line_3",
+          "line_4"
+        ],
+        "clarification_questions": null,
+        "manipulator_priority": {
+          "enabled": true
+        },
+        "operation_paths": [
+          "/lines/line_1/manipulator_priority",
+          "/lines/line_1/tooling_policy/required_scope",
+          "/lines/line_1/target_set_id",
+          "/lines/line_2/manipulator_priority",
+          "/lines/line_2/tooling_policy/required_scope",
+          "/lines/line_2/target_set_id",
+          "/lines/line_3/manipulator_priority",
+          "/lines/line_3/tooling_policy/required_scope",
+          "/lines/line_3/target_set_id",
+          "/lines/line_4/manipulator_priority",
+          "/lines/line_4/tooling_policy/required_scope",
+          "/lines/line_4/target_set_id"
+        ],
+        "request_type": "INSTRUMENT_SCOPE_UPDATE",
+        "request_types": [
+          "INSTRUMENT_SCOPE_UPDATE",
+          "SIMULATION_CONFIG_UPDATE",
+          "MANIPULATOR_PRIORITY_UPDATE",
+          "TOOLING_POLICY_UPDATE"
+        ],
+        "simulation_config_updates": {
+          "add_reference_number": 5
+        },
+        "target_lines": [
+          "line_2"
+        ],
+        "target_scope": "SINGLE_LINE",
+        "tooling_policy": {
+          "required_scope": "SELECTED_TOOLING"
+        }
+      },
+      {
+        "affected_lines": [
+          "line_1",
+          "line_2",
+          "line_3",
+          "line_4"
+        ],
+        "clarification_questions": null,
+        "manipulator_priority": {
+          "enabled": true
+        },
+        "operation_paths": [
+          "/lines/line_1/manipulator_priority",
+          "/lines/line_1/target_set_id",
+          "/lines/line_2/manipulator_priority",
+          "/lines/line_2/target_set_id",
+          "/lines/line_3/manipulator_priority",
+          "/lines/line_3/target_set_id",
+          "/lines/line_4/manipulator_priority",
+          "/lines/line_4/target_set_id"
+        ],
+        "request_type": "MANIPULATOR_PRIORITY_UPDATE",
+        "request_types": [
+          "MANIPULATOR_PRIORITY_UPDATE",
+          "SIMULATION_CONFIG_UPDATE",
+          "TOOLING_POLICY_UPDATE"
+        ],
+        "simulation_config_updates": {
+          "add_reference_number": 5
+        },
+        "target_lines": [
+          "line_1"
+        ],
+        "target_scope": "SINGLE_LINE"
+      }
+    ],
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [
+      "/lines/line_1/manipulator_priority",
+      "/lines/line_1/target_set_id",
+      "/lines/line_1/abnormal_strategy",
+      "/lines/line_2/manipulator_priority",
+      "/lines/line_2/target_set_id",
+      "/lines/line_2/abnormal_strategy",
+      "/lines/line_3/manipulator_priority",
+      "/lines/line_3/target_set_id",
+      "/lines/line_3/abnormal_strategy",
+      "/lines/line_4/manipulator_priority",
+      "/lines/line_4/target_set_id",
+      "/lines/line_4/abnormal_strategy",
+      "/lines/line_1/manipulator_priority",
+      "/lines/line_1/target_set_id",
+      "/lines/line_2/manipulator_priority",
+      "/lines/line_2/target_set_id",
+      "/lines/line_3/manipulator_priority",
+      "/lines/line_3/target_set_id",
+      "/lines/line_4/manipulator_priority",
+      "/lines/line_4/target_set_id",
+      "/lines/line_1/manipulator_priority",
+      "/lines/line_1/target_set_id",
+      "/lines/line_1/kpi/min_throughput_per_hour",
+      "/lines/line_2/manipulator_priority",
+      "/lines/line_2/target_set_id",
+      "/lines/line_2/kpi/min_throughput_per_hour",
+      "/lines/line_3/manipulator_priority",
+      "/lines/line_3/target_set_id",
+      "/lines/line_3/kpi/min_throughput_per_hour",
+      "/lines/line_4/manipulator_priority",
+      "/lines/line_4/target_set_id",
+      "/lines/line_4/kpi/min_throughput_per_hour",
+      "/lines/line_1/manipulator_priority",
+      "/lines/line_1/tooling_policy/required_scope",
+      "/lines/line_1/target_set_id",
+      "/lines/line_2/manipulator_priority",
+      "/lines/line_2/tooling_policy/required_scope",
+      "/lines/line_2/target_set_id",
+      "/lines/line_3/manipulator_priority",
+      "/lines/line_3/tooling_policy/required_scope",
+      "/lines/line_3/target_set_id",
+      "/lines/line_4/manipulator_priority",
+      "/lines/line_4/tooling_policy/required_scope",
+      "/lines/line_4/target_set_id",
+      "/lines/line_1/manipulator_priority",
+      "/lines/line_1/target_set_id",
+      "/lines/line_2/manipulator_priority",
+      "/lines/line_2/target_set_id",
+      "/lines/line_3/manipulator_priority",
+      "/lines/line_3/target_set_id",
+      "/lines/line_4/manipulator_priority",
+      "/lines/line_4/target_set_id"
+    ],
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "intent_text": "okay, two production lines fucked up today. i want to confirm that with only two production lines remaining, my arrival time can be reduced by about 2.5 seconds, and the time to resolve entanglements can be reduced by 1.5 seconds. however, to ensure the remaining production lines operate normally, pls stop the robotic arms immediately upon detecting an anomaly. because of this, pls adjust the recovery time to be 2 second slower, and set the number of tooling per production line to 5. adjust the throughput/hr for all production lines to at least 90; set the tooling picking target for production lines 2 to knife handle; and adjust the tooling picking order for production lines 1 to prioritize picking tooling other than ent tooling set.",
+    "reason": "test for milestone 11.6"
+  },
+  "created_at_utc": "2026-06-23T14:38:02.668068Z",
+  "current_trt_path": "/app/data/trt/current_trt.json",
+  "operator_decision": {
+    "comment": "Test for the Milestone 11.6",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-06-23T14:38:02.828426Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1782225473237",
+  "previous_trt_version": "v66",
+  "release_id": "rel_ba8f4c38-0b26-4630-beb1-44b32a57419d",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "trt_version": "v67",
+  "updated_at_utc": "2026-06-23T14:38:02.828426Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  },
+  "version_path": "/app/data/trt_versions/trt-demo_v67.json"
+}

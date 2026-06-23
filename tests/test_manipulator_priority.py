@@ -280,6 +280,93 @@ def test_composite_request_sub_requests_compile_independently():
         assert "SPONGE_FORCEPS" not in value["ordered_normalized_types"]
 
 
+def test_composite_kpi_sub_request_requires_concrete_kpi_updates():
+    composite = candidate("adjust the throughput/hr for all production lines to at least 100")
+    composite["sub_requests"] = [
+        {
+            "request_type": "KPI_LIMIT_UPDATE",
+            "target_scope": "ALL_LINES",
+            "target_lines": [],
+            "operator_text": "adjust the throughput/hr for all production lines to at least 100",
+        }
+    ]
+
+    with pytest.raises(ValueError, match="KPI sub-request is missing concrete kpi_updates"):
+        normalize_domain_candidate(composite, current_trt())
+
+
+def test_compact_complex_time_arrival_candidate_compiles_expected_patch():
+    trt = current_trt()
+    compact = candidate(
+        "okay, two production lines fucked up today. i want to confirm that with only two production lines remaining, "
+        "my arrival time can be reduced by about 2.5 seconds, and the time to resolve entanglements can be reduced "
+        "by 1.5 seconds. however, to ensure the remaining production lines operate normally, pls stop the robotic arms "
+        "immediately upon detecting an anomaly. because of this, pls adjust the recovery time to be 2 second slower, "
+        "and set the number of tooling per production line to 5. adjust the throughput/hr for all production lines "
+        "to at least 90; set the tooling picking target for production lines 2 to ent tooling set; and adjust the "
+        "tooling picking order for production lines 1 to prioritize picking tooling other than knife handle."
+    )
+    compact.update(
+        {
+            "request_types": [
+                "SIMULATION_CONFIG_UPDATE",
+                "KPI_LIMIT_UPDATE",
+                "TOOLING_POLICY_UPDATE",
+                "MANIPULATOR_PRIORITY_UPDATE",
+            ],
+            "simulation_config_updates": {
+                "num_envs": 2,
+                "chosen_intervention_mode": "immediate-stop",
+                "travel_time": 2.5,
+                "fix_duration": 6.5,
+                "resume_delay": 2.5,
+                "add_reference_number": 5,
+            },
+            "kpi_updates": {
+                "target_scope": "ALL_LINES",
+                "min_throughput_per_hour": 90,
+            },
+            "tooling_policy_updates": [
+                {
+                    "target_lines": ["line_2"],
+                    "target_set_id": "ENT_SURGICAL_TOOLING_SET",
+                }
+            ],
+            "manipulator_priority_updates": [
+                {
+                    "target_lines": ["line_1"],
+                    "policy": "EXPLICIT_TYPE_ORDER",
+                    "prioritize_excluding_normalized_types": ["KNIFE_HANDLE"],
+                }
+            ],
+            "unsupported_terms": [],
+            "clarification_questions": [],
+        }
+    )
+
+    patch = normalize_domain_candidate(compact, trt)
+    paths = {operation["path"]: operation["value"] for operation in patch["operations"]}
+
+    assert patch["simulation_config_updates"] == {
+        "num_envs": 2,
+        "chosen_intervention_mode": "immediate-stop",
+        "travel_time": 2.5,
+        "fix_duration": 6.5,
+        "resume_delay": 2.5,
+        "add_reference_number": 5,
+    }
+    assert paths["/lines/line_1/kpi/min_throughput_per_hour"] == 90
+    assert paths["/lines/line_2/kpi/min_throughput_per_hour"] == 90
+    assert paths["/lines/line_3/kpi/min_throughput_per_hour"] == 90
+    assert paths["/lines/line_4/kpi/min_throughput_per_hour"] == 90
+    assert paths["/lines/line_2/target_set_id"] == "ENT_SURGICAL_TOOLING_SET"
+    priority = paths["/lines/line_1/manipulator_priority"]
+    assert priority["policy"] == "EXPLICIT_TYPE_ORDER"
+    assert priority["prioritize"] == "NON_MATCHING_TYPES_FIRST"
+    assert priority["reference_normalized_types"] == ["KNIFE_HANDLE"]
+    assert patch.get("unsupported_terms") in (None, [])
+
+
 def test_ambiguous_prioritize_adjustment_requires_clarification():
     with pytest.raises(ValueError, match="Do you mean production-line priority"):
         normalize_domain_candidate(

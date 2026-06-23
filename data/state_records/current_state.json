@@ -1,16 +1,16 @@
 {
   "active_trt_id": "trt-demo",
-  "active_trt_version": "v63",
+  "active_trt_version": "v68",
   "deployment_source": "DIGITAL_TWIN_EVIDENCE_APPROVED_BY_OPERATOR",
   "deployment_status": "DEPLOYED",
-  "last_deployed_run_id": "sim_a0026054-bbba-45ed-91b2-72089332f17c",
-  "last_deployed_scenario_spec_id": "scn_9ad8726d-4dff-4b47-847c-b72fec576251",
-  "last_deployment_id": "deploy_692cae4b-58ca-4348-aecc-0e5f34b664c1",
+  "last_deployed_run_id": "sim_e6bf3990-c1ba-481d-bb5f-e59bc2aa539e",
+  "last_deployed_scenario_spec_id": "scn_3725523c-7b82-40b2-ae2b-1c627ebe1b76",
+  "last_deployment_id": "deploy_0b3dcdb3-d866-40a4-b0f0-7245e0af17db",
   "lines": {
     "line_1": {
       "active_set_id": "ENT_SURGICAL_TOOLING_SET",
       "active_trt_id": "trt-demo",
-      "active_trt_version": "v63",
+      "active_trt_version": "v68",
       "checkpoint": "NONE",
       "completed_tool_ids": [],
       "current_instruments": [],
@@ -23,9 +23,9 @@
         "severity": null,
         "tool_ids": []
       },
-      "last_deployed_run_id": "sim_a0026054-bbba-45ed-91b2-72089332f17c",
-      "last_deployed_scenario_spec_id": "scn_9ad8726d-4dff-4b47-847c-b72fec576251",
-      "last_deployment_id": "deploy_692cae4b-58ca-4348-aecc-0e5f34b664c1",
+      "last_deployed_run_id": "sim_e6bf3990-c1ba-481d-bb5f-e59bc2aa539e",
+      "last_deployed_scenario_spec_id": "scn_3725523c-7b82-40b2-ae2b-1c627ebe1b76",
+      "last_deployment_id": "deploy_0b3dcdb3-d866-40a4-b0f0-7245e0af17db",
       "last_exception": null,
       "locked_resources": [],
       "mode": "RUNNING",
@@ -38,7 +38,7 @@
     "line_2": {
       "active_set_id": "ENT_SURGICAL_TOOLING_SET",
       "active_trt_id": "trt-demo",
-      "active_trt_version": "v63",
+      "active_trt_version": "v68",
       "checkpoint": "NONE",
       "completed_tool_ids": [],
       "current_instruments": [],
@@ -51,9 +51,9 @@
         "severity": null,
         "tool_ids": []
       },
-      "last_deployed_run_id": "sim_a0026054-bbba-45ed-91b2-72089332f17c",
-      "last_deployed_scenario_spec_id": "scn_9ad8726d-4dff-4b47-847c-b72fec576251",
-      "last_deployment_id": "deploy_692cae4b-58ca-4348-aecc-0e5f34b664c1",
+      "last_deployed_run_id": "sim_e6bf3990-c1ba-481d-bb5f-e59bc2aa539e",
+      "last_deployed_scenario_spec_id": "scn_3725523c-7b82-40b2-ae2b-1c627ebe1b76",
+      "last_deployment_id": "deploy_0b3dcdb3-d866-40a4-b0f0-7245e0af17db",
       "last_exception": null,
       "locked_resources": [],
       "mode": "RUNNING",
@@ -66,7 +66,7 @@
     "line_3": {
       "active_set_id": "ENT_SURGICAL_TOOLING_SET",
       "active_trt_id": "trt-demo",
-      "active_trt_version": "v63",
+      "active_trt_version": "v68",
       "checkpoint": "NONE",
       "completed_tool_ids": [],
       "current_instruments": [],
@@ -79,9 +79,9 @@
         "severity": null,
         "tool_ids": []
       },
-      "last_deployed_run_id": "sim_a0026054-bbba-45ed-91b2-72089332f17c",
-      "last_deployed_scenario_spec_id": "scn_9ad8726d-4dff-4b47-847c-b72fec576251",
-      "last_deployment_id": "deploy_692cae4b-58ca-4348-aecc-0e5f34b664c1",
+      "last_deployed_run_id": "sim_e6bf3990-c1ba-481d-bb5f-e59bc2aa539e",
+      "last_deployed_scenario_spec_id": "scn_3725523c-7b82-40b2-ae2b-1c627ebe1b76",
+      "last_deployment_id": "deploy_0b3dcdb3-d866-40a4-b0f0-7245e0af17db",
       "last_exception": null,
       "locked_resources": [],
       "mode": "RUNNING",
@@ -94,7 +94,7 @@
     "line_4": {
       "active_set_id": "ENT_SURGICAL_TOOLING_SET",
       "active_trt_id": "trt-demo",
-      "active_trt_version": "v63",
+      "active_trt_version": "v68",
       "checkpoint": "NONE",
       "completed_tool_ids": [],
       "current_instruments": [],
@@ -107,9 +107,9 @@
         "severity": null,
         "tool_ids": []
       },
-      "last_deployed_run_id": "sim_a0026054-bbba-45ed-91b2-72089332f17c",
-      "last_deployed_scenario_spec_id": "scn_9ad8726d-4dff-4b47-847c-b72fec576251",
-      "last_deployment_id": "deploy_692cae4b-58ca-4348-aecc-0e5f34b664c1",
+      "last_deployed_run_id": "sim_e6bf3990-c1ba-481d-bb5f-e59bc2aa539e",
+      "last_deployed_scenario_spec_id": "scn_3725523c-7b82-40b2-ae2b-1c627ebe1b76",
+      "last_deployment_id": "deploy_0b3dcdb3-d866-40a4-b0f0-7245e0af17db",
       "last_exception": null,
       "locked_resources": [],
       "mode": "RUNNING",
@@ -120,5 +120,5 @@
       "workspace_id": "workspace_line_4"
     }
   },
-  "state_version": "state-demo-v63"
+  "state_version": "state-demo-v68"
 }

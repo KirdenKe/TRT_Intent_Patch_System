@@ -976,6 +976,8 @@ def test_get_intent_context_returns_llm_generation_context(tmp_path, fixture_loa
         "excluded_tool_ids",
         "required_tool_ids",
         "target_set_id",
+        "manipulator_priority",
+        "simulation_config_updates",
         "kpi_updates",
         "tooling_policy",
         "abnormal_strategy",
@@ -999,13 +1001,21 @@ def test_get_intent_context_returns_llm_generation_context(tmp_path, fixture_loa
         "excluded_tool_ids",
         "required_tool_ids",
         "target_set_id",
+        "manipulator_priority",
+        "simulation_config_updates",
         "kpi_updates",
+        "tooling_policy_updates",
+        "manipulator_priority_updates",
         "tooling_policy",
         "abnormal_strategy",
         "clarification_questions",
         "unsupported_terms",
         "detected_request_types",
         "request_types",
+        "dry_run_only",
+        "deployment_allowed_after_success",
+        "failure_action_hint",
+        "sub_requests",
     }
     assert body["llm_candidate_generation_schema"]["properties"]["action"]["enum"] == [
         "PROPOSE_PATCH",
@@ -1096,10 +1106,14 @@ def test_debug_intent_schema_shows_active_v2_fields(tmp_path, fixture_loader):
         "request_types",
         "abnormal_strategy",
         "kpi_updates",
+        "tooling_policy_updates",
+        "manipulator_priority_updates",
         "tooling_policy",
     ):
         assert field in body["domain_candidate_fields"]
     assert "request_types" in body["llm_candidate_generation_fields"]
+    assert "tooling_policy_updates" in body["llm_candidate_generation_fields"]
+    assert "manipulator_priority_updates" in body["llm_candidate_generation_fields"]
 
 
 def test_debug_intent_normalizer_runtime_reports_route_schema(tmp_path, fixture_loader):

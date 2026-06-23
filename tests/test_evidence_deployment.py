@@ -71,6 +71,11 @@ def _scenario_spec(repo: TRTRepository, add_reference_number: int = 5) -> dict:
             {
                 "line_id": f"line_{index}",
                 "target_set_id": "ENT_SURGICAL_TOOLING_SET",
+                "kpi": {
+                    "min_throughput_per_hour": 120,
+                    "deadline_minutes": None,
+                    "max_downtime_seconds": None,
+                },
                 "manipulator_priority": {"policy": "FCFS", "enabled": False},
             }
             for index in range(1, 5)
@@ -152,6 +157,149 @@ def test_evidence_summary_blocks_deployment_for_failed_kpi(tmp_path: Path) -> No
     assert failed_checks[0]["deployment_blocking"] is True
     assert evidence["line_results"][-1]["failed_check_ids"] == ["throughput.min_per_hour"]
     assert "line_4" in evidence["errors"][0]
+
+
+def test_evidence_summary_reports_multiline_tool_classification_failure(tmp_path: Path) -> None:
+    repo = _repo(tmp_path)
+    spec_path = repo.root / "outputs" / "scenario_specs" / "scn_test.json"
+    spec = json.loads(spec_path.read_text(encoding="utf-8"))
+    spec["simulation_scope"] = {"mode": "EXPLICIT_OPERATOR_LIMITED", "lines": ["line_1", "line_2"]}
+    spec["simulation_config"]["num_envs"] = 2
+    spec["simulation_config"]["add_reference_number"] = 5
+    spec_path.write_text(json.dumps(spec), encoding="utf-8")
+
+    run_id = "sim_classification_failed"
+    path = repo.root / "outputs" / "run_artifacts" / f"{run_id}.sqlite"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(path) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE simulation_runs(run_id TEXT PRIMARY KEY, scenario_spec_id TEXT, scenario_spec_path TEXT, started_at TEXT, completed_at TEXT, status TEXT, error_message TEXT);
+            CREATE TABLE line_kpis(run_id TEXT, line_id TEXT, throughput_per_hour REAL, completed_count INTEGER, wanted_completed_count INTEGER, unwanted_completed_count INTEGER, misplaced_count INTEGER, entanglement_count INTEGER, downtime_seconds REAL, cycle_time_seconds REAL, success INTEGER, priority_deviation_count INTEGER, priority_policy TEXT);
+            CREATE TABLE tool_events(run_id TEXT, line_id TEXT, tool_id TEXT, tool_type TEXT, wanted INTEGER, picked INTEGER, placed INTEGER, placement_target TEXT, placement_correct INTEGER, event_time_seconds REAL);
+            """
+        )
+        connection.execute(
+            "INSERT INTO simulation_runs VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (run_id, "scn_test", "outputs/scenario_specs/scn_test.json", "a", "b", "FAILED", "Run artifact Assert validation failed."),
+        )
+        for line_id in ("line_1", "line_2"):
+            connection.execute(
+                "INSERT INTO line_kpis VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (run_id, line_id, 0, 27, 20, 7, 0, 0, 0, 0, 0, 0, "FCFS"),
+            )
+            for index in range(1, 28):
+                connection.execute(
+                    "INSERT INTO tool_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (run_id, line_id, f"tool_{index:02d}", str(index), 1, 1, 1, "REQUIRED_TRAY", 1, 0.0),
+                )
+
+    evidence = build_evidence_summary(
+        repository=repo,
+        run_id=run_id,
+        scenario_spec_id="scn_test",
+        trt_id="trt-demo",
+        trt_version="v1",
+        host_runner={"stderr_tail": "line_id is required when ScenarioSpec contains multiple production lines"},
+    )
+
+    summary = evidence["evidence_summary"]
+    assert summary["deployment_recommended"] is False
+    assert summary["deployment_allowed"] is False
+    assert summary["failure_summary"]["failure_stage"] == "TOOL_CLASSIFICATION_FAILED"
+    assert summary["failure_summary"]["failure_details"]["expected_tool_events"] == 10
+    assert summary["failure_summary"]["failure_details"]["actual_tool_events"] == 54
+    assert "line_id is required" in summary["operator_summary"]
+
+
+def test_evidence_recalculates_implausible_timing_from_tool_events(tmp_path: Path) -> None:
+    repo = TRTRepository(tmp_path)
+    trt = {
+        "trt_id": "trt-demo",
+        "version": "v1",
+        "lines": {
+            "line_1": {
+                "target_set_id": "ENT_SURGICAL_TOOLING_SET",
+                "kpi": {"min_throughput_per_hour": 80, "deadline_minutes": None, "max_downtime_seconds": None},
+            }
+        },
+    }
+    repo.save_trt(trt)
+    repo.save_current_trt_snapshot(trt)
+    spec = {
+        "scenario_spec_id": "scn_timing",
+        "trt_id": "trt-demo",
+        "trt_version": "v1",
+        "simulation_scope": {"mode": "SELECTED_LINES", "lines": ["line_1"]},
+        "simulation_config": {
+            "num_envs": 1,
+            "chosen_intervention_mode": "immediate-stop",
+            "travel_time": 2.5,
+            "fix_duration": 6.5,
+            "resume_delay": 2.5,
+            "add_reference_number": 5,
+        },
+        "line_policies": [
+            {
+                "line_id": "line_1",
+                "target_set_id": "ENT_SURGICAL_TOOLING_SET",
+                "kpi": {"min_throughput_per_hour": 100, "deadline_minutes": None, "max_downtime_seconds": None},
+                "manipulator_priority": {"policy": "FCFS", "enabled": False},
+            }
+        ],
+    }
+    spec_path = repo.root / "outputs" / "scenario_specs" / "scn_timing.json"
+    spec_path.parent.mkdir(parents=True, exist_ok=True)
+    spec_path.write_text(json.dumps(spec), encoding="utf-8")
+
+    run_id = "sim_timing"
+    db_path = repo.root / "outputs" / "run_artifacts" / f"{run_id}.sqlite"
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(db_path) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE simulation_runs(run_id TEXT PRIMARY KEY, scenario_spec_id TEXT, scenario_spec_path TEXT, started_at TEXT, completed_at TEXT, status TEXT, error_message TEXT);
+            CREATE TABLE line_kpis(run_id TEXT, line_id TEXT, throughput_per_hour REAL, completed_count INTEGER, wanted_completed_count INTEGER, unwanted_completed_count INTEGER, misplaced_count INTEGER, entanglement_count INTEGER, downtime_seconds REAL, cycle_time_seconds REAL, success INTEGER, priority_deviation_count INTEGER, priority_policy TEXT);
+            CREATE TABLE tool_events(run_id TEXT, line_id TEXT, tool_id TEXT, tool_type TEXT, wanted INTEGER, picked INTEGER, placed INTEGER, placement_target TEXT, placement_correct INTEGER, event_time_seconds REAL);
+            """
+        )
+        connection.execute(
+            "INSERT INTO simulation_runs VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (run_id, "scn_timing", "outputs/scenario_specs/scn_timing.json", "a", "b", "COMPLETED", None),
+        )
+        connection.execute(
+            "INSERT INTO line_kpis VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (run_id, "line_1", 18000, 5, 5, 0, 0, 1, 0, 1, 1, 0, "FCFS"),
+        )
+        for index, event_time in enumerate([40.0, 80.0, 120.0, 160.0, 201.60999549366534], start=1):
+            connection.execute(
+                "INSERT INTO tool_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (run_id, "line_1", f"tool_{index:02d}", "FORCEPS", 1, 1, 1, "REQUIRED_TRAY", 1, event_time),
+            )
+
+    evidence = build_evidence_summary(
+        repository=repo,
+        run_id=run_id,
+        scenario_spec_id="scn_timing",
+        trt_id="trt-demo",
+        trt_version="v1",
+    )
+
+    line_1 = evidence["evidence_summary"]["line_results"][0]
+    assert line_1["target_min_throughput_per_hour"] == 100
+    assert abs(line_1["actual_kpis"]["throughput_per_hour"] - 89.28) < 0.1
+    assert line_1["actual_kpis"]["cycle_time_seconds"] == 201.60999549366534
+    assert line_1["actual_kpis"]["recorded_cycle_time_seconds"] == 1
+    assert line_1["completion_durations"]["required_tray_completion_seconds"] == 201.60999549366534
+    assert line_1["completion_durations"]["unwanted_box_completion_seconds"] is None
+    assert "throughput.min_per_hour" in line_1["failed_check_ids"]
+    assert "data_quality.timing_inconsistent_with_pick_events" in line_1["failed_check_ids"]
+    assert evidence["evidence_summary"]["deployment_recommended"] is False
+    detail = evidence["evidence_summary"]["operator_detail_summary"]
+    assert "Target minimum throughput: 100 tools/hour" in detail
+    assert "Actual throughput: 89." in detail
+    assert "Required tray: 5 tools" in detail
+    assert "Unwanted box: 0 tools, completed in not applicable" in detail
 
 
 def test_evidence_summary_uses_operator_language_for_priority_and_batch_failures(tmp_path: Path) -> None:
