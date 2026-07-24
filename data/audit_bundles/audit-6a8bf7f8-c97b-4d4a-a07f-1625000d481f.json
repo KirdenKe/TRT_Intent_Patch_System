@@ -1,0 +1,37 @@
+{
+  "audit_id": "audit-6a8bf7f8-c97b-4d4a-a07f-1625000d481f",
+  "intent_text": "set line 1 picking order to prioritize tooling other than scissors and with two production lines remaining and set simulated tooling count per production line to 5",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "FCFS",
+        "tie_breaker": "FCFS"
+      }
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1783336891827",
+  "reason": "m12 seed",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-07-06T11:21:36.727890Z",
+  "trt_after_hash": "104ff9b41ba1cd02d451bed1ebd063fd64917b567b0dbb26cef82c0c87ed24c6",
+  "trt_after_version": "v147",
+  "trt_before_hash": "d6ad88db1b622361bcb841580db14a1704dc8b1fc8d811138437582169932f74",
+  "trt_before_version": "v146",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

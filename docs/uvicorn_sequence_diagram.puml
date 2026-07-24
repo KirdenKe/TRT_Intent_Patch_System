@@ -1,0 +1,105 @@
+@startuml
+title TRT Uvicorn Server - UML Sequence Diagram
+
+skinparam backgroundColor white
+skinparam shadowing false
+autonumber
+
+actor Operator
+participant "n8n workflow\nor API client" as Client
+participant "Uvicorn\ntrt_core.api:app" as API
+participant "Intent normalizer" as Normalizer
+participant "Patch validator/apply" as Patch
+participant "Release manager" as Release
+participant "TRTRepository\nJSON store" as Repo
+participant "Supervisor" as Supervisor
+participant "Scenario generator" as Scenario
+participant "Digital twin adapter" as Adapter
+participant "Host runner service" as HostRunner
+participant "Isaac Sim UR5 script" as Isaac
+database "Run result SQLite" as RunDB
+participant "Evidence extractor" as Evidence
+
+Operator -> Client : submit operator intent
+Client -> API : GET /intent/context
+API -> Repo : load current TRT and schemas
+Repo --> API : current TRT context
+API --> Client : valid lines, vocabularies, schemas
+
+Client -> API : POST /intent/normalize\n(domain candidate)
+API -> Normalizer : normalize_domain_candidate()
+Normalizer -> Repo : read current TRT
+Repo --> Normalizer : current TRT
+Normalizer --> API : Intent Patch candidate
+API --> Client : normalized patch
+
+Client -> API : POST /patch/validate
+API -> Patch : validate_intent_patch()
+Patch -> Repo : load current TRT
+Patch --> API : validation results
+API --> Client : REVIEWED or NEEDS_REVISION
+
+Operator -> Client : approve release
+Client -> API : POST /release/prepare
+API -> Release : prepare_release()
+Release -> Repo : persist pending release
+Repo --> Release : release_id
+Release --> API : pending release record
+API --> Client : PENDING_OPERATOR_DECISION
+
+Client -> API : POST /release/decision APPROVE
+API -> Release : record_release_decision()
+Release -> Patch : apply_intent_patch()
+Patch -> Repo : write new TRT version
+Patch -> Repo : write audit bundle
+Repo --> Patch : version and audit ids
+Release --> API : RELEASED
+API --> Client : release_id, audit_id, trt_version
+
+Client -> API : POST /supervisor/reconcile
+API -> Supervisor : reconcile_current_trt()
+Supervisor -> Repo : load released TRT and state records
+Repo --> Supervisor : TRT + current state
+Supervisor -> Repo : save reconciliation plan
+Supervisor --> API : READY / WAITING / DEGRADED / REJECTED
+API --> Client : reconciliation plan
+
+alt plan is READY or DEGRADED
+  Client -> API : POST /scenario/generate
+  API -> Scenario : generate_scenario_spec()
+  Scenario -> Repo : load TRT, plan, templates, line registry
+  Scenario -> Repo : write ScenarioSpec JSON
+  Scenario --> API : scenario_spec_id and path
+  API --> Client : GENERATED
+
+  Client -> API : POST /simulation/runs\nASYNC
+  API -> Adapter : build_isaac_command()
+  Adapter -> Repo : resolve host/container paths
+  Adapter --> API : host runner payload
+  API -> HostRunner : POST /isaac/runs
+  HostRunner -> Isaac : start pick_up_example.py subprocess
+  HostRunner --> API : run_id, status STARTED
+  API --> Client : poll_url
+
+  loop until terminal
+    Client -> API : GET /simulation/runs/{run_id}
+    API -> HostRunner : GET /isaac/runs/{run_id}
+    HostRunner --> API : RUNNING or terminal status
+    API --> Client : current run status
+  end
+
+  Isaac -> RunDB : write simulation_runs,\nline_kpis, tool_events
+  Client -> API : POST /evidence/summarize
+  API -> Evidence : build_evidence_summary()
+  Evidence -> RunDB : read KPI/result tables
+  Evidence -> Repo : load ScenarioSpec and TRT context
+  Evidence -> Repo : write evidence summary/audit data
+  Evidence --> API : operator and technical findings
+  API --> Client : evidence summary
+else plan waits or is rejected
+  API --> Client : stop before ScenarioSpec or simulation
+end
+
+Operator <- Client : final summary and next action
+
+@enduml

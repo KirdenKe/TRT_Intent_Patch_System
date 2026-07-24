@@ -8,6 +8,82 @@ Docker trt-api -> Windows host runner -> Isaac Sim python.bat -> pick_up_example
 
 The Docker container must not try to execute the Windows Isaac Sim path directly.
 
+## Fresh Clone Bootstrap
+
+From a newly cloned repository, run these steps from Windows PowerShell in the project root.
+
+### 1. Create the local Python environment
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -e ".[dev]"
+pytest
+```
+
+The editable install provides both the TRT API package and the host-runner dependencies used by `host_isaac_runner_service.py`.
+
+### 2. Create the Docker containers
+
+Create `.env` next to `docker-compose.yml` so Docker can reach the Windows host runner:
+
+```text
+ISAAC_HOST_RUNNER_URL=http://host.docker.internal:8765
+```
+
+If you need to override the project path through Compose, add `HOST_PROJECT_ROOT=<absolute Windows clone path>`. When the path contains a literal `$`, prefer `data/isaac_host_config.json`; otherwise escape `$` as `$$` in `.env` or Compose values.
+
+Build and start the services:
+
+```powershell
+docker compose build trt-api
+docker compose up -d trt-api
+Invoke-RestMethod http://localhost:8000/health
+```
+
+To start n8n from a fresh clone, first make sure the `n8n` volume host path in `docker-compose.yml` points to a real local n8n data directory for your machine. Then run `docker compose up -d n8n`.
+
+Use `docker compose up -d --force-recreate trt-api` after changing `.env` or `docker-compose.yml`; `docker compose restart` keeps the old container environment.
+
+### 3. Configure host_runner paths
+
+Edit `data/isaac_host_config.json` for the cloned machine:
+
+```json
+{
+  "host_project_root": "C:\\path\\to\\trt_intent_patch_system",
+  "container_project_root": "/app",
+  "isaac_working_directory": "C:\\Dev\\IsaacSim",
+  "python_bat": "C:\\Dev\\IsaacSim\\_build\\windows-x86_64\\release\\python.bat",
+  "entry_script": "C:\\Dev\\IsaacSim\\_build\\windows-x86_64\\release\\standalone_examples\\api\\isaacsim.robot.manipulators\\ur5\\pick_up_example.py",
+  "seed_db_path": "C:\\Dev\\IsaacSim\\_build\\windows-x86_64\\release\\standalone_examples\\api\\isaacsim.robot.manipulators\\ur5\\tasks\\seed_sweep.sqlite3"
+}
+```
+
+Start the host runner:
+
+```powershell
+.\scripts\start_host_isaac_runner.ps1 -Port 8765
+```
+
+In another PowerShell window, recreate and verify `trt-api`:
+
+```powershell
+docker compose up -d --force-recreate trt-api
+Invoke-RestMethod http://127.0.0.1:8765/health
+Invoke-RestMethod http://localhost:8000/debug/isaac-host-runner-status
+.\scripts\check_isaac_host_runner_from_container.ps1
+```
+
+Expected high-level status:
+
+```text
+status = OK
+host_runner_url_configured = true
+available = true
+```
+
 ## 1. Start The Host Runner
 
 Open Windows PowerShell.

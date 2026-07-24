@@ -1,0 +1,42 @@
+{
+  "audit_id": "audit-33c68056-ef92-4e0f-9a0b-cf7372dc1279",
+  "intent_text": "set line 1 tooling picking target to knife handle and set simulated tooling count per production line to 5 and run this as a two-production-line simulation (M12 full test target total simulated tooling: 10)",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "FCFS",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/tooling_policy/required_scope",
+      "value": "SELECTED_TOOLING"
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1783095563073",
+  "reason": "m12 seed",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-07-03T16:19:27.142371Z",
+  "trt_after_hash": "f8f60f8898e21f34e8aab419b03d8c233595b514048be111e34c044987e7f9b4",
+  "trt_after_version": "v104",
+  "trt_before_hash": "3e02209436e0365024ba61f925d3d07ad58f4375d8fd24b9a67adfb155bb78a4",
+  "trt_before_version": "v103",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

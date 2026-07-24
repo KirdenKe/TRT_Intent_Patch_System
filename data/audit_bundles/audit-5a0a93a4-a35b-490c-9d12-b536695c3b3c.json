@@ -1,0 +1,42 @@
+{
+  "audit_id": "audit-5a0a93a4-a35b-490c-9d12-b536695c3b3c",
+  "intent_text": "set line 2 tooling picking target to forceps and set simulated tooling count per production line to 4 and run this as a two-production-line simulation (M12 full test target total simulated tooling: 8)",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_2/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "FCFS",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/tooling_policy/required_scope",
+      "value": "SELECTED_TOOLING"
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1783097807858",
+  "reason": "m12 seed",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-07-03T16:56:51.963115Z",
+  "trt_after_hash": "7c2e3fbfd1df6a3aae12c95ee0f3c4b87fbd170a8d7fd1226b9c6a801674da21",
+  "trt_after_version": "v109",
+  "trt_before_hash": "e79b416753b22a95284b951eb1d03e08b41442869404535229bbb7580412a918",
+  "trt_before_version": "v108",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

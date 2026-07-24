@@ -1,0 +1,23 @@
+{
+  "conversation": [],
+  "latest_dialogue_decision": null,
+  "normalized_request": {
+    "intent_text": "with two production lines remaining stop the robotic arms immediately upon anomaly detection and set simulated tooling count per production line to 4 (M12 full test target total simulated tooling: 8)",
+    "operator_id": null,
+    "reason": null
+  },
+  "pending_intent": {
+    "intent_text": "with two production lines remaining stop the robotic arms immediately upon anomaly detection and set simulated tooling count per production line to 4 (M12 full test target total simulated tooling: 8)",
+    "missing_fields": [
+      "operator_id",
+      "reason"
+    ],
+    "operator_id": null,
+    "original_intent_text": "with two production lines remaining stop the robotic arms immediately upon anomaly detection and set simulated tooling count per production line to 4 (M12 full test target total simulated tooling: 8)",
+    "pending_status": "WAITING_FOR_REQUIRED_FIELDS",
+    "reason": null
+  },
+  "session_id": "m12-full-TC3-fixture_our_setup_iii_a_06-1783106045",
+  "state": "WAITING_FOR_REQUIRED_FIELDS",
+  "updated_at": "2026-07-03T19:14:09.559362Z"
+}

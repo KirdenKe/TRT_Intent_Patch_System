@@ -1,0 +1,23 @@
+{
+  "conversation": [],
+  "latest_dialogue_decision": null,
+  "normalized_request": {
+    "intent_text": "set all production lines throughput/hr to at least 90 but only apply it to no lines",
+    "operator_id": null,
+    "reason": null
+  },
+  "pending_intent": {
+    "intent_text": "set all production lines throughput/hr to at least 90 but only apply it to no lines",
+    "missing_fields": [
+      "operator_id",
+      "reason"
+    ],
+    "operator_id": null,
+    "original_intent_text": "set all production lines throughput/hr to at least 90 but only apply it to no lines",
+    "pending_status": "WAITING_FOR_REQUIRED_FIELDS",
+    "reason": null
+  },
+  "session_id": "m12-full-SMOKE_025-1783338290",
+  "state": "WAITING_FOR_REQUIRED_FIELDS",
+  "updated_at": "2026-07-06T11:44:54.260370Z"
+}

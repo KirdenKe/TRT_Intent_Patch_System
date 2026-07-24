@@ -1,0 +1,25 @@
+{
+  "audit_id": "audit-28a8f660-9920-456e-bd38-c1cbded6fae9",
+  "intent_text": "run a limited two-line simulation and preserve required reset cycle completion and set simulated tooling count per production line to 5 (M12 full test target total simulated tooling: 10)",
+  "operations": [],
+  "operator_id": "op_001",
+  "patch_id": "patch-1783102382377",
+  "reason": "M12 manual comparison test TC3-fixture_our_setup_ii_04",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-07-03T18:13:05.912251Z",
+  "trt_after_hash": "b39c4bf4b026d93308f4bf2db9fe141295b168452466079b192b184493e71312",
+  "trt_after_version": "v122",
+  "trt_before_hash": "c7509d5165b8af47f00f8a5aa3bdb1cf98ce49bde8e8d54b807230bf35420636",
+  "trt_before_version": "v121",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

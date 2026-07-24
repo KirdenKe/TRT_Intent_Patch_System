@@ -1,0 +1,118 @@
+{
+  "audit_id": "audit-3b3436dd-0be8-4b32-b1cc-a5abeb1b654f",
+  "base_version": "v132",
+  "candidate_patch": {
+    "affected_lines": [
+      "line_1",
+      "line_2"
+    ],
+    "base_version": "v132",
+    "dry_run_only": false,
+    "intent_text": "with two production lines remaining continue feasible tasks until operator arrival and set simulated tooling count per production line to 5 (M12 full test target total simulated tooling: 10)",
+    "message": "The candidate patch passed validation. It will apply the requested composite changes across 2 sub-requests. Please approve, reject, or request revision.",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_1/abnormal_strategy",
+        "value": "CONTINUE_FEASIBLE_TASKS"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/abnormal_strategy",
+        "value": "CONTINUE_FEASIBLE_TASKS"
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "patch-1783107325728",
+    "reason": "M12 manual comparison test TC3-fixture_our_setup_iii_b_04",
+    "request_types": [
+      "SIMULATION_CONFIG_UPDATE",
+      "ABNORMAL_STRATEGY_UPDATE"
+    ],
+    "simulation_config_updates": {
+      "add_reference_number": 5,
+      "num_envs": 2
+    },
+    "status": "REVIEWED",
+    "sub_requests": [
+      {
+        "affected_lines": [
+          "line_1",
+          "line_2"
+        ],
+        "operation_paths": [],
+        "request_type": "SIMULATION_CONFIG_UPDATE",
+        "request_types": [
+          "SIMULATION_CONFIG_UPDATE"
+        ],
+        "simulation_config_updates": {
+          "add_reference_number": 5,
+          "num_envs": 2
+        },
+        "target_lines": [
+          "line_1",
+          "line_2"
+        ],
+        "target_scope": "MULTIPLE_LINES"
+      },
+      {
+        "abnormal_strategy": "CONTINUE_FEASIBLE_TASKS",
+        "affected_lines": [
+          "line_1",
+          "line_2"
+        ],
+        "operation_paths": [
+          "/lines/line_1/abnormal_strategy",
+          "/lines/line_2/abnormal_strategy"
+        ],
+        "request_type": "ABNORMAL_STRATEGY_UPDATE",
+        "request_types": [
+          "ABNORMAL_STRATEGY_UPDATE"
+        ],
+        "simulation_config_updates": {},
+        "target_lines": [
+          "line_1",
+          "line_2"
+        ],
+        "target_scope": "MULTIPLE_LINES"
+      }
+    ],
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [
+      "/lines/line_1/abnormal_strategy",
+      "/lines/line_2/abnormal_strategy"
+    ],
+    "affected_lines": [
+      "line_1",
+      "line_2"
+    ],
+    "intent_text": "with two production lines remaining continue feasible tasks until operator arrival and set simulated tooling count per production line to 5 (M12 full test target total simulated tooling: 10)",
+    "reason": "M12 manual comparison test TC3-fixture_our_setup_iii_b_04"
+  },
+  "created_at_utc": "2026-07-03T19:35:28.167200Z",
+  "current_trt_path": "/app/data/trt/current_trt.json",
+  "operator_decision": {
+    "comment": "M12 manual comparison test TC3-fixture_our_setup_iii_b_04",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-07-03T19:35:28.354403Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1783107325728",
+  "previous_trt_version": "v132",
+  "release_id": "rel_981713a2-6eb5-42c1-8435-50723889a12c",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "trt_version": "v133",
+  "updated_at_utc": "2026-07-03T19:35:28.354403Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  },
+  "version_path": "/app/data/trt_versions/trt-demo_v133.json"
+}

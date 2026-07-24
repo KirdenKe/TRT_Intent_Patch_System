@@ -1,25 +1,25 @@
 {
-  "deployment_id": "deploy_0b3dcdb3-d866-40a4-b0f0-7245e0af17db",
+  "deployment_id": "deploy_a5c38c42-6961-4d9a-863c-ab6287a3657a",
   "operator_facing": {
     "simulated_tooling_count": 5
   },
-  "run_id": "sim_e6bf3990-c1ba-481d-bb5f-e59bc2aa539e",
-  "scenario_spec_id": "scn_3725523c-7b82-40b2-ae2b-1c627ebe1b76",
+  "run_id": "sim_93f8833a-a53e-4116-ab6d-aba99e6daf33",
+  "scenario_spec_id": "scn_95731763-9598-4762-80a5-a31b23fe0ef9",
   "simulation_config": {
     "add_reference_number": 5,
     "allowed_overlap_ratio": 0.99,
     "chosen_intervention_mode": "immediate-stop",
     "episode_success_requires_reset_cycles": 1,
-    "fix_duration": 6.5,
+    "fix_duration": 3.0,
     "headless": false,
     "layout_source": "auto",
     "num_envs": 2,
-    "resume_delay": 2.5,
+    "resume_delay": 1.0,
     "reuse_verified_seed": true,
-    "travel_time": 2.5
+    "travel_time": 1.0
   },
   "source": "simulated_physical_deployment",
   "trt_id": "trt-demo",
-  "trt_version": "v68",
-  "updated_at": "2026-06-23T15:36:09.745671Z"
+  "trt_version": "v81",
+  "updated_at": "2026-06-29T23:55:30.301246Z"
 }

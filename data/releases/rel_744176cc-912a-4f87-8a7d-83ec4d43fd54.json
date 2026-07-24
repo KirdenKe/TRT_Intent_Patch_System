@@ -1,0 +1,213 @@
+{
+  "audit_id": "audit-14c06729-aa25-4d0c-8b06-ff337214590c",
+  "base_version": "v138",
+  "candidate_patch": {
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "base_version": "v138",
+    "dry_run_only": false,
+    "intent_text": "set line 1 to prioritize non-scissors tooling, set line 2 target to knife handle, and set all lines throughput/hr to at least 100 and set simulated tooling count per production line to 2 (M12 full test target total simulated tooling: 8)",
+    "message": "The candidate patch passed validation. It will apply the requested composite changes across 4 sub-requests. Please approve, reject, or request revision.",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_1/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [],
+          "ordered_tool_ids": [],
+          "policy": "FCFS",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [],
+          "ordered_tool_ids": [],
+          "policy": "FCFS",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/tooling_policy/required_scope",
+        "value": "SELECTED_TOOLING"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/kpi/min_throughput_per_hour",
+        "value": 100
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/kpi/min_throughput_per_hour",
+        "value": 100
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/kpi/min_throughput_per_hour",
+        "value": 100
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/kpi/min_throughput_per_hour",
+        "value": 100
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "patch-1783109425957",
+    "reason": "M12 manual comparison test TC3-fixture_our_setup_iv_04",
+    "request_types": [
+      "MANIPULATOR_PRIORITY_UPDATE",
+      "INSTRUMENT_SCOPE_UPDATE",
+      "KPI_LIMIT_UPDATE",
+      "SIMULATION_CONFIG_UPDATE"
+    ],
+    "simulation_config_updates": {
+      "add_reference_number": 2
+    },
+    "status": "REVIEWED",
+    "sub_requests": [
+      {
+        "affected_lines": [
+          "line_1"
+        ],
+        "manipulator_priority": {
+          "enabled": true
+        },
+        "operation_paths": [
+          "/lines/line_1/manipulator_priority"
+        ],
+        "request_type": "MANIPULATOR_PRIORITY_UPDATE",
+        "request_types": [
+          "MANIPULATOR_PRIORITY_UPDATE"
+        ],
+        "simulation_config_updates": {},
+        "target_lines": [
+          "line_1"
+        ],
+        "target_scope": "SINGLE_LINE"
+      },
+      {
+        "affected_lines": [
+          "line_2"
+        ],
+        "clarification_questions": [
+          "Do you mean line 2 should only use knife handles, or should it prioritize them?"
+        ],
+        "manipulator_priority": {
+          "enabled": true
+        },
+        "operation_paths": [
+          "/lines/line_2/manipulator_priority",
+          "/lines/line_2/tooling_policy/required_scope"
+        ],
+        "request_type": "INSTRUMENT_SCOPE_UPDATE",
+        "request_types": [
+          "INSTRUMENT_SCOPE_UPDATE"
+        ],
+        "simulation_config_updates": {},
+        "target_lines": [
+          "line_2"
+        ],
+        "target_scope": "SINGLE_LINE",
+        "tooling_policy": {
+          "required_scope": "SELECTED_TOOLING"
+        }
+      },
+      {
+        "affected_lines": [
+          "line_1",
+          "line_2",
+          "line_3",
+          "line_4"
+        ],
+        "kpi_updates": {
+          "min_throughput_per_hour": 100
+        },
+        "operation_paths": [
+          "/lines/line_1/kpi/min_throughput_per_hour",
+          "/lines/line_2/kpi/min_throughput_per_hour",
+          "/lines/line_3/kpi/min_throughput_per_hour",
+          "/lines/line_4/kpi/min_throughput_per_hour"
+        ],
+        "request_type": "KPI_LIMIT_UPDATE",
+        "request_types": [
+          "KPI_LIMIT_UPDATE"
+        ],
+        "simulation_config_updates": {},
+        "target_lines": [],
+        "target_scope": "ALL_LINES"
+      },
+      {
+        "affected_lines": [
+          "line_1",
+          "line_2",
+          "line_3",
+          "line_4"
+        ],
+        "operation_paths": [],
+        "request_type": "SIMULATION_CONFIG_UPDATE",
+        "request_types": [
+          "SIMULATION_CONFIG_UPDATE"
+        ],
+        "simulation_config_updates": {
+          "add_reference_number": 2
+        },
+        "target_lines": [],
+        "target_scope": "ALL_LINES"
+      }
+    ],
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [
+      "/lines/line_1/manipulator_priority",
+      "/lines/line_2/manipulator_priority",
+      "/lines/line_2/tooling_policy/required_scope",
+      "/lines/line_1/kpi/min_throughput_per_hour",
+      "/lines/line_2/kpi/min_throughput_per_hour",
+      "/lines/line_3/kpi/min_throughput_per_hour",
+      "/lines/line_4/kpi/min_throughput_per_hour"
+    ],
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "intent_text": "set line 1 to prioritize non-scissors tooling, set line 2 target to knife handle, and set all lines throughput/hr to at least 100 and set simulated tooling count per production line to 2 (M12 full test target total simulated tooling: 8)",
+    "reason": "M12 manual comparison test TC3-fixture_our_setup_iv_04"
+  },
+  "created_at_utc": "2026-07-03T20:10:30.074798Z",
+  "current_trt_path": "/app/data/trt/current_trt.json",
+  "operator_decision": {
+    "comment": "M12 manual comparison test TC3-fixture_our_setup_iv_04",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-07-03T20:10:30.272965Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1783109425957",
+  "previous_trt_version": "v138",
+  "release_id": "rel_744176cc-912a-4f87-8a7d-83ec4d43fd54",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "trt_version": "v139",
+  "updated_at_utc": "2026-07-03T20:10:30.272965Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  },
+  "version_path": "/app/data/trt_versions/trt-demo_v139.json"
+}

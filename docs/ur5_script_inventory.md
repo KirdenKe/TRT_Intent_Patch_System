@@ -1,5 +1,49 @@
 # UR5 Isaac Sim Script Inventory
 
+## Fresh Clone Setup
+
+Create the repository-local Python environment:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -e ".[dev]"
+pytest tests\test_digital_twin_adapter.py
+```
+
+Create and start the Docker API container:
+
+```powershell
+docker compose build trt-api
+docker compose up -d trt-api
+Invoke-RestMethod http://localhost:8000/health
+```
+
+The current integration boundary is `Docker trt-api -> Windows host_runner -> Isaac Sim python.bat -> pick_up_example.py`. Configure it for a new clone:
+
+1. Edit `data/isaac_host_config.json` so it points to the cloned repository, Isaac Sim working directory, `python.bat`, UR5 `pick_up_example.py`, and optional `seed_sweep.sqlite3`.
+2. Create `.env` next to `docker-compose.yml`:
+
+```text
+ISAAC_HOST_RUNNER_URL=http://host.docker.internal:8765
+```
+
+3. Start the host service:
+
+```powershell
+.\scripts\start_host_isaac_runner.ps1 -Port 8765
+```
+
+4. Recreate and check the API container:
+
+```powershell
+docker compose up -d --force-recreate trt-api
+Invoke-RestMethod http://localhost:8000/debug/isaac-host-runner-status
+```
+
+Use `docs/start_host_isaac_runner.md` for the expanded checklist and dry-run examples.
+
 Inspected folder:
 `C:\Dev\IsaacSim\_build\windows-x86_64\release\standalone_examples\api\isaacsim.robot.manipulators\ur5`
 

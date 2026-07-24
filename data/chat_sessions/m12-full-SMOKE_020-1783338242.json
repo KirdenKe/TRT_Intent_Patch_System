@@ -1,0 +1,22 @@
+{
+  "conversation": [],
+  "latest_dialogue_decision": null,
+  "normalized_request": {
+    "intent_text": "set line 1 throughput/hr to at least 90",
+    "operator_id": null,
+    "reason": "M12 mandatory error interception test ERR_001"
+  },
+  "pending_intent": {
+    "intent_text": "set line 1 throughput/hr to at least 90",
+    "missing_fields": [
+      "operator_id"
+    ],
+    "operator_id": null,
+    "original_intent_text": "set line 1 throughput/hr to at least 90",
+    "pending_status": "WAITING_FOR_REQUIRED_FIELDS",
+    "reason": "M12 mandatory error interception test ERR_001"
+  },
+  "session_id": "m12-full-SMOKE_020-1783338242",
+  "state": "WAITING_FOR_REQUIRED_FIELDS",
+  "updated_at": "2026-07-06T11:44:08.860569Z"
+}

@@ -1,5 +1,35 @@
 # ENT Tooling Data Migration
 
+## Fresh Clone Setup
+
+From a new clone, set up the Python package and tests before editing generated ENT data:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -e ".[dev]"
+pytest
+```
+
+Build and start the application containers:
+
+```powershell
+docker compose build trt-api
+docker compose up -d trt-api
+Invoke-RestMethod http://localhost:8000/health
+```
+
+For Isaac-backed runs, configure `host_runner`:
+
+1. Update `data/isaac_host_config.json` with the Windows host project root and Isaac Sim paths for this clone.
+2. Add `.env` with `ISAAC_HOST_RUNNER_URL=http://host.docker.internal:8765`.
+3. Start `.\scripts\start_host_isaac_runner.ps1 -Port 8765` from Windows PowerShell.
+4. Recreate the API container with `docker compose up -d --force-recreate trt-api`.
+5. Check `Invoke-RestMethod http://localhost:8000/debug/isaac-host-runner-status`.
+
+Use `docs/start_host_isaac_runner.md` for detailed troubleshooting.
+
 The original demo used `allowed_instruments` and `excluded_instruments` as
 type-level strategy fields. That is no longer precise enough for the ENT
 surgical tooling experiment because the set contains repeated instrument types.
@@ -22,4 +52,3 @@ Legacy fields remain only for compatibility:
 Entanglement is runtime state, not a tooling exclusion. It belongs in
 `data/state_records/current_state.json` under each line's `entanglement` object
 and must not remove tools from `selected_tool_ids` or `excluded_tool_ids`.
-

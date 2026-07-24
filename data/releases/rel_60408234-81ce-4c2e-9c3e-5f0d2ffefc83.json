@@ -1,0 +1,110 @@
+{
+  "audit_id": "audit-620ff95e-3af9-4b15-9582-aea6b7b7bffb",
+  "base_version": "v69",
+  "candidate_patch": {
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "base_version": "v69",
+    "dry_run_only": false,
+    "intent_text": "set line 1 throughput/hr to at least 90 and with two production lines remaining set simulated tooling count per production line to 5",
+    "message": "The candidate patch passed validation. It will apply the requested composite changes across 2 sub-requests. Please approve, reject, or request revision.",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_1/kpi/min_throughput_per_hour",
+        "value": 90
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "patch-1782363601217",
+    "reason": "m12 seed",
+    "request_types": [
+      "KPI_LIMIT_UPDATE",
+      "SIMULATION_CONFIG_UPDATE"
+    ],
+    "simulation_config_updates": {
+      "add_reference_number": 5,
+      "num_envs": 2
+    },
+    "status": "REVIEWED",
+    "sub_requests": [
+      {
+        "affected_lines": [
+          "line_1"
+        ],
+        "kpi_updates": {
+          "min_throughput_per_hour": 90
+        },
+        "operation_paths": [
+          "/lines/line_1/kpi/min_throughput_per_hour"
+        ],
+        "request_type": "KPI_LIMIT_UPDATE",
+        "request_types": [
+          "KPI_LIMIT_UPDATE"
+        ],
+        "simulation_config_updates": {},
+        "target_lines": [
+          "line_1"
+        ],
+        "target_scope": "SINGLE_LINE"
+      },
+      {
+        "affected_lines": [
+          "line_1",
+          "line_2",
+          "line_3",
+          "line_4"
+        ],
+        "operation_paths": [],
+        "request_type": "SIMULATION_CONFIG_UPDATE",
+        "request_types": [
+          "SIMULATION_CONFIG_UPDATE"
+        ],
+        "simulation_config_updates": {
+          "add_reference_number": 5,
+          "num_envs": 2
+        },
+        "target_scope": "ALL_LINES"
+      }
+    ],
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [
+      "/lines/line_1/kpi/min_throughput_per_hour"
+    ],
+    "affected_lines": [
+      "line_1"
+    ],
+    "intent_text": "set line 1 throughput/hr to at least 90 and with two production lines remaining set simulated tooling count per production line to 5",
+    "reason": "m12 seed"
+  },
+  "created_at_utc": "2026-06-25T05:00:40.553607Z",
+  "current_trt_path": "/app/data/trt/current_trt.json",
+  "operator_decision": {
+    "comment": "M12 manual comparison test TC1-INTENT_001",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-06-25T05:00:40.704883Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1782363601217",
+  "previous_trt_version": "v69",
+  "release_id": "rel_60408234-81ce-4c2e-9c3e-5f0d2ffefc83",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "trt_version": "v70",
+  "updated_at_utc": "2026-06-25T05:00:40.704883Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  },
+  "version_path": "/app/data/trt_versions/trt-demo_v70.json"
+}

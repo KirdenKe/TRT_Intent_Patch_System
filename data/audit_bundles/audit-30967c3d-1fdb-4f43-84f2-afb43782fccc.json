@@ -1,0 +1,78 @@
+{
+  "audit_id": "audit-30967c3d-1fdb-4f43-84f2-afb43782fccc",
+  "intent_text": "set line 1 to prioritize non-scissors tooling, set line 2 target to knife handle, and set all lines throughput/hr to at least 100 and set simulated tooling count per production line to 3 (M12 full test target total simulated tooling: 12)",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "FCFS",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/tooling_policy/required_scope",
+      "value": "SELECTED_TOOLING"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/selected_tool_ids",
+      "value": [
+        "tool_16",
+        "tool_17",
+        "tool_18"
+      ]
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/selected_normalized_types",
+      "value": [
+        "KNIFE_HANDLE"
+      ]
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/min_throughput_per_hour",
+      "value": 100
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/kpi/min_throughput_per_hour",
+      "value": 100
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/kpi/min_throughput_per_hour",
+      "value": 100
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/kpi/min_throughput_per_hour",
+      "value": 100
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1783109626473",
+  "reason": "M12 manual comparison test TC3-fixture_our_setup_iv_05",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-07-03T20:13:49.732714Z",
+  "trt_after_hash": "45cebaeadd2def607079749ca95d5ab07b55fd5771bdba03a3dfb3c1e396eb8e",
+  "trt_after_version": "v140",
+  "trt_before_hash": "0ac25bf24f13b5bdef41bc9601074ace1a13401afac46f77ea55d30b7bf616c0",
+  "trt_before_version": "v139",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

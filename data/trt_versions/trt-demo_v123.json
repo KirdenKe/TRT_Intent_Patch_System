@@ -1,0 +1,471 @@
+{
+  "audit_id": "audit-6d85bc65-a4d7-4c93-a2cb-9b90250199b6",
+  "experiment_id": "ent_surgical_tooling_sorting_demo",
+  "lines": {
+    "line_1": {
+      "abnormal_strategy": "STOP_LINE",
+      "allowed_instruments": [],
+      "digital_twin": {
+        "active_set_id": "ENT_SURGICAL_TOOLING_SET",
+        "robot_id": "ur5_line_1",
+        "robot_model": "UR5",
+        "robot_scene_name": "ur5_robot_0",
+        "stage_end_effector_prim_path": "/World/Envs/Env0/ur5/Gripper/robotiq_arg2f_base_link",
+        "stage_robot_prim_path": "/World/Envs/Env0",
+        "stage_tooling_root_prim_path": "/World/Envs/Env0/Tooling",
+        "stage_tray_prim_path": null,
+        "stage_workspace_prim_path": "/World/Envs/Env0",
+        "task_name": "ur5_pick_place",
+        "tray_id": "tray_line_1",
+        "workspace_env_id": 0,
+        "workspace_id": "workspace_line_1"
+      },
+      "excluded_instruments": [],
+      "excluded_tool_ids": [],
+      "goal": "ROUTINE_CLASSIFICATION",
+      "kpi": {
+        "deadline_minutes": null,
+        "max_downtime_seconds": null,
+        "min_throughput_per_hour": 90
+      },
+      "manipulator_priority": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "FCFS",
+        "tie_breaker": "FCFS"
+      },
+      "priority": 3,
+      "required_tool_ids": [],
+      "selected_tool_ids": [],
+      "target_set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tooling_policy": {
+        "required_scope": "SELECTED_TOOLING"
+      }
+    },
+    "line_2": {
+      "abnormal_strategy": "STOP_LINE",
+      "allowed_instruments": [],
+      "digital_twin": {
+        "active_set_id": "ENT_SURGICAL_TOOLING_SET",
+        "robot_id": "ur5_line_2",
+        "robot_model": "UR5",
+        "robot_scene_name": "ur5_robot_1",
+        "stage_end_effector_prim_path": "/World/Envs/Env1/ur5/Gripper/robotiq_arg2f_base_link",
+        "stage_robot_prim_path": "/World/Envs/Env1",
+        "stage_tooling_root_prim_path": "/World/Envs/Env1/Tooling",
+        "stage_tray_prim_path": null,
+        "stage_workspace_prim_path": "/World/Envs/Env1",
+        "task_name": "ur5_pick_place",
+        "tray_id": "tray_line_2",
+        "workspace_env_id": 1,
+        "workspace_id": "workspace_line_2"
+      },
+      "excluded_instruments": [],
+      "excluded_tool_ids": [],
+      "goal": "ROUTINE_CLASSIFICATION",
+      "kpi": {
+        "deadline_minutes": null,
+        "max_downtime_seconds": null,
+        "min_throughput_per_hour": 90
+      },
+      "manipulator_priority": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "FCFS",
+        "tie_breaker": "FCFS"
+      },
+      "priority": 3,
+      "required_tool_ids": [],
+      "selected_normalized_types": [
+        "KNIFE_HANDLE"
+      ],
+      "selected_tool_ids": [
+        "tool_16",
+        "tool_17",
+        "tool_18"
+      ],
+      "target_set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tooling_policy": {
+        "required_scope": "SELECTED_TOOLING"
+      }
+    },
+    "line_3": {
+      "abnormal_strategy": "STOP_LINE",
+      "allowed_instruments": [],
+      "digital_twin": {
+        "active_set_id": "ENT_SURGICAL_TOOLING_SET",
+        "robot_id": "ur5_line_3",
+        "robot_model": "UR5",
+        "robot_scene_name": "ur5_robot_2",
+        "stage_end_effector_prim_path": "/World/Envs/Env2/ur5/Gripper/robotiq_arg2f_base_link",
+        "stage_robot_prim_path": "/World/Envs/Env2",
+        "stage_tooling_root_prim_path": "/World/Envs/Env2/Tooling",
+        "stage_tray_prim_path": null,
+        "stage_workspace_prim_path": "/World/Envs/Env2",
+        "task_name": "ur5_pick_place",
+        "tray_id": "tray_line_3",
+        "workspace_env_id": 2,
+        "workspace_id": "workspace_line_3"
+      },
+      "excluded_instruments": [],
+      "excluded_tool_ids": [
+        "tool_16",
+        "tool_17",
+        "tool_18"
+      ],
+      "goal": "ROUTINE_CLASSIFICATION",
+      "kpi": {
+        "deadline_minutes": null,
+        "max_downtime_seconds": null,
+        "min_throughput_per_hour": 90
+      },
+      "manipulator_priority": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "FCFS",
+        "tie_breaker": "FCFS"
+      },
+      "priority": 3,
+      "required_tool_ids": [],
+      "selected_tool_ids": [],
+      "target_set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tooling_policy": {
+        "required_scope": "SELECTED_TOOLING"
+      }
+    },
+    "line_4": {
+      "abnormal_strategy": "STOP_LINE",
+      "allowed_instruments": [],
+      "digital_twin": {
+        "active_set_id": "ENT_SURGICAL_TOOLING_SET",
+        "robot_id": "ur5_line_4",
+        "robot_model": "UR5",
+        "robot_scene_name": "ur5_robot_3",
+        "stage_end_effector_prim_path": "/World/Envs/Env3/ur5/Gripper/robotiq_arg2f_base_link",
+        "stage_robot_prim_path": "/World/Envs/Env3",
+        "stage_tooling_root_prim_path": "/World/Envs/Env3/Tooling",
+        "stage_tray_prim_path": null,
+        "stage_workspace_prim_path": "/World/Envs/Env3",
+        "task_name": "ur5_pick_place",
+        "tray_id": "tray_line_4",
+        "workspace_env_id": 3,
+        "workspace_id": "workspace_line_4"
+      },
+      "excluded_instruments": [],
+      "excluded_tool_ids": [
+        "tool_16",
+        "tool_17",
+        "tool_18"
+      ],
+      "goal": "ROUTINE_CLASSIFICATION",
+      "kpi": {
+        "deadline_minutes": null,
+        "max_downtime_seconds": null,
+        "min_throughput_per_hour": 90
+      },
+      "manipulator_priority": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "FCFS",
+        "tie_breaker": "FCFS"
+      },
+      "priority": 3,
+      "required_tool_ids": [],
+      "selected_tool_ids": [],
+      "target_set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tooling_policy": {
+        "required_scope": "SELECTED_TOOLING"
+      }
+    }
+  },
+  "previous_version": "v122",
+  "release_id": "rel_bffd6104-cc61-46cf-947c-6febc1ea2acb",
+  "released_at": "2026-07-03T18:19:51.340060Z",
+  "tool_catalog": {
+    "tool_01": {
+      "belongs_to_ent_set": false,
+      "normalized_type": "FORCEPS",
+      "quantity_instance": 1,
+      "set_id": null,
+      "tool_id": "tool_01",
+      "tool_number": 1,
+      "type": "Forceps"
+    },
+    "tool_02": {
+      "belongs_to_ent_set": false,
+      "normalized_type": "SCISSORS",
+      "quantity_instance": 1,
+      "set_id": null,
+      "tool_id": "tool_02",
+      "tool_number": 2,
+      "type": "Scissors"
+    },
+    "tool_03": {
+      "belongs_to_ent_set": false,
+      "normalized_type": "DOUBLE_ENDED_SURGICAL_RETRACTOR",
+      "quantity_instance": 1,
+      "set_id": null,
+      "tool_id": "tool_03",
+      "tool_number": 3,
+      "type": "Double-ended Surgical Retractor"
+    },
+    "tool_04": {
+      "belongs_to_ent_set": false,
+      "normalized_type": "SURGICAL_FORCEPS",
+      "quantity_instance": 1,
+      "set_id": null,
+      "tool_id": "tool_04",
+      "tool_number": 4,
+      "type": "Surgical Forceps"
+    },
+    "tool_05": {
+      "belongs_to_ent_set": false,
+      "normalized_type": "KNIFE_HANDLE",
+      "quantity_instance": 1,
+      "set_id": null,
+      "tool_id": "tool_05",
+      "tool_number": 5,
+      "type": "Knife Handle"
+    },
+    "tool_06": {
+      "belongs_to_ent_set": true,
+      "normalized_type": "SPONGE_FORCEPS",
+      "quantity_instance": 1,
+      "set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tool_id": "tool_06",
+      "tool_number": 6,
+      "type": "Sponge Forceps"
+    },
+    "tool_07": {
+      "belongs_to_ent_set": true,
+      "normalized_type": "NEEDLE_HOLDER",
+      "quantity_instance": 1,
+      "set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tool_id": "tool_07",
+      "tool_number": 7,
+      "type": "Needle holder"
+    },
+    "tool_08": {
+      "belongs_to_ent_set": true,
+      "normalized_type": "NEEDLE_HOLDER",
+      "quantity_instance": 1,
+      "set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tool_id": "tool_08",
+      "tool_number": 8,
+      "type": "Needle holder"
+    },
+    "tool_09": {
+      "belongs_to_ent_set": true,
+      "normalized_type": "FORCEPS",
+      "quantity_instance": 1,
+      "set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tool_id": "tool_09",
+      "tool_number": 9,
+      "type": "Forceps"
+    },
+    "tool_10": {
+      "belongs_to_ent_set": true,
+      "normalized_type": "FORCEPS",
+      "quantity_instance": 1,
+      "set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tool_id": "tool_10",
+      "tool_number": 10,
+      "type": "Forceps"
+    },
+    "tool_11": {
+      "belongs_to_ent_set": true,
+      "normalized_type": "FORCEPS",
+      "quantity_instance": 1,
+      "set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tool_id": "tool_11",
+      "tool_number": 11,
+      "type": "Forceps"
+    },
+    "tool_12": {
+      "belongs_to_ent_set": true,
+      "normalized_type": "SPONGE_FORCEPS",
+      "quantity_instance": 1,
+      "set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tool_id": "tool_12",
+      "tool_number": 12,
+      "type": "Sponge Forceps"
+    },
+    "tool_13": {
+      "belongs_to_ent_set": true,
+      "normalized_type": "SPONGE_FORCEPS",
+      "quantity_instance": 1,
+      "set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tool_id": "tool_13",
+      "tool_number": 13,
+      "type": "Sponge Forceps"
+    },
+    "tool_14": {
+      "belongs_to_ent_set": true,
+      "normalized_type": "FORCEPS",
+      "quantity_instance": 1,
+      "set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tool_id": "tool_14",
+      "tool_number": 14,
+      "type": "Forceps"
+    },
+    "tool_15": {
+      "belongs_to_ent_set": true,
+      "normalized_type": "SCISSORS",
+      "quantity_instance": 1,
+      "set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tool_id": "tool_15",
+      "tool_number": 15,
+      "type": "Scissors"
+    },
+    "tool_16": {
+      "belongs_to_ent_set": true,
+      "normalized_type": "KNIFE_HANDLE",
+      "quantity_instance": 1,
+      "set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tool_id": "tool_16",
+      "tool_number": 16,
+      "type": "Knife Handle"
+    },
+    "tool_17": {
+      "belongs_to_ent_set": true,
+      "normalized_type": "KNIFE_HANDLE",
+      "quantity_instance": 1,
+      "set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tool_id": "tool_17",
+      "tool_number": 17,
+      "type": "Knife Handle"
+    },
+    "tool_18": {
+      "belongs_to_ent_set": false,
+      "normalized_type": "KNIFE_HANDLE",
+      "quantity_instance": 1,
+      "set_id": null,
+      "tool_id": "tool_18",
+      "tool_number": 18,
+      "type": "Knife Handle"
+    },
+    "tool_19": {
+      "belongs_to_ent_set": true,
+      "normalized_type": "SURGICAL_FORCEPS",
+      "quantity_instance": 1,
+      "set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tool_id": "tool_19",
+      "tool_number": 19,
+      "type": "Surgical Forceps"
+    },
+    "tool_20": {
+      "belongs_to_ent_set": true,
+      "normalized_type": "NERVE_RETRACTOR",
+      "quantity_instance": 1,
+      "set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tool_id": "tool_20",
+      "tool_number": 20,
+      "type": "Nerve Retractor"
+    },
+    "tool_21": {
+      "belongs_to_ent_set": true,
+      "normalized_type": "DOUBLE_ENDED_SURGICAL_RETRACTOR",
+      "quantity_instance": 1,
+      "set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tool_id": "tool_21",
+      "tool_number": 21,
+      "type": "Double-ended Surgical Retractor"
+    },
+    "tool_22": {
+      "belongs_to_ent_set": false,
+      "normalized_type": "SURGICAL_FORCEPS",
+      "quantity_instance": 1,
+      "set_id": null,
+      "tool_id": "tool_22",
+      "tool_number": 22,
+      "type": "Surgical Forceps"
+    },
+    "tool_23": {
+      "belongs_to_ent_set": true,
+      "normalized_type": "MASTOID_RETRACTOR",
+      "quantity_instance": 1,
+      "set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tool_id": "tool_23",
+      "tool_number": 23,
+      "type": "Mastoid Retractor"
+    },
+    "tool_24": {
+      "belongs_to_ent_set": true,
+      "normalized_type": "SURGICAL_SUCTION_CANNULA",
+      "quantity_instance": 1,
+      "set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tool_id": "tool_24",
+      "tool_number": 24,
+      "type": "Surgical Suction Cannula"
+    },
+    "tool_25": {
+      "belongs_to_ent_set": true,
+      "normalized_type": "SURGICAL_FORCEPS",
+      "quantity_instance": 1,
+      "set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tool_id": "tool_25",
+      "tool_number": 25,
+      "type": "Surgical Forceps"
+    },
+    "tool_26": {
+      "belongs_to_ent_set": true,
+      "normalized_type": "SURGICAL_FORCEPS",
+      "quantity_instance": 1,
+      "set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tool_id": "tool_26",
+      "tool_number": 26,
+      "type": "Surgical Forceps"
+    },
+    "tool_27": {
+      "belongs_to_ent_set": true,
+      "normalized_type": "SURGICAL_FORCEPS",
+      "quantity_instance": 1,
+      "set_id": "ENT_SURGICAL_TOOLING_SET",
+      "tool_id": "tool_27",
+      "tool_number": 27,
+      "type": "Surgical Forceps"
+    }
+  },
+  "tool_sets": {
+    "ENT_SURGICAL_TOOLING_SET": {
+      "non_member_tool_ids": [
+        "tool_01",
+        "tool_02",
+        "tool_03",
+        "tool_04",
+        "tool_05",
+        "tool_18",
+        "tool_22"
+      ],
+      "required_tool_ids": [
+        "tool_06",
+        "tool_07",
+        "tool_08",
+        "tool_09",
+        "tool_10",
+        "tool_11",
+        "tool_12",
+        "tool_13",
+        "tool_14",
+        "tool_15",
+        "tool_16",
+        "tool_17",
+        "tool_19",
+        "tool_20",
+        "tool_21",
+        "tool_23",
+        "tool_24",
+        "tool_25",
+        "tool_26",
+        "tool_27"
+      ],
+      "set_id": "ENT_SURGICAL_TOOLING_SET"
+    }
+  },
+  "trt_id": "trt-demo",
+  "version": "v123"
+}

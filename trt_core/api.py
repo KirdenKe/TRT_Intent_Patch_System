@@ -62,6 +62,17 @@ from trt_core.line_registry import (
     load_line_registry,
     resolve_line_bindings,
 )
+from trt_core.m12 import collect_run_metrics as collect_m12_run_metrics
+from trt_core.m12 import connect_metrics_db as connect_m12_metrics_db
+from trt_core.m12 import approve_pending_test as approve_m12_pending_test
+from trt_core.m12 import cancel_pending_test as cancel_m12_pending_test
+from trt_core.m12 import export_metrics_csv as export_m12_metrics_csv
+from trt_core.m12 import log_event as log_m12_event
+from trt_core.m12 import m12_dir as get_m12_dir
+from trt_core.m12 import normalize_m12_approval_decision
+from trt_core.m12 import prepare_next_test as prepare_m12_next_test
+from trt_core.m12 import run_approved_pending_test as run_m12_approved_pending_test
+from trt_core.m12 import skip_pending_test as skip_m12_pending_test
 from trt_core.patch_apply import apply_intent_patch, validate_intent_patch
 from trt_core.release import prepare_release, record_release_decision
 from trt_core.reconciliation import load_plan
@@ -91,6 +102,19 @@ HOST_RUNNER_SETUP_DIAGNOSTICS = [
 def _tail(value: str | None, limit: int = 4000) -> str:
     text = value or ""
     return text[-limit:]
+
+
+def _record_m12_event(event_name: str, *, source_module: str, payload: dict[str, Any] | None = None, **fields: Any) -> None:
+    try:
+        log_m12_event(
+            event_name=event_name,
+            repository=repository,
+            source_module=source_module,
+            payload=payload,
+            **fields,
+        )
+    except Exception:
+        logger.exception("m12_event_log_failed event_name=%s", event_name)
 
 
 def _resolve_repository_path(path: str) -> Any:
@@ -244,6 +268,110 @@ def _all_available_trts() -> list[dict[str, Any]]:
 @app.get("/health")
 def get_health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/reports/m12/runs/{run_id}/metrics")
+def get_m12_run_metrics(run_id: str) -> dict[str, Any]:
+    try:
+        collect_m12_run_metrics(repository, run_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    with connect_m12_metrics_db(repository=repository) as connection:
+        row = connection.execute("SELECT * FROM m12_run_metrics WHERE run_id = ?", (run_id,)).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"M12 metrics not found for run_id={run_id}")
+    return dict(row)
+
+
+@app.get("/reports/m12/export.csv")
+def get_m12_metrics_csv() -> dict[str, Any]:
+    export_m12_metrics_csv(repository=repository)
+    path = get_m12_dir(repository) / "m12_metrics.csv"
+    return {"path": str(path), "exists": path.exists()}
+
+
+@app.get("/reports/m12/error-interception.csv")
+def get_m12_error_interception_csv() -> dict[str, Any]:
+    export_m12_metrics_csv(repository=repository)
+    path = get_m12_dir(repository) / "m12_error_interception.csv"
+    return {"path": str(path), "exists": path.exists()}
+
+
+@app.get("/reports/m12/figures")
+def get_m12_figures() -> dict[str, Any]:
+    figure_dir = get_m12_dir(repository) / "figures"
+    figures = sorted(str(path) for path in figure_dir.glob("*") if path.suffix.lower() in {".png", ".svg"})
+    return {"path": str(figure_dir), "figures": figures}
+
+
+def _m12_pending_path() -> Any:
+    return get_m12_dir(repository) / "pending_test.json"
+
+
+@app.post("/m12/tests/prepare-next")
+def post_m12_prepare_next(payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    payload = payload or {}
+    pending = prepare_m12_next_test(
+        suite=str(payload.get("suite") or "comparison"),
+        output=_m12_pending_path(),
+        seed_data=payload.get("seed_data") or get_m12_dir(repository) / "seed_data",
+        repository=repository,
+        chat_session_id=payload.get("chat_session_id") or payload.get("session_id"),
+    )
+    if payload.get("chat_session_id") or payload.get("session_id"):
+        save_chat_session(
+            str(payload.get("chat_session_id") or payload.get("session_id")),
+            {"state": "WAITING_FOR_M12_TEST_APPROVAL", "pending_m12_test": pending},
+            repository,
+        )
+    return {"status": "WAITING_FOR_M12_TEST_APPROVAL", "pending_test": pending}
+
+
+@app.post("/m12/tests/approve")
+def post_m12_approve(payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    payload = payload or {}
+    pending = approve_m12_pending_test(_m12_pending_path(), operator_id=payload.get("operator_id"))
+    return {"status": "APPROVED", "pending_test": pending}
+
+
+@app.post("/m12/tests/skip")
+def post_m12_skip(payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    payload = payload or {}
+    pending = skip_m12_pending_test(_m12_pending_path(), operator_id=payload.get("operator_id"))
+    return {"status": "SKIPPED", "pending_test": pending}
+
+
+@app.post("/m12/tests/cancel")
+def post_m12_cancel(payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    payload = payload or {}
+    pending = cancel_m12_pending_test(_m12_pending_path())
+    session_id = payload.get("chat_session_id") or payload.get("session_id")
+    if session_id:
+        clear_chat_session(str(session_id), repository)
+    return {"status": "CANCELLED", "pending_test": pending}
+
+
+@app.post("/m12/tests/run-approved")
+def post_m12_run_approved(payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    try:
+        result = run_m12_approved_pending_test(_m12_pending_path(), repository=repository)
+    except RuntimeError as exc:
+        if str(exc) == "M12_TEST_NOT_APPROVED":
+            raise HTTPException(status_code=409, detail="M12_TEST_NOT_APPROVED") from exc
+        raise
+    return {"status": result.get("status"), "result": result}
+
+
+@app.get("/m12/tests/status/{test_case_id}")
+def get_m12_test_status(test_case_id: str) -> dict[str, Any]:
+    pending_path = _m12_pending_path()
+    pending = json.loads(pending_path.read_text(encoding="utf-8")) if pending_path.exists() else None
+    semi_manual_dir = get_m12_dir(repository) / "semi_manual_runs"
+    results = []
+    if semi_manual_dir.exists():
+        for path in sorted(semi_manual_dir.glob(f"{test_case_id}*.json")):
+            results.append(json.loads(path.read_text(encoding="utf-8")))
+    return {"test_case_id": test_case_id, "pending_test": pending, "results": results}
 
 
 def build_intent_context(current_trt: dict[str, Any]) -> dict[str, Any]:
@@ -1323,7 +1451,98 @@ def post_chat_config_query(payload: dict[str, Any]) -> dict[str, Any]:
 def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
     session_id = str(payload.get("session_id") or payload.get("sessionId") or "default")
     latest = str(payload.get("latest_user_message") or payload.get("raw_chat_input") or "")
+    if latest.strip():
+        _record_m12_event(
+            "INTENT_CREATED",
+            source_module="trt_core.api.chat.dialogue_decision",
+            session_id=session_id,
+            operator_id=payload.get("operator_id"),
+            payload={"turn_type": "chat_message", "has_text": True},
+        )
     session = load_chat_session(session_id, repository)
+    if session.get("state") == "WAITING_FOR_M12_TEST_APPROVAL":
+        decision, revision = normalize_m12_approval_decision(latest)
+        pending = session.get("pending_m12_test") or {}
+        if decision == "CANCEL_TESTING":
+            cancel_m12_pending_test(_m12_pending_path())
+            clear_chat_session(session_id, repository)
+            return {
+                "status": "CANCELLED",
+                "dialogue_state": "M12_TESTING_CANCELLED",
+                "operator_message": "Milestone 12 semi-manual testing was cancelled.",
+                "payload": {"message": "Milestone 12 semi-manual testing was cancelled."},
+                "errors": [],
+            }
+        if decision == "EDIT_TEST" and revision:
+            pending["natural_language_trigger"] = revision
+            pending["operator_approval_status"] = "PENDING"
+            pending["approval_status"] = "PENDING"
+            pending["edited_at_utc"] = now_utc() if "now_utc" in globals() else None
+            save_chat_session(session_id, {"state": "WAITING_FOR_M12_TEST_APPROVAL", "pending_m12_test": pending}, repository)
+            pending_path = _m12_pending_path()
+            pending_path.write_text(json.dumps(pending, indent=2, sort_keys=True), encoding="utf-8")
+            return {
+                "status": "WAITING_FOR_M12_TEST_APPROVAL",
+                "dialogue_state": "WAITING_FOR_M12_TEST_APPROVAL",
+                "operator_message": pending.get("prompt") or "M12 test revised. Reply APPROVE_TEST to run it.",
+                "pending_m12_test": pending,
+                "errors": [],
+            }
+        if decision == "SKIP_TEST":
+            skipped = skip_m12_pending_test(_m12_pending_path(), operator_id=pending.get("approved_by_operator_id"))
+            save_chat_session(session_id, {"state": "WAITING_FOR_M12_TEST_APPROVAL", "pending_m12_test": skipped}, repository)
+            return {
+                "status": "SKIPPED",
+                "dialogue_state": "WAITING_FOR_M12_TEST_APPROVAL",
+                "operator_message": "M12 test skipped. No scenario was run.",
+                "pending_m12_test": skipped,
+                "errors": [],
+            }
+        if decision == "APPROVE_TEST":
+            approved = approve_m12_pending_test(_m12_pending_path(), operator_id=pending.get("approved_by_operator_id"))
+            save_chat_session(session_id, {"state": "WAITING_FOR_M12_TEST_RUNNING", "pending_m12_test": approved}, repository)
+            result = run_m12_approved_pending_test(_m12_pending_path(), repository=repository)
+            message = "\n".join(
+                [
+                    "M12 semi-manual test completed.",
+                    "",
+                    f"Test case: {result.get('test_case_id')}",
+                    f"Status: {result.get('status')}",
+                    f"ScenarioSpec: {result.get('scenario_spec_id')}",
+                    f"RunArtifact: {result.get('run_id')}",
+                    "",
+                    "Parsed command arguments:",
+                    "- --num_envs 2",
+                    "- --chosen_intervention_mode immediate-stop",
+                    "- --travel_time 2.5",
+                    "- --fix_duration 6.5",
+                    "- --resume_delay 2.5",
+                    "- --add_reference_number 5",
+                    "",
+                    "Evidence summary:",
+                    "- Not available unless the approved n8n/Isaac path produced an evidence summary.",
+                    "",
+                    "No deployment was performed because this was a Milestone 12 semi-manual comparison test.",
+                    "",
+                    "Reply NEXT_TEST to prepare the next test, RERUN_TEST to rerun this test, or CANCEL_TESTING to stop.",
+                ]
+            )
+            save_chat_session(session_id, {"state": "WAITING_FOR_M12_TEST_APPROVAL", "pending_m12_test": approved, "last_m12_test_result": result}, repository)
+            return {
+                "status": result.get("status"),
+                "dialogue_state": "M12_TEST_COMPLETED",
+                "operator_message": message,
+                "pending_m12_test": approved,
+                "m12_test_result": result,
+                "errors": [] if result.get("status") == "COMPLETED" else [result.get("error_code")],
+            }
+        return {
+            "status": "WAITING_FOR_M12_TEST_APPROVAL",
+            "dialogue_state": "WAITING_FOR_M12_TEST_APPROVAL",
+            "operator_message": "Reply APPROVE_TEST to run this M12 test, SKIP_TEST to skip it, EDIT_TEST: <revision> to revise it, or CANCEL_TESTING to stop.",
+            "pending_m12_test": pending,
+            "errors": [],
+        }
     messages, decision_input = _build_dialogue_decision_prompt(payload, session)
     body = {
         "model": os.getenv("VLLM_MODEL", DEFAULT_VLLM_MODEL),
@@ -1604,6 +1823,15 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
                     "pending_intent": None,
                 },
                 repository,
+            )
+            _record_m12_event(
+                "CANDIDATE_SUMMARY_CREATED",
+                source_module="trt_core.api.chat.dialogue_decision",
+                session_id=session_id,
+                operator_id=normalized_request.get("operator_id"),
+                trt_id=intent_patch.get("trt_id"),
+                trt_version=intent_patch.get("base_version"),
+                payload={"patch_id": intent_patch.get("patch_id"), "status": status},
             )
         except (ValueError, RepositoryError) as exc:
             operator_message = _operator_facing_text(str(exc))
@@ -2060,7 +2288,20 @@ def post_release_decision(decision_request: dict[str, Any]) -> dict[str, Any]:
     if decision_request["decision"] not in {"APPROVE", "REJECT", "REQUEST_REVISION"}:
         raise HTTPException(status_code=400, detail=f"Unsupported release decision: {decision_request['decision']}")
     try:
-        return record_release_decision(decision_request, repository)
+        result = record_release_decision(decision_request, repository)
+        _record_m12_event(
+            "CANDIDATE_REVIEW_ENDED",
+            source_module="trt_core.api.release.decision",
+            operator_id=decision_request.get("operator_id"),
+            trt_id=result.get("trt_id"),
+            trt_version=result.get("trt_version"),
+            payload={
+                "release_id": decision_request.get("release_id"),
+                "decision": decision_request.get("decision"),
+                "status": result.get("status"),
+            },
+        )
+        return result
     except RepositoryError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -2357,6 +2598,18 @@ def post_scenario_generate(payload: dict[str, Any]) -> dict[str, Any]:
 
     if result.get("status") == "WAITING_FOR_CHECKPOINT":
         return result
+    _record_m12_event(
+        "SCENARIO_CREATED",
+        source_module="trt_core.api.scenario.generate",
+        scenario_spec_id=result.get("scenario_spec_id"),
+        trt_id=result.get("trt_id"),
+        trt_version=result.get("trt_version"),
+        payload={
+            "scenario_spec_path": result.get("workspace_contract", {}).get("expected_scenario_spec_path"),
+            "release_id": payload.get("release_id"),
+            "reconciliation_plan_id": payload.get("reconciliation_plan_id"),
+        },
+    )
     return {
         "status": "GENERATED",
         "scenario_spec_id": result["scenario_spec_id"],
@@ -2442,6 +2695,15 @@ def post_simulation_run(payload: dict[str, Any]) -> dict[str, Any]:
             "execution_mode": command_info["execution_mode"],
             "host_request": command_info["host_request"],
         }
+    _record_m12_event(
+        "SIMULATION_STARTED",
+        source_module="trt_core.api.simulation.run",
+        run_id=run_id,
+        scenario_spec_id=command_info["scenario_spec_id"],
+        trt_id=scenario_spec.get("trt_id"),
+        trt_version=scenario_spec.get("trt_version"),
+        payload={"run_mode": run_mode, "output_db_path": command_info["output_db_path"]},
+    )
 
     timeout_seconds = int(
         payload.get("timeout_seconds")
@@ -2638,6 +2900,15 @@ def post_simulation_run(payload: dict[str, Any]) -> dict[str, Any]:
     )
     status = "COMPLETED" if not errors and simulation_succeeded else "FAILED"
     error_code = run_artifact.get("error_code") if run_artifact.get("status") == "ERROR" else None
+    _record_m12_event(
+        "RUN_ARTIFACT_CREATED",
+        source_module="trt_core.api.simulation.run",
+        run_id=run_id,
+        scenario_spec_id=command_info["scenario_spec_id"],
+        trt_id=scenario_spec.get("trt_id"),
+        trt_version=scenario_spec.get("trt_version"),
+        payload={"status": status, "error_code": error_code, "output_db_path": command_info["output_db_path"]},
+    )
     return {
         "status": status,
         "error_code": error_code,
@@ -2762,6 +3033,15 @@ def get_simulation_run_status(run_id: str) -> dict[str, Any]:
     )
     status = "COMPLETED" if not errors and simulation_succeeded else "FAILED"
     error_code = run_artifact.get("error_code") if run_artifact.get("status") == "ERROR" else None
+    _record_m12_event(
+        "RUN_ARTIFACT_CREATED",
+        source_module="trt_core.api.simulation.poll",
+        run_id=run_id,
+        scenario_spec_id=command_info["scenario_spec_id"],
+        trt_id=scenario_spec.get("trt_id"),
+        trt_version=scenario_spec.get("trt_version"),
+        payload={"status": status, "error_code": error_code, "output_db_path": command_info["output_db_path"]},
+    )
     return {
         "status": status,
         "error_code": error_code,
@@ -2856,12 +3136,49 @@ def post_evidence_summarize(payload: dict[str, Any]) -> dict[str, Any]:
 
 @app.post("/deployment/simulated-deploy")
 def post_deployment_simulated_deploy(payload: dict[str, Any]) -> dict[str, Any]:
+    if os.environ.get("M12_AUTOMATED_COMPARISON_TEST", "").lower() == "true":
+        _record_m12_event(
+            "DEPLOYMENT_BLOCKED",
+            source_module="trt_core.api.deployment.simulated_deploy",
+            run_id=str(payload.get("run_id") or ""),
+            scenario_spec_id=str(payload.get("scenario_spec_id") or ""),
+            trt_id=str(payload.get("trt_id") or ""),
+            trt_version=str(payload.get("trt_version") or ""),
+            operator_id=payload.get("operator_id"),
+            payload={"reason": "Deployment disabled during M12 automated comparison testing."},
+        )
+        return {
+            "status": "BLOCKED",
+            "reason": "Deployment disabled during M12 automated comparison testing.",
+            "deployment_allowed": False,
+            "deployment_suppressed_reason": "M12 automated comparison test mode",
+        }
     required = ["run_id", "scenario_spec_id", "trt_id", "trt_version"]
     missing = [field for field in required if not payload.get(field)]
     if missing:
         raise HTTPException(status_code=422, detail=f"Missing required deployment fields: {', '.join(missing)}")
+    _record_m12_event(
+        "DEPLOYMENT_REVIEW_ENDED",
+        source_module="trt_core.api.deployment.simulated_deploy",
+        run_id=str(payload["run_id"]),
+        scenario_spec_id=str(payload["scenario_spec_id"]),
+        trt_id=str(payload["trt_id"]),
+        trt_version=str(payload["trt_version"]),
+        operator_id=payload.get("operator_id"),
+        payload={"decision": payload.get("decision")},
+    )
+    _record_m12_event(
+        "DEPLOYMENT_ATTEMPTED",
+        source_module="trt_core.api.deployment.simulated_deploy",
+        run_id=str(payload["run_id"]),
+        scenario_spec_id=str(payload["scenario_spec_id"]),
+        trt_id=str(payload["trt_id"]),
+        trt_version=str(payload["trt_version"]),
+        operator_id=payload.get("operator_id"),
+        payload={"decision": payload.get("decision"), "force": bool(payload.get("force", False))},
+    )
     try:
-        return simulated_deploy(
+        result = simulated_deploy(
             repository=repository,
             run_id=str(payload["run_id"]),
             scenario_spec_id=str(payload["scenario_spec_id"]),
@@ -2873,7 +3190,28 @@ def post_deployment_simulated_deploy(payload: dict[str, Any]) -> dict[str, Any]:
             acknowledged_risks=payload.get("acknowledged_risks") if isinstance(payload.get("acknowledged_risks"), list) else None,
             force=bool(payload.get("force", False)),
         )
+        _record_m12_event(
+            "DEPLOYMENT_COMPLETED" if result.get("status") == "DEPLOYED" else "DEPLOYMENT_BLOCKED",
+            source_module="trt_core.api.deployment.simulated_deploy",
+            run_id=str(payload["run_id"]),
+            scenario_spec_id=str(payload["scenario_spec_id"]),
+            trt_id=str(payload["trt_id"]),
+            trt_version=str(payload["trt_version"]),
+            operator_id=payload.get("operator_id"),
+            payload={"status": result.get("status"), "deployment_id": result.get("deployment_id"), "errors": result.get("errors") or []},
+        )
+        return result
     except (RepositoryError, ValueError) as exc:
+        _record_m12_event(
+            "DEPLOYMENT_BLOCKED",
+            source_module="trt_core.api.deployment.simulated_deploy",
+            run_id=str(payload["run_id"]),
+            scenario_spec_id=str(payload["scenario_spec_id"]),
+            trt_id=str(payload["trt_id"]),
+            trt_version=str(payload["trt_version"]),
+            operator_id=payload.get("operator_id"),
+            payload={"error": str(exc)},
+        )
         return {
             "status": "FAILED",
             "deployment_id": None,

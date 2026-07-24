@@ -1,0 +1,82 @@
+{
+  "audit_id": "audit-a5fe7fee-529c-4991-a969-eaa5fa06ec8a",
+  "intent_text": "today there are two production lines. my arrival time is 4 seconds, the time required to resolve the tangling issue is 5 seconds, and the recovery time is 0.5 seconds. in the event of an anomaly, pls configure the logic so that continue until i arrive at the production line. the allow overlap ratio is 0.9. adjust the throughput/hr for all production lines to at least 80; set the tooling picking target for production lines 2 to knife handle; and adjust the tooling picking order for production lines 1 to prioritize picking tooling other than ent tooling set.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/abnormal_strategy",
+      "value": "CONTINUE_FEASIBLE_TASKS"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/abnormal_strategy",
+      "value": "CONTINUE_FEASIBLE_TASKS"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/abnormal_strategy",
+      "value": "CONTINUE_FEASIBLE_TASKS"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/abnormal_strategy",
+      "value": "CONTINUE_FEASIBLE_TASKS"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/min_throughput_per_hour",
+      "value": 80
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/kpi/min_throughput_per_hour",
+      "value": 80
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/kpi/min_throughput_per_hour",
+      "value": 80
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/kpi/min_throughput_per_hour",
+      "value": 80
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/tooling_policy/required_scope",
+      "value": "SELECTED_TOOLING"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "FCFS",
+        "tie_breaker": "FCFS"
+      }
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1784390756712",
+  "reason": "testing",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-07-18T16:06:02.977331Z",
+  "trt_after_hash": "0e9b55332d504f21ebe79fb6741423600af460b6874c9c3d3903424eda5f8e9a",
+  "trt_after_version": "v163",
+  "trt_before_hash": "1897bb01076f0baea67b77e4c87b510e7038959273e88beef42cd4937b3d5873",
+  "trt_before_version": "v162",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

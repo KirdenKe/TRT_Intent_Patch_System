@@ -1,0 +1,42 @@
+{
+  "audit_id": "audit-2572d7ca-bece-4b88-a5a4-dc5974c934f1",
+  "intent_text": "set production line 2 tooling picking target to knife handle and with two production lines remaining and set simulated tooling count per production line to 5",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_2/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "FCFS",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/tooling_policy/required_scope",
+      "value": "SELECTED_TOOLING"
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1783336514796",
+  "reason": "m12 seed",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-07-06T11:15:17.540134Z",
+  "trt_after_hash": "d6ad88db1b622361bcb841580db14a1704dc8b1fc8d811138437582169932f74",
+  "trt_after_version": "v146",
+  "trt_before_hash": "8e0f7c9ec99cb45c433499755cd5d2db0d37fe168214cc9671344ec121b3cfc5",
+  "trt_before_version": "v145",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

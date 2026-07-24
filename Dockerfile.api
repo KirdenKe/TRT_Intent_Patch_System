@@ -8,6 +8,7 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY trt_core ./trt_core
 COPY scenario_generation ./scenario_generation
+COPY tools ./tools
 COPY schemas ./schemas
 COPY data ./data
 

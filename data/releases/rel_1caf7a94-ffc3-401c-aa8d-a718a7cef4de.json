@@ -1,0 +1,183 @@
+{
+  "audit_id": "audit-0790e138-13fd-48c3-a8d2-b449fd72f103",
+  "base_version": "v144",
+  "candidate_patch": {
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "base_version": "v144",
+    "dry_run_only": false,
+    "intent_text": "reduce arrival time by 2.5 seconds, reduce entanglement fix time by 1.5 seconds, and make recovery delay 2 seconds slower and with two production lines remaining and set simulated tooling count per production line to 5",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_1/selected_tool_ids",
+        "value": []
+      },
+      {
+        "op": "add",
+        "path": "/lines/line_1/selected_normalized_types",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/excluded_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/required_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/selected_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/selected_normalized_types",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/excluded_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/selected_tool_ids",
+        "value": [
+          "tool_16",
+          "tool_17",
+          "tool_18"
+        ]
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/required_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/selected_tool_ids",
+        "value": []
+      },
+      {
+        "op": "add",
+        "path": "/lines/line_3/selected_normalized_types",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/excluded_tool_ids",
+        "value": [
+          "tool_16",
+          "tool_17",
+          "tool_18"
+        ]
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/required_tool_ids",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/selected_tool_ids",
+        "value": []
+      },
+      {
+        "op": "add",
+        "path": "/lines/line_4/selected_normalized_types",
+        "value": []
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/excluded_tool_ids",
+        "value": [
+          "tool_16",
+          "tool_17",
+          "tool_18"
+        ]
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/required_tool_ids",
+        "value": []
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "patch-1783335611539",
+    "reason": "m12 seed",
+    "request_types": [
+      "SIMULATION_CONFIG_UPDATE"
+    ],
+    "simulation_config_updates": {
+      "add_reference_number": 5,
+      "episode_success_requires_reset_cycles": 2,
+      "fix_duration": 6.5,
+      "num_envs": 2,
+      "resume_delay": 2.5,
+      "travel_time": 3.5
+    },
+    "status": "REVIEWED",
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [
+      "/lines/line_1/selected_tool_ids",
+      "/lines/line_1/selected_normalized_types",
+      "/lines/line_1/excluded_tool_ids",
+      "/lines/line_1/required_tool_ids",
+      "/lines/line_2/selected_tool_ids",
+      "/lines/line_2/selected_normalized_types",
+      "/lines/line_2/excluded_tool_ids",
+      "/lines/line_2/selected_tool_ids",
+      "/lines/line_2/required_tool_ids",
+      "/lines/line_3/selected_tool_ids",
+      "/lines/line_3/selected_normalized_types",
+      "/lines/line_3/excluded_tool_ids",
+      "/lines/line_3/required_tool_ids",
+      "/lines/line_4/selected_tool_ids",
+      "/lines/line_4/selected_normalized_types",
+      "/lines/line_4/excluded_tool_ids",
+      "/lines/line_4/required_tool_ids"
+    ],
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "intent_text": "reduce arrival time by 2.5 seconds, reduce entanglement fix time by 1.5 seconds, and make recovery delay 2 seconds slower and with two production lines remaining and set simulated tooling count per production line to 5",
+    "reason": "m12 seed"
+  },
+  "created_at_utc": "2026-07-06T11:00:14.707841Z",
+  "current_trt_path": "/app/data/trt/current_trt.json",
+  "operator_decision": {
+    "comment": "M12 manual comparison test TC1-INTENT_004",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-07-06T11:00:14.914283Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1783335611539",
+  "previous_trt_version": "v144",
+  "release_id": "rel_1caf7a94-ffc3-401c-aa8d-a718a7cef4de",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "trt_version": "v145",
+  "updated_at_utc": "2026-07-06T11:00:14.914283Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  },
+  "version_path": "/app/data/trt_versions/trt-demo_v145.json"
+}

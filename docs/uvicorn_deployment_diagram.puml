@@ -1,0 +1,79 @@
+@startuml
+title TRT Uvicorn Server - UML Deployment Diagram
+
+skinparam backgroundColor white
+skinparam shadowing false
+
+actor "Operator" as Operator
+
+node "Developer workstation" as Workstation {
+  artifact "Project checkout" as Checkout
+  artifact ".env\nISAAC_HOST_RUNNER_URL" as DotEnv
+  artifact "data/isaac_host_config.json" as HostConfig
+
+  node "Docker Desktop" as Docker {
+    node "Container: trt-api" as TrtContainer {
+      artifact "Python 3.11 image\nDockerfile.api" as ApiImage
+      component "Uvicorn\ntrt_core.api:app\nport 8000" as Uvicorn
+      artifact "/app/trt_core" as AppCode
+      artifact "/app/scenario_generation" as ScenarioCode
+      artifact "/app/schemas" as Schemas
+      database "/app/data" as AppData
+      database "/app/outputs" as AppOutputs
+    }
+
+    node "Container: n8n" as N8nContainer {
+      component "n8n\nport 5678" as N8n
+      artifact "/home/node/.n8n/imports\nworkflow JSON" as WorkflowImports
+    }
+  }
+
+  node "Windows host process" as WindowsHost {
+    component "Host runner service\nhost_isaac_runner_service.py\nport 8765" as HostRunner
+    component "Isaac Sim Python\npython.bat" as IsaacPython
+    artifact "UR5 entry script\npick_up_example.py" as PickUp
+    database "seed_sweep.sqlite3\nlayout/seed input" as SeedDB
+  }
+
+  database "Bind mount: ./data" as HostData
+  database "Bind mount: ../dt_exchange\noutputs" as HostOutputs
+}
+
+cloud "Remote/local model service" as ModelHost {
+  component "vLLM\nOpenAI-compatible\n/v1/chat/completions" as VLLM
+}
+
+Operator --> N8n : browser chat/webhooks
+Operator --> Uvicorn : direct API calls\noptional
+N8n --> Uvicorn : http://trt-api:8000
+Uvicorn --> HostRunner : http://host.docker.internal:8765\nhost_runner mode
+Uvicorn --> VLLM : chat/dialogue resolution\nwhen configured
+HostRunner --> IsaacPython : starts subprocess
+IsaacPython --> PickUp : executes script
+PickUp --> SeedDB : reads verified layouts
+PickUp --> HostOutputs : writes run result SQLite
+Uvicorn --> AppData : read/write JSON records
+Uvicorn --> AppOutputs : ScenarioSpecs,\nrun artifacts, reports
+
+Checkout --> AppCode : bind mount
+Checkout --> ScenarioCode : bind mount
+Checkout --> Schemas : bind mount
+HostData --> AppData : bind mount
+HostOutputs --> AppOutputs : bind mount
+DotEnv --> Uvicorn : compose environment
+HostConfig --> Uvicorn : host path mapping config
+WorkflowImports --> N8n : imported workflows
+
+note right of TrtContainer
+  docker-compose.yml publishes:
+  - trt-api: localhost:8000
+  - n8n: localhost:5678
+end note
+
+note right of WindowsHost
+  Docker does not execute Windows Isaac paths.
+  trt-api sends a host request;
+  the host runner expands it into the Isaac command.
+end note
+
+@enduml

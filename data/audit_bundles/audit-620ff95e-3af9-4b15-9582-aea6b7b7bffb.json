@@ -1,0 +1,31 @@
+{
+  "audit_id": "audit-620ff95e-3af9-4b15-9582-aea6b7b7bffb",
+  "intent_text": "set line 1 throughput/hr to at least 90 and with two production lines remaining set simulated tooling count per production line to 5",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/min_throughput_per_hour",
+      "value": 90
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1782363601217",
+  "reason": "m12 seed",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-25T05:00:40.987497Z",
+  "trt_after_hash": "cbf8276388c56ad83f5eb4a5b9f8a6d21e51fe973d8e7d2c6ac8517951c844ba",
+  "trt_after_version": "v70",
+  "trt_before_hash": "7df868e18583bec9b9a7001765c22c675166824bdcc508749cc5b098d56aa787",
+  "trt_before_version": "v69",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

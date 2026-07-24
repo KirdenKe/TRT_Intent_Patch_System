@@ -1,0 +1,22 @@
+{
+  "conversation": [],
+  "latest_dialogue_decision": null,
+  "normalized_request": {
+    "intent_text": "set line 1 throughput/hr to at least 90",
+    "operator_id": "op_001",
+    "reason": null
+  },
+  "pending_intent": {
+    "intent_text": "set line 1 throughput/hr to at least 90",
+    "missing_fields": [
+      "reason"
+    ],
+    "operator_id": "op_001",
+    "original_intent_text": "set line 1 throughput/hr to at least 90",
+    "pending_status": "WAITING_FOR_REQUIRED_FIELDS",
+    "reason": null
+  },
+  "session_id": "m12-full-TC4-ERR_002-1783110148",
+  "state": "WAITING_FOR_REQUIRED_FIELDS",
+  "updated_at": "2026-07-03T20:22:35.284705Z"
+}

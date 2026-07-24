@@ -1,0 +1,78 @@
+{
+  "audit_id": "audit-40a50c79-ca30-44eb-85ae-3acbbc0ab557",
+  "intent_text": "today there are two production lines. my arrival time is approximately 4 seconds, the time required to resolve the tangling issue is approximately 5 seconds, and the recovery time is 0.5 seconds. in the event of an anomaly, pls configure the logic so that i stop only after i arrive at the production line. adjust the throughput/hr for all production lines to at least 85; set the tooling picking target for production lines 2 to knife handle; and adjust the tooling picking order for production lines 1 to prioritize picking tooling other than ent tooling set.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/min_throughput_per_hour",
+      "value": 85
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/kpi/min_throughput_per_hour",
+      "value": 85
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/kpi/min_throughput_per_hour",
+      "value": 85
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/kpi/min_throughput_per_hour",
+      "value": 85
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/tooling_policy/required_scope",
+      "value": "SELECTED_TOOLING"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/selected_tool_ids",
+      "value": [
+        "tool_16",
+        "tool_17",
+        "tool_18"
+      ]
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/selected_normalized_types",
+      "value": [
+        "KNIFE_HANDLE"
+      ]
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "FCFS",
+        "tie_breaker": "FCFS"
+      }
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1784385438168",
+  "reason": "test for milestone 12",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-07-18T14:37:27.150410Z",
+  "trt_after_hash": "a94048dbc87b0e8dbcdf292047c22ca347a63e6c061824bd7c676cb5a83436ef",
+  "trt_after_version": "v150",
+  "trt_before_hash": "161a3eab826f3716344ef73e346e28187dd2d049c3a3c2ca40d30ccba765285f",
+  "trt_before_version": "v149",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

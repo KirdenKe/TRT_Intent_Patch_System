@@ -1,0 +1,128 @@
+{
+  "audit_id": "audit-da89733d-88a6-4f98-81db-83b34a097351",
+  "base_version": "v107",
+  "candidate_patch": {
+    "affected_lines": [
+      "line_2",
+      "line_1",
+      "line_3",
+      "line_4"
+    ],
+    "base_version": "v107",
+    "dry_run_only": false,
+    "intent_text": "set line 2 tooling picking target to scissors and set simulated tooling count per production line to 6 and run this as a two-production-line simulation (M12 full test target total simulated tooling: 12)",
+    "message": "The candidate patch passed validation. It will apply the requested composite changes across 2 sub-requests. Please approve, reject, or request revision.",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_2/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [],
+          "ordered_tool_ids": [],
+          "policy": "FCFS",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/tooling_policy/required_scope",
+        "value": "SELECTED_TOOLING"
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "patch-1783097243084",
+    "reason": "m12 seed",
+    "request_types": [
+      "TOOLING_POLICY_UPDATE",
+      "SIMULATION_CONFIG_UPDATE"
+    ],
+    "simulation_config_updates": {
+      "add_reference_number": 6,
+      "num_envs": 2
+    },
+    "status": "REVIEWED",
+    "sub_requests": [
+      {
+        "affected_lines": [
+          "line_2"
+        ],
+        "clarification_questions": null,
+        "manipulator_priority": {
+          "enabled": true
+        },
+        "operation_paths": [
+          "/lines/line_2/manipulator_priority",
+          "/lines/line_2/tooling_policy/required_scope"
+        ],
+        "request_type": "TOOLING_POLICY_UPDATE",
+        "request_types": [
+          "TOOLING_POLICY_UPDATE"
+        ],
+        "simulation_config_updates": {},
+        "target_lines": [
+          "line_2"
+        ],
+        "target_scope": "SINGLE_LINE",
+        "tooling_policy": {
+          "required_scope": "SELECTED_TOOLING"
+        }
+      },
+      {
+        "affected_lines": [
+          "line_1",
+          "line_2",
+          "line_3",
+          "line_4"
+        ],
+        "operation_paths": [],
+        "request_type": "SIMULATION_CONFIG_UPDATE",
+        "request_types": [
+          "SIMULATION_CONFIG_UPDATE"
+        ],
+        "simulation_config_updates": {
+          "add_reference_number": 6,
+          "num_envs": 2
+        },
+        "target_lines": [],
+        "target_scope": "ALL_LINES"
+      }
+    ],
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [
+      "/lines/line_2/manipulator_priority",
+      "/lines/line_2/tooling_policy/required_scope"
+    ],
+    "affected_lines": [
+      "line_2"
+    ],
+    "intent_text": "set line 2 tooling picking target to scissors and set simulated tooling count per production line to 6 and run this as a two-production-line simulation (M12 full test target total simulated tooling: 12)",
+    "reason": "m12 seed"
+  },
+  "created_at_utc": "2026-07-03T16:47:26.778897Z",
+  "current_trt_path": "/app/data/trt/current_trt.json",
+  "operator_decision": {
+    "comment": "M12 manual comparison test TC1-INTENT_037",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-07-03T16:47:26.956095Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1783097243084",
+  "previous_trt_version": "v107",
+  "release_id": "rel_c237be08-52d1-44a5-84b5-b718b26e0297",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "trt_version": "v108",
+  "updated_at_utc": "2026-07-03T16:47:26.956095Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  },
+  "version_path": "/app/data/trt_versions/trt-demo_v108.json"
+}

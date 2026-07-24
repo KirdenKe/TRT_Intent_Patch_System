@@ -1,0 +1,23 @@
+{
+  "conversation": [],
+  "latest_dialogue_decision": null,
+  "normalized_request": {
+    "intent_text": "set tooling target to unicorn clamps",
+    "operator_id": null,
+    "reason": null
+  },
+  "pending_intent": {
+    "intent_text": "set tooling target to unicorn clamps",
+    "missing_fields": [
+      "operator_id",
+      "reason"
+    ],
+    "operator_id": null,
+    "original_intent_text": "set tooling target to unicorn clamps",
+    "pending_status": "WAITING_FOR_REQUIRED_FIELDS",
+    "reason": null
+  },
+  "session_id": "m12-full-SMOKE_008-1783337319",
+  "state": "WAITING_FOR_REQUIRED_FIELDS",
+  "updated_at": "2026-07-06T11:28:41.620734Z"
+}

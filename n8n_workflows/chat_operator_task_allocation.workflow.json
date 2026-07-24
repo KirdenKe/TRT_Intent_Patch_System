@@ -4,12 +4,13 @@
   "active": false,
   "nodes": [
     {
-      "parameters": {
-        "public": true,
-        "initialMessages": "Tell me the operator_id, task request, and reason for the task allocation request. You can send JSON or plain text.",
-        "options": {
-          "responseMode": "responseNodes"
-        }
+    "parameters": {
+      "public": true,
+      "initialMessages": "Tell me the operator_id, task request, and reason for the task allocation request. You can send JSON or plain text.",
+      "responseMode": "responseNodes",
+      "options": {
+        "responseMode": "responseNodes"
+      }
       },
       "id": "f7ea77bc-faf2-4bf2-a0c4-38b225116ab0",
       "name": "Receive Operator Intent",

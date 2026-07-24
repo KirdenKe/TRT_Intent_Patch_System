@@ -1,0 +1,73 @@
+{
+  "audit_id": "audit-d49881d7-afcf-4d6b-bd61-d9e16af420a4",
+  "intent_text": "today there are two production lines. my arrival time is approximately 4 seconds, the time required to resolve the tangling issue is approximately 5 seconds, and the recovery time is 0.5 seconds. in the event of an anomaly, pls configure the logic so that i stop only after i arrive at the production line. adjust the throughput/hr for all production lines to at least 85; set the tooling picking target for production lines 2 to knife handle; and adjust the tooling picking order for production lines 1 to prioritize picking tooling other than ent tooling set.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/min_throughput_per_hour",
+      "value": 85
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/kpi/min_throughput_per_hour",
+      "value": 85
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/kpi/min_throughput_per_hour",
+      "value": 85
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/kpi/min_throughput_per_hour",
+      "value": 85
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "FCFS",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/tooling_policy/required_scope",
+      "value": "SELECTED_TOOLING"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "FCFS",
+        "tie_breaker": "FCFS"
+      }
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1782752107221",
+  "reason": "test for milestone 12",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-29T16:55:18.010901Z",
+  "trt_after_hash": "563525d17c8d34cb51a93f53e6bb3fde9a2f28fdfd5d5ffe2a2f90821bbf50f4",
+  "trt_after_version": "v81",
+  "trt_before_hash": "f18b1e3ea8a0a1dfcd9adcc5cf836bb4c2e0fc30ef6fd62732067c06a5d9f91c",
+  "trt_before_version": "v80",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

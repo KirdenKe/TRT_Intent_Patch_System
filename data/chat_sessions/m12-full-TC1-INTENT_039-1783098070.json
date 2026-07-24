@@ -1,0 +1,23 @@
+{
+  "conversation": [],
+  "latest_dialogue_decision": null,
+  "normalized_request": {
+    "intent_text": "set line 3 tooling picking target to knife handle and set simulated tooling count per production line to 3 and run this as a four-production-line simulation (M12 full test target total simulated tooling: 12)",
+    "operator_id": null,
+    "reason": null
+  },
+  "pending_intent": {
+    "intent_text": "set line 3 tooling picking target to knife handle and set simulated tooling count per production line to 3 and run this as a four-production-line simulation (M12 full test target total simulated tooling: 12)",
+    "missing_fields": [
+      "operator_id",
+      "reason"
+    ],
+    "operator_id": null,
+    "original_intent_text": "set line 3 tooling picking target to knife handle and set simulated tooling count per production line to 3 and run this as a four-production-line simulation (M12 full test target total simulated tooling: 12)",
+    "pending_status": "WAITING_FOR_REQUIRED_FIELDS",
+    "reason": null
+  },
+  "session_id": "m12-full-TC1-INTENT_039-1783098070",
+  "state": "WAITING_FOR_REQUIRED_FIELDS",
+  "updated_at": "2026-07-03T17:01:13.444608Z"
+}

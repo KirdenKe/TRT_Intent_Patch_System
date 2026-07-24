@@ -1,0 +1,36 @@
+{
+  "audit_id": "audit-db17125d-5781-4d75-a8cd-9d66f641271c",
+  "intent_text": "with two production lines remaining continue feasible tasks until operator arrival and set simulated tooling count per production line to 4 (M12 full test target total simulated tooling: 8)",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/abnormal_strategy",
+      "value": "CONTINUE_FEASIBLE_TASKS"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/abnormal_strategy",
+      "value": "CONTINUE_FEASIBLE_TASKS"
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1783107039592",
+  "reason": "M12 manual comparison test TC3-fixture_our_setup_iii_b_03",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-07-03T19:30:44.181364Z",
+  "trt_after_hash": "4e327137b08859f90d8f60e49ec134101736843a02541abf9f33339461f9ba47",
+  "trt_after_version": "v132",
+  "trt_before_hash": "2ac9b5479f19ffb50f3e8a1b70477c34ca36e5c453f826f02479726bf724b802",
+  "trt_before_version": "v131",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

@@ -9,6 +9,7 @@ dependencies = [
     "jsonpatch>=1.33",
     "fastapi>=0.110",
     "uvicorn>=0.27",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -22,4 +23,4 @@ dev = [
 testpaths = ["tests"]
 
 [tool.setuptools]
-packages = ["trt_core", "trt_core.digital_twin_adapter", "scenario_generation"]
+packages = ["trt_core", "trt_core.digital_twin_adapter", "trt_core.evidence_extractor", "scenario_generation", "tools"]

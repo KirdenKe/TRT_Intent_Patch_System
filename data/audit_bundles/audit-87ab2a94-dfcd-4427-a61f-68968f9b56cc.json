@@ -1,0 +1,46 @@
+{
+  "audit_id": "audit-87ab2a94-dfcd-4427-a61f-68968f9b56cc",
+  "intent_text": "set all production lines throughput/hr to at least 90 and keep placement verification strict and with two production lines remaining and set simulated tooling count per production line to 5",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/min_throughput_per_hour",
+      "value": 90
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/kpi/min_throughput_per_hour",
+      "value": 90
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/kpi/min_throughput_per_hour",
+      "value": 90
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/kpi/min_throughput_per_hour",
+      "value": 90
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1783337833077",
+  "reason": "M12 manual comparison test TC3-fixture_our_setup_i_02",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-07-06T11:37:18.289717Z",
+  "trt_after_hash": "161a3eab826f3716344ef73e346e28187dd2d049c3a3c2ca40d30ccba765285f",
+  "trt_after_version": "v149",
+  "trt_before_hash": "e1d1336ba26ef3eecae5a3472f66775bf293f2d8aa80adc23e568f4bb4e01410",
+  "trt_before_version": "v148",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

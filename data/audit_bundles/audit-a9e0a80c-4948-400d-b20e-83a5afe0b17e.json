@@ -1,0 +1,25 @@
+{
+  "audit_id": "audit-a9e0a80c-4948-400d-b20e-83a5afe0b17e",
+  "intent_text": "with two production lines remaining stop the robotic arms immediately upon anomaly detection and set simulated tooling count per production line to 6 (M12 full test target total simulated tooling: 12)",
+  "operations": [],
+  "operator_id": "op_001",
+  "patch_id": "patch-1783105427646",
+  "reason": "M12 manual comparison test TC3-fixture_our_setup_iii_a_05",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-07-03T19:03:51.533299Z",
+  "trt_after_hash": "8bd912a775de876aabf311ce319d2a86f78a33b48a42d55f2fed2af10949c92c",
+  "trt_after_version": "v129",
+  "trt_before_hash": "c0d4fec012cd9b6b655720a6627ea28a2dda2ca8d62754344c791f26217fe8bc",
+  "trt_before_version": "v128",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

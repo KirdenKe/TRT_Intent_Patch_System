@@ -1,0 +1,23 @@
+{
+  "conversation": [],
+  "latest_dialogue_decision": null,
+  "normalized_request": {
+    "intent_text": "compare immediate-stop and continue-until-arrival using throughput, downtime, placement, and reset metrics",
+    "operator_id": null,
+    "reason": null
+  },
+  "pending_intent": {
+    "intent_text": "compare immediate-stop and continue-until-arrival using throughput, downtime, placement, and reset metrics",
+    "missing_fields": [
+      "operator_id",
+      "reason"
+    ],
+    "operator_id": null,
+    "original_intent_text": "compare immediate-stop and continue-until-arrival using throughput, downtime, placement, and reset metrics",
+    "pending_status": "WAITING_FOR_REQUIRED_FIELDS",
+    "reason": null
+  },
+  "session_id": "m12-full-TC2-TOOL_L3_009-1783099773",
+  "state": "WAITING_FOR_REQUIRED_FIELDS",
+  "updated_at": "2026-07-03T17:29:34.802620Z"
+}

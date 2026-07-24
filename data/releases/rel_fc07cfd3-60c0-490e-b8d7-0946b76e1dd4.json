@@ -1,0 +1,85 @@
+{
+  "audit_id": "audit-b8e65efd-056e-4e79-987f-ce34f860a620",
+  "base_version": "v68",
+  "candidate_patch": {
+    "affected_lines": [
+      "line_1"
+    ],
+    "base_version": "v68",
+    "dry_run_only": false,
+    "intent_text": "set line 1 throughput/hr to at least 90",
+    "message": "The candidate patch passed validation. It will apply the requested composite changes across 1 sub-requests. Please approve, reject, or request revision.",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_1/kpi/min_throughput_per_hour",
+        "value": 90
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "patch-1782361895333",
+    "reason": "m12 seed",
+    "request_types": [
+      "KPI_LIMIT_UPDATE",
+      "KPI_UPDATE"
+    ],
+    "status": "REVIEWED",
+    "sub_requests": [
+      {
+        "affected_lines": [
+          "line_1"
+        ],
+        "kpi_updates": {
+          "min_throughput_per_hour": 90
+        },
+        "operation_paths": [
+          "/lines/line_1/kpi/min_throughput_per_hour"
+        ],
+        "request_type": "KPI_UPDATE",
+        "request_types": [
+          "KPI_LIMIT_UPDATE"
+        ],
+        "simulation_config_updates": {},
+        "target_lines": [
+          "line_1"
+        ],
+        "target_scope": "SINGLE_LINE"
+      }
+    ],
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [
+      "/lines/line_1/kpi/min_throughput_per_hour"
+    ],
+    "affected_lines": [
+      "line_1"
+    ],
+    "intent_text": "set line 1 throughput/hr to at least 90",
+    "reason": "m12 seed"
+  },
+  "created_at_utc": "2026-06-25T04:32:11.937745Z",
+  "current_trt_path": "/app/data/trt/current_trt.json",
+  "operator_decision": {
+    "comment": "M12 manual comparison test TC1-INTENT_001",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-06-25T04:32:12.164158Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1782361895333",
+  "previous_trt_version": "v68",
+  "release_id": "rel_fc07cfd3-60c0-490e-b8d7-0946b76e1dd4",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "trt_version": "v69",
+  "updated_at_utc": "2026-06-25T04:32:12.164158Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  },
+  "version_path": "/app/data/trt_versions/trt-demo_v69.json"
+}

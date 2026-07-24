@@ -1,0 +1,733 @@
+{
+  "conversation": [
+    {
+      "content": "Simulation completed with warnings. Review the measured results before deciding what to do next.\n\nSimulation scope:\n- Simulated lines: line_1, line_2\n- Simulated tooling count per line: 5\n- Intervention mode: immediate-stop\n- Arrival time: 1 seconds\n- Entanglement fix time: 3 seconds\n- Recovery delay: 1 seconds\n\nKPI comparison:\nline_1:\n- Target minimum throughput: 90 tools/hour\n- Actual throughput: 92.7309 tools/hour\n- Completed: 5/5 simulated tools\n- Required tray: 5 tools, completed in 194.11 seconds\n- Unwanted box: 0 tools, completed in not applicable\n- All sorting completed in 194.11 seconds\n- Entanglements: 1\n- Downtime: 0 seconds\n- Result: WARNING\n\nline_2:\n- Target minimum throughput: 90 tools/hour\n- Actual throughput: 95.2835 tools/hour\n- Completed: 5/5 simulated tools\n- Required tray: 4 tools, completed in 188.91 seconds\n- Unwanted box: 1 tools, completed in 117.91 seconds\n- All sorting completed in 188.91 seconds\n- Entanglements: 1\n- Downtime: 0 seconds\n- Result: WARNING\n\nData quality:\n- No data-quality warnings were recorded.\n\nDeployment is allowed with operator acknowledgement, but it is not automatically recommended.\nReply DEPLOY_WITH_ACK to deploy anyway, DO_NOT_DEPLOY to stop, REQUEST_REVISION to revise the strategy, or RERUN_SIMULATION to rerun the same ScenarioSpec.",
+      "role": "assistant"
+    }
+  ],
+  "normalized_request": {
+    "affected_lines": [
+      "line_1",
+      "line_2"
+    ],
+    "audit_id": "audit-28a8f660-9920-456e-bd38-c1cbded6fae9",
+    "debug": false,
+    "dry_run_only": false,
+    "intent_text": "run a limited two-line simulation and preserve required reset cycle completion and set simulated tooling count per production line to 5 (M12 full test target total simulated tooling: 10)",
+    "operator_id": "op_001",
+    "patch_id": "patch-1783102382377",
+    "pending_intent": {
+      "intent_text": "run a limited two-line simulation and preserve required reset cycle completion and set simulated tooling count per production line to 5 (M12 full test target total simulated tooling: 10)",
+      "missing_fields": [
+        "operator_id",
+        "reason"
+      ],
+      "operator_id": null,
+      "original_intent_text": "run a limited two-line simulation and preserve required reset cycle completion and set simulated tooling count per production line to 5 (M12 full test target total simulated tooling: 10)",
+      "pending_status": "WAITING_FOR_REQUIRED_FIELDS",
+      "reason": null
+    },
+    "reason": "M12 manual comparison test TC3-fixture_our_setup_ii_04",
+    "reconciliation_plan_id": "rec_27d15602-eed6-4766-8926-9d171ddcf78e",
+    "release_id": "rel_c51e8908-4d0b-402a-8665-40aba8b96059",
+    "run_id": "sim_1a480316-77f4-4805-b7a2-7b75eb3507a0",
+    "scenario_spec_id": "scn_45f4f7a9-d183-4f6b-abc7-f22574899904",
+    "scenario_spec_ids": [
+      "scn_45f4f7a9-d183-4f6b-abc7-f22574899904"
+    ],
+    "session_id": "m12-full-TC3-fixture_our_setup_ii_04-1783102369",
+    "simulation_config_updates": {
+      "add_reference_number": 5,
+      "episode_success_requires_reset_cycles": null,
+      "num_envs": 2
+    },
+    "simulation_run_id": "sim_1a480316-77f4-4805-b7a2-7b75eb3507a0",
+    "trt_id": "trt-demo",
+    "trt_version": "v122"
+  },
+  "pending_deployment": {
+    "acknowledged_risks": [
+      "KPI_SCOPE_MISMATCH",
+      "PLACEMENT_VALIDATION_WARNING"
+    ],
+    "deployment_allowed": true,
+    "deployment_recommended": false,
+    "evidence_summary": {
+      "acknowledged_risks": [
+        "KPI_SCOPE_MISMATCH",
+        "PLACEMENT_VALIDATION_WARNING"
+      ],
+      "data_quality_warnings": [],
+      "deployment_allowed": true,
+      "deployment_recommended": false,
+      "dry_run_only": false,
+      "failed_checks": [
+        {
+          "actual": "The KPI checker expected 27 full-environment tools, while the run completed 5 shown tools.",
+          "actual_value": 5,
+          "check_id": "kpi_scope.full_environment_expected_for_limited_simulation",
+          "deployment_blocking": false,
+          "evidence_row_id": null,
+          "evidence_source": "container_completion_events.ALL_SORTING",
+          "expected": "Evaluate the 5 tools shown in this simulation run.",
+          "expected_value": 5,
+          "full_environment_tooling_count": 27,
+          "kpi_evaluation_scope": "SIMULATED_TABLE_SCOPE",
+          "line_id": "line_1",
+          "operator_explanation": "The simulation was limited to a smaller number of tools, but the KPI checker still expected the full production-line inventory to be sorted.",
+          "operator_impact": "Do not deploy yet. The KPI result is measuring a full-inventory condition against a partial-table simulation.",
+          "operator_label": "KPI scope expected the full environment",
+          "recommended_action": "Update the KPI checker to evaluate the tools actually shown in the simulation, then rerun.",
+          "severity": "OPERATOR_ACK_REQUIRED",
+          "simulated_tooling_count": 5,
+          "technical_check_id": "kpi_scope.full_environment_expected_for_limited_simulation",
+          "technical_explanation": "line_1 sorted all 5 tools shown in the simulation, but the KPI checker expected the full 27-tool environment."
+        },
+        {
+          "actual": "The KPI checker expected 27 full-environment tools, while the run completed 5 shown tools.",
+          "actual_value": 5,
+          "check_id": "kpi_scope.full_environment_expected_for_limited_simulation",
+          "deployment_blocking": false,
+          "evidence_row_id": null,
+          "evidence_source": "container_completion_events.ALL_SORTING",
+          "expected": "Evaluate the 5 tools shown in this simulation run.",
+          "expected_value": 5,
+          "full_environment_tooling_count": 27,
+          "kpi_evaluation_scope": "SIMULATED_TABLE_SCOPE",
+          "line_id": "line_2",
+          "operator_explanation": "The simulation was limited to a smaller number of tools, but the KPI checker still expected the full production-line inventory to be sorted.",
+          "operator_impact": "Do not deploy yet. The KPI result is measuring a full-inventory condition against a partial-table simulation.",
+          "operator_label": "KPI scope expected the full environment",
+          "recommended_action": "Update the KPI checker to evaluate the tools actually shown in the simulation, then rerun.",
+          "severity": "OPERATOR_ACK_REQUIRED",
+          "simulated_tooling_count": 5,
+          "technical_check_id": "kpi_scope.full_environment_expected_for_limited_simulation",
+          "technical_explanation": "line_2 sorted all 5 tools shown in the simulation, but the KPI checker expected the full 27-tool environment."
+        }
+      ],
+      "failed_lines": [
+        "line_1",
+        "line_2"
+      ],
+      "failure_summary": null,
+      "inconclusive_lines": [],
+      "kpi_evaluation_scope": "SIMULATED_TABLE_SCOPE",
+      "kpi_table": [
+        {
+          "actual_kpis": {
+            "completed_count": 5,
+            "cycle_time_seconds": 194.1099956613034,
+            "downtime_seconds": 0,
+            "entanglement_count": 1,
+            "misplaced_count": 0,
+            "recorded_cycle_time_seconds": 194.1099956613034,
+            "recorded_throughput_per_hour": 92.73092783643996,
+            "throughput_per_hour": 92.73092783643996,
+            "throughput_reliable": true,
+            "unwanted_completed_count": 0,
+            "wanted_completed_count": 5
+          },
+          "batch_gating": {
+            "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+            "status": "PASS"
+          },
+          "completion_durations": {
+            "all_sorting_completion_seconds": 194.1099956613034,
+            "required_tray_completion_seconds": 194.1099956613034,
+            "unwanted_box_completion_seconds": null
+          },
+          "deployment_blocking": false,
+          "downtime_pass": true,
+          "downtime_seconds": 0,
+          "failed_check_ids": [
+            "kpi_scope.full_environment_expected_for_limited_simulation"
+          ],
+          "failed_checks": [
+            {
+              "actual": "The KPI checker expected 27 full-environment tools, while the run completed 5 shown tools.",
+              "actual_value": 5,
+              "check_id": "kpi_scope.full_environment_expected_for_limited_simulation",
+              "deployment_blocking": false,
+              "evidence_row_id": null,
+              "evidence_source": "container_completion_events.ALL_SORTING",
+              "expected": "Evaluate the 5 tools shown in this simulation run.",
+              "expected_value": 5,
+              "full_environment_tooling_count": 27,
+              "kpi_evaluation_scope": "SIMULATED_TABLE_SCOPE",
+              "line_id": "line_1",
+              "operator_explanation": "The simulation was limited to a smaller number of tools, but the KPI checker still expected the full production-line inventory to be sorted.",
+              "operator_impact": "Do not deploy yet. The KPI result is measuring a full-inventory condition against a partial-table simulation.",
+              "operator_label": "KPI scope expected the full environment",
+              "recommended_action": "Update the KPI checker to evaluate the tools actually shown in the simulation, then rerun.",
+              "severity": "OPERATOR_ACK_REQUIRED",
+              "simulated_tooling_count": 5,
+              "technical_check_id": "kpi_scope.full_environment_expected_for_limited_simulation",
+              "technical_explanation": "line_1 sorted all 5 tools shown in the simulation, but the KPI checker expected the full 27-tool environment."
+            }
+          ],
+          "failure_reason": "The simulation was limited to a smaller number of tools, but the KPI checker still expected the full production-line inventory to be sorted.",
+          "line_id": "line_1",
+          "max_downtime_seconds": null,
+          "operator_reason": "line_1 sorted all 5 tools shown in the simulation. The completed set contained 5 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. line_1 warning: tool_14 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed. The KPI failure appears to come from the checker expecting the full 27-tool environment instead of the 5 tools shown in this run.",
+          "placement": {
+            "reason": "line_1 warning: tool_14 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed.",
+            "status": "WARNING"
+          },
+          "priority_deviation_count": 3,
+          "priority_pass": true,
+          "priority_policy": "FCFS",
+          "priority_required_first": {
+            "reason": "FCFS does not require ENT-required tools to be picked first.",
+            "status": "NOT_APPLICABLE"
+          },
+          "simulated_tools_completed": 5,
+          "status": "OPERATOR_ACK_REQUIRED",
+          "target_kpis": {
+            "deadline_minutes": null,
+            "max_downtime_seconds": null,
+            "min_throughput_per_hour": 90
+          },
+          "target_min_throughput_per_hour": 90,
+          "throughput_pass": true,
+          "throughput_per_hour": 92.73092783643996,
+          "unwanted_completed_count": 0,
+          "unwanted_completion_time_seconds": null,
+          "wanted_completed_count": 5,
+          "wanted_completion_time_seconds": 194.1099956613034,
+          "warning_check_ids": [
+            "placement.incorrect_required_tool",
+            "placement.incorrect_required_tool",
+            "placement.incorrect_required_tool"
+          ],
+          "warnings": [
+            {
+              "actual": "tool_14 was sent to REQUIRED_TRAY, but placement_correct was 0.",
+              "actual_value": "tool_14",
+              "check_id": "placement.incorrect_required_tool",
+              "deployment_blocking": false,
+              "evidence_row_id": 1,
+              "evidence_source": "tool_events.placement_correct",
+              "expected": "Picked tools should be marked correctly placed in their target container.",
+              "expected_value": "placement_correct=1",
+              "line_id": "line_1",
+              "operator_explanation": "line_1 warning: tool_14 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed.",
+              "operator_impact": "Review before deployment. The robot behavior may be correct, but placement validation disagreed.",
+              "operator_label": "Required tool placement warning",
+              "recommended_action": "Inspect the placement validator and rerun the simulation.",
+              "severity": "WARNING",
+              "technical_check_id": "placement.incorrect_required_tool",
+              "technical_explanation": "line_1 warning: tool_14 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed."
+            },
+            {
+              "actual": "tool_15 was sent to REQUIRED_TRAY, but placement_correct was 0.",
+              "actual_value": "tool_15",
+              "check_id": "placement.incorrect_required_tool",
+              "deployment_blocking": false,
+              "evidence_row_id": 2,
+              "evidence_source": "tool_events.placement_correct",
+              "expected": "Picked tools should be marked correctly placed in their target container.",
+              "expected_value": "placement_correct=1",
+              "line_id": "line_1",
+              "operator_explanation": "line_1 warning: tool_15 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed.",
+              "operator_impact": "Review before deployment. The robot behavior may be correct, but placement validation disagreed.",
+              "operator_label": "Required tool placement warning",
+              "recommended_action": "Inspect the placement validator and rerun the simulation.",
+              "severity": "WARNING",
+              "technical_check_id": "placement.incorrect_required_tool",
+              "technical_explanation": "line_1 warning: tool_15 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed."
+            },
+            {
+              "actual": "tool_17 was sent to REQUIRED_TRAY, but placement_correct was 0.",
+              "actual_value": "tool_17",
+              "check_id": "placement.incorrect_required_tool",
+              "deployment_blocking": false,
+              "evidence_row_id": 3,
+              "evidence_source": "tool_events.placement_correct",
+              "expected": "Picked tools should be marked correctly placed in their target container.",
+              "expected_value": "placement_correct=1",
+              "line_id": "line_1",
+              "operator_explanation": "line_1 warning: tool_17 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed.",
+              "operator_impact": "Review before deployment. The robot behavior may be correct, but placement validation disagreed.",
+              "operator_label": "Required tool placement warning",
+              "recommended_action": "Inspect the placement validator and rerun the simulation.",
+              "severity": "WARNING",
+              "technical_check_id": "placement.incorrect_required_tool",
+              "technical_explanation": "line_1 warning: tool_17 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed."
+            }
+          ]
+        },
+        {
+          "actual_kpis": {
+            "completed_count": 5,
+            "cycle_time_seconds": 188.90999577753246,
+            "downtime_seconds": 0,
+            "entanglement_count": 1,
+            "misplaced_count": 0,
+            "recorded_cycle_time_seconds": 188.90999577753246,
+            "recorded_throughput_per_hour": 95.28347044799831,
+            "throughput_per_hour": 95.28347044799831,
+            "throughput_reliable": true,
+            "unwanted_completed_count": 1,
+            "wanted_completed_count": 4
+          },
+          "batch_gating": {
+            "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+            "status": "PASS"
+          },
+          "completion_durations": {
+            "all_sorting_completion_seconds": 188.90999577753246,
+            "required_tray_completion_seconds": 188.90999577753246,
+            "unwanted_box_completion_seconds": 117.90999736450613
+          },
+          "deployment_blocking": false,
+          "downtime_pass": true,
+          "downtime_seconds": 0,
+          "failed_check_ids": [
+            "kpi_scope.full_environment_expected_for_limited_simulation"
+          ],
+          "failed_checks": [
+            {
+              "actual": "The KPI checker expected 27 full-environment tools, while the run completed 5 shown tools.",
+              "actual_value": 5,
+              "check_id": "kpi_scope.full_environment_expected_for_limited_simulation",
+              "deployment_blocking": false,
+              "evidence_row_id": null,
+              "evidence_source": "container_completion_events.ALL_SORTING",
+              "expected": "Evaluate the 5 tools shown in this simulation run.",
+              "expected_value": 5,
+              "full_environment_tooling_count": 27,
+              "kpi_evaluation_scope": "SIMULATED_TABLE_SCOPE",
+              "line_id": "line_2",
+              "operator_explanation": "The simulation was limited to a smaller number of tools, but the KPI checker still expected the full production-line inventory to be sorted.",
+              "operator_impact": "Do not deploy yet. The KPI result is measuring a full-inventory condition against a partial-table simulation.",
+              "operator_label": "KPI scope expected the full environment",
+              "recommended_action": "Update the KPI checker to evaluate the tools actually shown in the simulation, then rerun.",
+              "severity": "OPERATOR_ACK_REQUIRED",
+              "simulated_tooling_count": 5,
+              "technical_check_id": "kpi_scope.full_environment_expected_for_limited_simulation",
+              "technical_explanation": "line_2 sorted all 5 tools shown in the simulation, but the KPI checker expected the full 27-tool environment."
+            }
+          ],
+          "failure_reason": "The simulation was limited to a smaller number of tools, but the KPI checker still expected the full production-line inventory to be sorted.",
+          "line_id": "line_2",
+          "max_downtime_seconds": null,
+          "operator_reason": "line_2 sorted all 5 tools shown in the simulation. The completed set contained 4 required ENT tools and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The KPI failure appears to come from the checker expecting the full 27-tool environment instead of the 5 tools shown in this run.",
+          "placement": {
+            "reason": "No misplaced tools or placement validation warnings were recorded.",
+            "status": "PASS"
+          },
+          "priority_deviation_count": 0,
+          "priority_pass": true,
+          "priority_policy": "FCFS",
+          "priority_required_first": {
+            "reason": "FCFS does not require ENT-required tools to be picked first.",
+            "status": "NOT_APPLICABLE"
+          },
+          "simulated_tools_completed": 5,
+          "status": "OPERATOR_ACK_REQUIRED",
+          "target_kpis": {
+            "deadline_minutes": null,
+            "max_downtime_seconds": null,
+            "min_throughput_per_hour": 90
+          },
+          "target_min_throughput_per_hour": 90,
+          "throughput_pass": true,
+          "throughput_per_hour": 95.28347044799831,
+          "unwanted_completed_count": 1,
+          "unwanted_completion_time_seconds": 117.90999736450613,
+          "wanted_completed_count": 4,
+          "wanted_completion_time_seconds": 188.90999577753246,
+          "warning_check_ids": [],
+          "warnings": []
+        }
+      ],
+      "likely_root_cause": {
+        "code": "KPI_EXPECTED_FULL_ENVIRONMENT_BUT_SIMULATION_LIMITED",
+        "operator_text": "The simulation was limited to 5 tools per line, but the KPI checker still expected all 27 tools in the full environment to be sorted."
+      },
+      "line_findings": [
+        {
+          "deployment_blocking": false,
+          "line_id": "line_1",
+          "operator_text": "line_1 sorted all 5 tools shown in the simulation. The completed set contained 5 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. line_1 warning: tool_14 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed. The KPI failure appears to come from the checker expecting the full 27-tool environment instead of the 5 tools shown in this run.",
+          "severity": "OPERATOR_ACK_REQUIRED"
+        },
+        {
+          "deployment_blocking": false,
+          "line_id": "line_2",
+          "operator_text": "line_2 sorted all 5 tools shown in the simulation. The completed set contained 4 required ENT tools and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The KPI failure appears to come from the checker expecting the full 27-tool environment instead of the 5 tools shown in this run.",
+          "severity": "OPERATOR_ACK_REQUIRED"
+        }
+      ],
+      "line_results": [
+        {
+          "actual_kpis": {
+            "completed_count": 5,
+            "cycle_time_seconds": 194.1099956613034,
+            "downtime_seconds": 0,
+            "entanglement_count": 1,
+            "misplaced_count": 0,
+            "recorded_cycle_time_seconds": 194.1099956613034,
+            "recorded_throughput_per_hour": 92.73092783643996,
+            "throughput_per_hour": 92.73092783643996,
+            "throughput_reliable": true,
+            "unwanted_completed_count": 0,
+            "wanted_completed_count": 5
+          },
+          "batch_gating": {
+            "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+            "status": "PASS"
+          },
+          "completion_durations": {
+            "all_sorting_completion_seconds": 194.1099956613034,
+            "required_tray_completion_seconds": 194.1099956613034,
+            "unwanted_box_completion_seconds": null
+          },
+          "deployment_blocking": false,
+          "downtime_pass": true,
+          "downtime_seconds": 0,
+          "failed_check_ids": [
+            "kpi_scope.full_environment_expected_for_limited_simulation"
+          ],
+          "failed_checks": [
+            {
+              "actual": "The KPI checker expected 27 full-environment tools, while the run completed 5 shown tools.",
+              "actual_value": 5,
+              "check_id": "kpi_scope.full_environment_expected_for_limited_simulation",
+              "deployment_blocking": false,
+              "evidence_row_id": null,
+              "evidence_source": "container_completion_events.ALL_SORTING",
+              "expected": "Evaluate the 5 tools shown in this simulation run.",
+              "expected_value": 5,
+              "full_environment_tooling_count": 27,
+              "kpi_evaluation_scope": "SIMULATED_TABLE_SCOPE",
+              "line_id": "line_1",
+              "operator_explanation": "The simulation was limited to a smaller number of tools, but the KPI checker still expected the full production-line inventory to be sorted.",
+              "operator_impact": "Do not deploy yet. The KPI result is measuring a full-inventory condition against a partial-table simulation.",
+              "operator_label": "KPI scope expected the full environment",
+              "recommended_action": "Update the KPI checker to evaluate the tools actually shown in the simulation, then rerun.",
+              "severity": "OPERATOR_ACK_REQUIRED",
+              "simulated_tooling_count": 5,
+              "technical_check_id": "kpi_scope.full_environment_expected_for_limited_simulation",
+              "technical_explanation": "line_1 sorted all 5 tools shown in the simulation, but the KPI checker expected the full 27-tool environment."
+            }
+          ],
+          "failure_reason": "The simulation was limited to a smaller number of tools, but the KPI checker still expected the full production-line inventory to be sorted.",
+          "line_id": "line_1",
+          "max_downtime_seconds": null,
+          "operator_reason": "line_1 sorted all 5 tools shown in the simulation. The completed set contained 5 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. line_1 warning: tool_14 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed. The KPI failure appears to come from the checker expecting the full 27-tool environment instead of the 5 tools shown in this run.",
+          "placement": {
+            "reason": "line_1 warning: tool_14 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed.",
+            "status": "WARNING"
+          },
+          "priority_deviation_count": 3,
+          "priority_pass": true,
+          "priority_policy": "FCFS",
+          "priority_required_first": {
+            "reason": "FCFS does not require ENT-required tools to be picked first.",
+            "status": "NOT_APPLICABLE"
+          },
+          "simulated_tools_completed": 5,
+          "status": "OPERATOR_ACK_REQUIRED",
+          "target_kpis": {
+            "deadline_minutes": null,
+            "max_downtime_seconds": null,
+            "min_throughput_per_hour": 90
+          },
+          "target_min_throughput_per_hour": 90,
+          "throughput_pass": true,
+          "throughput_per_hour": 92.73092783643996,
+          "unwanted_completed_count": 0,
+          "unwanted_completion_time_seconds": null,
+          "wanted_completed_count": 5,
+          "wanted_completion_time_seconds": 194.1099956613034,
+          "warning_check_ids": [
+            "placement.incorrect_required_tool",
+            "placement.incorrect_required_tool",
+            "placement.incorrect_required_tool"
+          ],
+          "warnings": [
+            {
+              "actual": "tool_14 was sent to REQUIRED_TRAY, but placement_correct was 0.",
+              "actual_value": "tool_14",
+              "check_id": "placement.incorrect_required_tool",
+              "deployment_blocking": false,
+              "evidence_row_id": 1,
+              "evidence_source": "tool_events.placement_correct",
+              "expected": "Picked tools should be marked correctly placed in their target container.",
+              "expected_value": "placement_correct=1",
+              "line_id": "line_1",
+              "operator_explanation": "line_1 warning: tool_14 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed.",
+              "operator_impact": "Review before deployment. The robot behavior may be correct, but placement validation disagreed.",
+              "operator_label": "Required tool placement warning",
+              "recommended_action": "Inspect the placement validator and rerun the simulation.",
+              "severity": "WARNING",
+              "technical_check_id": "placement.incorrect_required_tool",
+              "technical_explanation": "line_1 warning: tool_14 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed."
+            },
+            {
+              "actual": "tool_15 was sent to REQUIRED_TRAY, but placement_correct was 0.",
+              "actual_value": "tool_15",
+              "check_id": "placement.incorrect_required_tool",
+              "deployment_blocking": false,
+              "evidence_row_id": 2,
+              "evidence_source": "tool_events.placement_correct",
+              "expected": "Picked tools should be marked correctly placed in their target container.",
+              "expected_value": "placement_correct=1",
+              "line_id": "line_1",
+              "operator_explanation": "line_1 warning: tool_15 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed.",
+              "operator_impact": "Review before deployment. The robot behavior may be correct, but placement validation disagreed.",
+              "operator_label": "Required tool placement warning",
+              "recommended_action": "Inspect the placement validator and rerun the simulation.",
+              "severity": "WARNING",
+              "technical_check_id": "placement.incorrect_required_tool",
+              "technical_explanation": "line_1 warning: tool_15 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed."
+            },
+            {
+              "actual": "tool_17 was sent to REQUIRED_TRAY, but placement_correct was 0.",
+              "actual_value": "tool_17",
+              "check_id": "placement.incorrect_required_tool",
+              "deployment_blocking": false,
+              "evidence_row_id": 3,
+              "evidence_source": "tool_events.placement_correct",
+              "expected": "Picked tools should be marked correctly placed in their target container.",
+              "expected_value": "placement_correct=1",
+              "line_id": "line_1",
+              "operator_explanation": "line_1 warning: tool_17 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed.",
+              "operator_impact": "Review before deployment. The robot behavior may be correct, but placement validation disagreed.",
+              "operator_label": "Required tool placement warning",
+              "recommended_action": "Inspect the placement validator and rerun the simulation.",
+              "severity": "WARNING",
+              "technical_check_id": "placement.incorrect_required_tool",
+              "technical_explanation": "line_1 warning: tool_17 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed."
+            }
+          ]
+        },
+        {
+          "actual_kpis": {
+            "completed_count": 5,
+            "cycle_time_seconds": 188.90999577753246,
+            "downtime_seconds": 0,
+            "entanglement_count": 1,
+            "misplaced_count": 0,
+            "recorded_cycle_time_seconds": 188.90999577753246,
+            "recorded_throughput_per_hour": 95.28347044799831,
+            "throughput_per_hour": 95.28347044799831,
+            "throughput_reliable": true,
+            "unwanted_completed_count": 1,
+            "wanted_completed_count": 4
+          },
+          "batch_gating": {
+            "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+            "status": "PASS"
+          },
+          "completion_durations": {
+            "all_sorting_completion_seconds": 188.90999577753246,
+            "required_tray_completion_seconds": 188.90999577753246,
+            "unwanted_box_completion_seconds": 117.90999736450613
+          },
+          "deployment_blocking": false,
+          "downtime_pass": true,
+          "downtime_seconds": 0,
+          "failed_check_ids": [
+            "kpi_scope.full_environment_expected_for_limited_simulation"
+          ],
+          "failed_checks": [
+            {
+              "actual": "The KPI checker expected 27 full-environment tools, while the run completed 5 shown tools.",
+              "actual_value": 5,
+              "check_id": "kpi_scope.full_environment_expected_for_limited_simulation",
+              "deployment_blocking": false,
+              "evidence_row_id": null,
+              "evidence_source": "container_completion_events.ALL_SORTING",
+              "expected": "Evaluate the 5 tools shown in this simulation run.",
+              "expected_value": 5,
+              "full_environment_tooling_count": 27,
+              "kpi_evaluation_scope": "SIMULATED_TABLE_SCOPE",
+              "line_id": "line_2",
+              "operator_explanation": "The simulation was limited to a smaller number of tools, but the KPI checker still expected the full production-line inventory to be sorted.",
+              "operator_impact": "Do not deploy yet. The KPI result is measuring a full-inventory condition against a partial-table simulation.",
+              "operator_label": "KPI scope expected the full environment",
+              "recommended_action": "Update the KPI checker to evaluate the tools actually shown in the simulation, then rerun.",
+              "severity": "OPERATOR_ACK_REQUIRED",
+              "simulated_tooling_count": 5,
+              "technical_check_id": "kpi_scope.full_environment_expected_for_limited_simulation",
+              "technical_explanation": "line_2 sorted all 5 tools shown in the simulation, but the KPI checker expected the full 27-tool environment."
+            }
+          ],
+          "failure_reason": "The simulation was limited to a smaller number of tools, but the KPI checker still expected the full production-line inventory to be sorted.",
+          "line_id": "line_2",
+          "max_downtime_seconds": null,
+          "operator_reason": "line_2 sorted all 5 tools shown in the simulation. The completed set contained 4 required ENT tools and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The KPI failure appears to come from the checker expecting the full 27-tool environment instead of the 5 tools shown in this run.",
+          "placement": {
+            "reason": "No misplaced tools or placement validation warnings were recorded.",
+            "status": "PASS"
+          },
+          "priority_deviation_count": 0,
+          "priority_pass": true,
+          "priority_policy": "FCFS",
+          "priority_required_first": {
+            "reason": "FCFS does not require ENT-required tools to be picked first.",
+            "status": "NOT_APPLICABLE"
+          },
+          "simulated_tools_completed": 5,
+          "status": "OPERATOR_ACK_REQUIRED",
+          "target_kpis": {
+            "deadline_minutes": null,
+            "max_downtime_seconds": null,
+            "min_throughput_per_hour": 90
+          },
+          "target_min_throughput_per_hour": 90,
+          "throughput_pass": true,
+          "throughput_per_hour": 95.28347044799831,
+          "unwanted_completed_count": 1,
+          "unwanted_completion_time_seconds": 117.90999736450613,
+          "wanted_completed_count": 4,
+          "wanted_completion_time_seconds": 188.90999577753246,
+          "warning_check_ids": [],
+          "warnings": []
+        }
+      ],
+      "next_action": "ASK_DEPLOY_ACKNOWLEDGEMENT",
+      "operator_detail_summary": "Simulation completed with warnings. Review the measured results before deciding what to do next.\n\nSimulation scope:\n- Simulated lines: line_1, line_2\n- Simulated tooling count per line: 5\n- Intervention mode: immediate-stop\n- Arrival time: 1 seconds\n- Entanglement fix time: 3 seconds\n- Recovery delay: 1 seconds\n\nKPI comparison:\nline_1:\n- Target minimum throughput: 90 tools/hour\n- Actual throughput: 92.7309 tools/hour\n- Completed: 5/5 simulated tools\n- Required tray: 5 tools, completed in 194.11 seconds\n- Unwanted box: 0 tools, completed in not applicable\n- All sorting completed in 194.11 seconds\n- Entanglements: 1\n- Downtime: 0 seconds\n- Result: WARNING\n\nline_2:\n- Target minimum throughput: 90 tools/hour\n- Actual throughput: 95.2835 tools/hour\n- Completed: 5/5 simulated tools\n- Required tray: 4 tools, completed in 188.91 seconds\n- Unwanted box: 1 tools, completed in 117.91 seconds\n- All sorting completed in 188.91 seconds\n- Entanglements: 1\n- Downtime: 0 seconds\n- Result: WARNING\n\nData quality:\n- No data-quality warnings were recorded.",
+      "operator_next_action": "DEPLOY_WITH_ACK, DO_NOT_DEPLOY, REQUEST_REVISION, RERUN_SIMULATION",
+      "operator_options": [
+        "DEPLOY_WITH_ACK",
+        "DO_NOT_DEPLOY",
+        "REQUEST_REVISION",
+        "RERUN_SIMULATION"
+      ],
+      "operator_summary": "Simulation completed, and the proposed strategy mostly behaved as expected. Deployment is possible, but it requires operator acknowledgement because there are non-blocking risks.\n\nThe main issue is not that the robots failed to sort the tools shown in the simulation. The simulation was limited to 5 tools per line, but the KPI checker still expected the full 27-tool environment to be completed.\n\nline_1 sorted all 5 tools shown in the simulation. The completed set contained 5 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. line_1 warning: tool_14 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed. The KPI failure appears to come from the checker expecting the full 27-tool environment instead of the 5 tools shown in this run.\n\nline_2 sorted all 5 tools shown in the simulation. The completed set contained 4 required ENT tools and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The KPI failure appears to come from the checker expecting the full 27-tool environment instead of the 5 tools shown in this run.\n\nDeployment is allowed with acknowledgement, but not automatically recommended. Recommended next step: update the KPI checker so a limited-tool simulation is evaluated against the tools actually shown, or clearly mark it as a partial-table run, then rerun the simulation.",
+      "overall_result": "WARNING",
+      "passed_lines": [],
+      "requires_operator_acknowledgement": true,
+      "risk_summary": "The simulation completed the tools shown on each line, but non-blocking risks require operator acknowledgement.",
+      "risk_tier": "OPERATOR_ACK_REQUIRED",
+      "simulation_config": {
+        "add_reference_number": 5,
+        "allowed_overlap_ratio": 0.99,
+        "chosen_intervention_mode": "immediate-stop",
+        "episode_success_requires_reset_cycles": 1,
+        "fix_duration": 3,
+        "full_environment_tooling_count": 27,
+        "full_scene_required": false,
+        "headless": false,
+        "layout_source": "auto",
+        "line_binding_source": "line_registry",
+        "num_envs": 2,
+        "resume_delay": 1,
+        "reuse_verified_seed": true,
+        "simulated_tooling_count": 5,
+        "supported_line_type_values": [
+          "UR5_SORTING_CELL"
+        ],
+        "template_scope": "DATA_DRIVEN",
+        "travel_time": 1
+      },
+      "summary_message": "KPI validation failed because this run was limited to 5 tools per line, but the completion KPI still expected the full 27-tool environment.",
+      "technical_findings": [
+        {
+          "code": "KPI_SCOPE_MISMATCH",
+          "operator_text": "The simulation was limited to 5 tools per line, but some KPI checks still expected the full 27-tool environment.",
+          "severity": "OPERATOR_ACK_REQUIRED"
+        },
+        {
+          "code": "PLACEMENT_VALIDATION_WARNING",
+          "line_id": "line_1",
+          "operator_text": "line_1 warning: tool_14 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed. This may indicate a placement-validation or sensor issue.",
+          "severity": "OPERATOR_ACK_REQUIRED"
+        },
+        {
+          "code": "PLACEMENT_VALIDATION_WARNING",
+          "line_id": "line_1",
+          "operator_text": "line_1 warning: tool_15 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed. This may indicate a placement-validation or sensor issue.",
+          "severity": "OPERATOR_ACK_REQUIRED"
+        },
+        {
+          "code": "PLACEMENT_VALIDATION_WARNING",
+          "line_id": "line_1",
+          "operator_text": "line_1 warning: tool_17 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed. This may indicate a placement-validation or sensor issue.",
+          "severity": "OPERATOR_ACK_REQUIRED"
+        }
+      ],
+      "warning_checks": [
+        {
+          "actual": "tool_14 was sent to REQUIRED_TRAY, but placement_correct was 0.",
+          "actual_value": "tool_14",
+          "check_id": "placement.incorrect_required_tool",
+          "deployment_blocking": false,
+          "evidence_row_id": 1,
+          "evidence_source": "tool_events.placement_correct",
+          "expected": "Picked tools should be marked correctly placed in their target container.",
+          "expected_value": "placement_correct=1",
+          "line_id": "line_1",
+          "operator_explanation": "line_1 warning: tool_14 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed.",
+          "operator_impact": "Review before deployment. The robot behavior may be correct, but placement validation disagreed.",
+          "operator_label": "Required tool placement warning",
+          "recommended_action": "Inspect the placement validator and rerun the simulation.",
+          "severity": "WARNING",
+          "technical_check_id": "placement.incorrect_required_tool",
+          "technical_explanation": "line_1 warning: tool_14 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed."
+        },
+        {
+          "actual": "tool_15 was sent to REQUIRED_TRAY, but placement_correct was 0.",
+          "actual_value": "tool_15",
+          "check_id": "placement.incorrect_required_tool",
+          "deployment_blocking": false,
+          "evidence_row_id": 2,
+          "evidence_source": "tool_events.placement_correct",
+          "expected": "Picked tools should be marked correctly placed in their target container.",
+          "expected_value": "placement_correct=1",
+          "line_id": "line_1",
+          "operator_explanation": "line_1 warning: tool_15 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed.",
+          "operator_impact": "Review before deployment. The robot behavior may be correct, but placement validation disagreed.",
+          "operator_label": "Required tool placement warning",
+          "recommended_action": "Inspect the placement validator and rerun the simulation.",
+          "severity": "WARNING",
+          "technical_check_id": "placement.incorrect_required_tool",
+          "technical_explanation": "line_1 warning: tool_15 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed."
+        },
+        {
+          "actual": "tool_17 was sent to REQUIRED_TRAY, but placement_correct was 0.",
+          "actual_value": "tool_17",
+          "check_id": "placement.incorrect_required_tool",
+          "deployment_blocking": false,
+          "evidence_row_id": 3,
+          "evidence_source": "tool_events.placement_correct",
+          "expected": "Picked tools should be marked correctly placed in their target container.",
+          "expected_value": "placement_correct=1",
+          "line_id": "line_1",
+          "operator_explanation": "line_1 warning: tool_17 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed.",
+          "operator_impact": "Review before deployment. The robot behavior may be correct, but placement validation disagreed.",
+          "operator_label": "Required tool placement warning",
+          "recommended_action": "Inspect the placement validator and rerun the simulation.",
+          "severity": "WARNING",
+          "technical_check_id": "placement.incorrect_required_tool",
+          "technical_explanation": "line_1 warning: tool_17 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed."
+        }
+      ],
+      "warnings": [
+        "line_1 warning: tool_14 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed.",
+        "line_1 warning: tool_15 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed.",
+        "line_1 warning: tool_17 was sent to REQUIRED_TRAY, but the result database marked it as not correctly placed.",
+        "KPI validation failed because this run was limited to 5 tools per line, but the completion KPI still expected the full 27-tool environment."
+      ]
+    },
+    "operator_options": [
+      "DEPLOY_WITH_ACK",
+      "DO_NOT_DEPLOY",
+      "REQUEST_REVISION",
+      "RERUN_SIMULATION"
+    ],
+    "requires_operator_acknowledgement": true,
+    "risk_tier": "OPERATOR_ACK_REQUIRED",
+    "run_id": "sim_1a480316-77f4-4805-b7a2-7b75eb3507a0",
+    "scenario_spec_id": "scn_45f4f7a9-d183-4f6b-abc7-f22574899904",
+    "trt_id": "trt-demo",
+    "trt_version": "v122"
+  },
+  "pending_intent": null,
+  "session_id": "m12-full-TC3-fixture_our_setup_ii_04-1783102369",
+  "state": "WAITING_FOR_DEPLOYMENT_DECISION",
+  "updated_at": "2026-07-03T18:19:16.765429Z"
+}

@@ -1,0 +1,112 @@
+@startuml
+title TRT Uvicorn Server - UML Component Diagram
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+
+actor "n8n workflows\nor API client" as Client
+
+node "trt-api container" {
+  component "Uvicorn\n0.0.0.0:8000" as Uvicorn
+  component "FastAPI app\ntrt_core.api:app" as API
+
+  package "HTTP endpoint groups" {
+    component "Intent and chat\n/intent/* /chat/*" as IntentChat
+    component "Patch and release\n/patch/* /release/*" as PatchRelease
+    component "TRT, audit, state\n/trt/* /audit/* /state/*" as RecordsApi
+    component "Supervisor\n/supervisor/* /reconciliation/*" as SupervisorApi
+    component "Scenario and simulation\n/scenario/* /simulation/*" as SimApi
+    component "Evidence and deployment\n/evidence/* /deployment/*" as EvidenceApi
+    component "Debug and M12 reports\n/debug/* /m12/* /reports/*" as OpsApi
+  }
+
+  package "Domain services" {
+    component "Intent normalizer\nintent_normalizer.py" as IntentNormalizer
+    component "Patch validator/apply\nvalidator.py\nsemantic_rules.py\npatch_apply.py" as PatchApply
+    component "Release manager\nrelease.py" as Release
+    component "Supervisor reconciler\nsupervisor.py\nreconciliation.py" as Supervisor
+    component "Scenario generator\nscenario_generation/*" as ScenarioGen
+    component "Digital twin adapter\ndigital_twin_adapter/*" as DTA
+    component "Evidence extractor\nevidence_extractor/*" as Evidence
+    component "Chat session store\nchat_sessions.py" as ChatSessions
+    component "M12 metrics\nm12.py" as M12
+  }
+
+  package "Persistence adapters" {
+    component "TRTRepository\nrepository.py" as Repo
+    component "State records\nstate_records.py" as StateRecords
+    component "Line registry\nline_registry.py" as LineRegistry
+    component "Audit builder\naudit.py" as Audit
+    component "ENT demo data builder\nent_demo.py" as EntDemo
+  }
+}
+
+database "JSON data store\n/app/data" as Data
+database "Output artifacts\n/app/outputs" as Outputs
+database "SQLite result DBs\noutputs/run_artifacts/*.sqlite" as ResultDB
+
+component "Windows Isaac host runner\nhost_isaac_runner_service.py" as HostRunner
+component "vLLM OpenAI-compatible API" as VLLM
+component "Isaac Sim UR5 script\npick_up_example.py" as Isaac
+
+Client --> Uvicorn : HTTP
+Uvicorn --> API : ASGI
+
+API --> IntentChat
+API --> PatchRelease
+API --> RecordsApi
+API --> SupervisorApi
+API --> SimApi
+API --> EvidenceApi
+API --> OpsApi
+
+IntentChat --> IntentNormalizer
+IntentChat --> ChatSessions
+IntentChat --> VLLM : optional dialogue resolution
+PatchRelease --> PatchApply
+PatchRelease --> Release
+PatchRelease --> Audit
+RecordsApi --> Repo
+RecordsApi --> StateRecords
+SupervisorApi --> Supervisor
+SimApi --> ScenarioGen
+SimApi --> DTA
+EvidenceApi --> Evidence
+EvidenceApi --> StateRecords
+OpsApi --> M12
+OpsApi --> EntDemo
+OpsApi --> LineRegistry
+
+IntentNormalizer --> Repo
+IntentNormalizer --> LineRegistry
+PatchApply --> Repo
+PatchApply --> Audit
+Release --> Repo
+Release --> Audit
+Supervisor --> Repo
+Supervisor --> StateRecords
+ScenarioGen --> LineRegistry
+ScenarioGen --> Repo
+DTA --> HostRunner : HTTP host_runner mode
+DTA --> ResultDB : read results
+Evidence --> Outputs
+Evidence --> ResultDB
+ChatSessions --> Data
+Repo --> Data
+StateRecords --> Data
+LineRegistry --> Data
+Audit --> Data
+M12 --> Outputs
+ScenarioGen --> Outputs
+HostRunner --> Isaac : subprocess
+Isaac --> ResultDB : write run metrics
+
+note right of API
+  Single FastAPI app exposes the server surface.
+  Endpoint handlers coordinate deterministic services;
+  n8n remains orchestration, not domain authority.
+end note
+
+@enduml

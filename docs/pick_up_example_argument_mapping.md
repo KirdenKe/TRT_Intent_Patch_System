@@ -1,5 +1,49 @@
 # pick_up_example.py Argument Mapping
 
+## Fresh Clone Setup
+
+Prepare the repository-local Python environment:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -e ".[dev]"
+pytest tests\test_digital_twin_adapter.py
+```
+
+Create the Docker container used by the governance API:
+
+```powershell
+docker compose build trt-api
+docker compose up -d trt-api
+Invoke-RestMethod http://localhost:8000/health
+```
+
+Configure `host_runner` for the cloned machine before using `/simulation/run`:
+
+1. Edit `data/isaac_host_config.json` with this clone's Windows path and Isaac Sim `python.bat`, `pick_up_example.py`, and `seed_sweep.sqlite3` paths.
+2. Create `.env` next to `docker-compose.yml`:
+
+```text
+ISAAC_HOST_RUNNER_URL=http://host.docker.internal:8765
+```
+
+3. Start the host runner:
+
+```powershell
+.\scripts\start_host_isaac_runner.ps1 -Port 8765
+```
+
+4. Recreate `trt-api` and verify:
+
+```powershell
+docker compose up -d --force-recreate trt-api
+Invoke-RestMethod http://localhost:8000/debug/isaac-host-runner-status
+```
+
+The full startup and dry-run flow is documented in `docs/start_host_isaac_runner.md`.
+
 `pick_up_example.py` is the Isaac Sim UR5 entry point. The Dockerized TRT API does not execute it directly; `/simulation/run` builds a host-runner request and the Windows host runner expands that request into the CLI command.
 
 The host runner passes the original command-compatible Isaac arguments plus the two governed result-output arguments now supported by the entry point: `--run_id` and `--output_db_path`. `--seed_db_path` remains the layout/seed input database and must not be used as the per-run KPI/result database.

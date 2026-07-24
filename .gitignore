@@ -7,3 +7,4 @@ data/*.db
 n8n_data/
 credentials*.json
 *.secret.json
+outputs/reports/m12/

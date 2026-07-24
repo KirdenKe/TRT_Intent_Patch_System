@@ -1,0 +1,173 @@
+{
+  "candidate_patch_summary": {
+    "body": {
+      "candidate_patch": {
+        "affected_lines": [
+          "line_1"
+        ],
+        "base_version": "v68",
+        "dry_run_only": false,
+        "intent_text": "set line 1 throughput/hr to at least 90",
+        "message": "The candidate patch passed validation. It will apply the requested composite changes across 1 sub-requests. Please approve, reject, or request revision.",
+        "operations": [
+          {
+            "op": "replace",
+            "path": "/lines/line_1/kpi/min_throughput_per_hour",
+            "value": 90
+          }
+        ],
+        "operator_id": "op_001",
+        "patch_id": "patch_6ca06043-05a0-4e75-8274-056c7dfa3ce8",
+        "reason": "M12 feasibility test",
+        "request_types": [
+          "KPI_LIMIT_UPDATE",
+          "KPI_UPDATE"
+        ],
+        "status": "REVIEWED",
+        "sub_requests": [
+          {
+            "affected_lines": [
+              "line_1"
+            ],
+            "kpi_updates": {
+              "min_throughput_per_hour": 90
+            },
+            "operation_paths": [
+              "/lines/line_1/kpi/min_throughput_per_hour"
+            ],
+            "request_type": "KPI_UPDATE",
+            "request_types": [
+              "KPI_LIMIT_UPDATE"
+            ],
+            "simulation_config_updates": {},
+            "target_lines": [
+              "line_1"
+            ],
+            "target_scope": "SINGLE_LINE"
+          }
+        ],
+        "trt_id": "trt-demo"
+      }
+    },
+    "context": {
+      "affected_lines": [
+        "line_1"
+      ],
+      "dry_run_only": false,
+      "intent_text": "set line 1 throughput/hr to at least 90",
+      "kpi_updates": {
+        "min_throughput_per_hour": 90
+      },
+      "line_ids": [],
+      "operator_id": "op_001",
+      "pending_deployment": null,
+      "pending_intent": null,
+      "query_targets": [],
+      "reason": "M12 feasibility test",
+      "run_id": null,
+      "scenario_spec_id": null,
+      "session_id": "m12-feas-1782361134",
+      "simulation_config_updates": {}
+    },
+    "payload": {
+      "affected_lines": [
+        "line_1"
+      ],
+      "candidate_patch": {
+        "affected_lines": [
+          "line_1"
+        ],
+        "base_version": "v68",
+        "dry_run_only": false,
+        "intent_text": "set line 1 throughput/hr to at least 90",
+        "message": "The candidate patch passed validation. It will apply the requested composite changes across 1 sub-requests. Please approve, reject, or request revision.",
+        "operations": [
+          {
+            "op": "replace",
+            "path": "/lines/line_1/kpi/min_throughput_per_hour",
+            "value": 90
+          }
+        ],
+        "operator_id": "op_001",
+        "patch_id": "patch_6ca06043-05a0-4e75-8274-056c7dfa3ce8",
+        "reason": "M12 feasibility test",
+        "request_types": [
+          "KPI_LIMIT_UPDATE",
+          "KPI_UPDATE"
+        ],
+        "status": "REVIEWED",
+        "sub_requests": [
+          {
+            "affected_lines": [
+              "line_1"
+            ],
+            "kpi_updates": {
+              "min_throughput_per_hour": 90
+            },
+            "operation_paths": [
+              "/lines/line_1/kpi/min_throughput_per_hour"
+            ],
+            "request_type": "KPI_UPDATE",
+            "request_types": [
+              "KPI_LIMIT_UPDATE"
+            ],
+            "simulation_config_updates": {},
+            "target_lines": [
+              "line_1"
+            ],
+            "target_scope": "SINGLE_LINE"
+          }
+        ],
+        "trt_id": "trt-demo"
+      },
+      "candidate_patch_summary": {
+        "affected_lines": [
+          "line_1"
+        ],
+        "dry_run_only": false,
+        "intent_text": "set line 1 throughput/hr to at least 90",
+        "operations": [
+          {
+            "op": "replace",
+            "path": "/lines/line_1/kpi/min_throughput_per_hour",
+            "value": 90
+          }
+        ],
+        "reason": "M12 feasibility test",
+        "simulation_config_updates": null
+      },
+      "dry_run_only": false,
+      "message": "The candidate patch passed validation. It will apply the requested composite changes across 1 sub-requests. Please approve, reject, or request revision.",
+      "simulation_config_updates": {},
+      "validation_results": {
+        "base_version": true,
+        "path_whitelist": true,
+        "readonly": true,
+        "schema": true,
+        "semantic": true
+      },
+      "validation_status": "REVIEWED"
+    },
+    "status": "REVIEWED"
+  },
+  "conversation": [
+    {
+      "content": "The candidate patch passed validation. Please approve, reject, or request revision.",
+      "role": "assistant"
+    }
+  ],
+  "normalized_request": {
+    "affected_lines": [
+      "line_1"
+    ],
+    "dry_run_only": false,
+    "intent_text": "set line 1 throughput/hr to at least 90",
+    "operator_id": "op_001",
+    "reason": "M12 feasibility test",
+    "simulation_config_updates": {}
+  },
+  "review_status": "REVIEWED",
+  "session_id": "m12-feas-1782361134",
+  "state": "WAITING_FOR_APPROVAL",
+  "updated_at": "2026-06-25T04:19:02.194899Z"
+}

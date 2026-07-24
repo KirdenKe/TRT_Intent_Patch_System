@@ -1,0 +1,121 @@
+{
+  "audit_id": "audit-9f8f19dd-639c-4240-8f68-3fec7bd88d6d",
+  "base_version": "v74",
+  "candidate_patch": {
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "base_version": "v74",
+    "dry_run_only": false,
+    "intent_text": "set line 1 picking order to prioritize tooling other than scissors and with two production lines remaining set simulated tooling count per production line to 5",
+    "message": "The candidate patch passed validation. It will apply the requested composite changes across 2 sub-requests. Please approve, reject, or request revision.",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_1/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [
+            "SCISSORS"
+          ],
+          "ordered_tool_ids": [],
+          "policy": "EXPLICIT_TYPE_ORDER",
+          "tie_breaker": "FCFS"
+        }
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "patch-1782369481300",
+    "reason": "m12 seed",
+    "request_types": [
+      "MANIPULATOR_PRIORITY_UPDATE",
+      "SIMULATION_CONFIG_UPDATE"
+    ],
+    "simulation_config_updates": {
+      "add_reference_number": 5,
+      "num_envs": 2
+    },
+    "status": "REVIEWED",
+    "sub_requests": [
+      {
+        "affected_lines": [
+          "line_1"
+        ],
+        "manipulator_priority": {
+          "enabled": true
+        },
+        "operation_paths": [
+          "/lines/line_1/manipulator_priority"
+        ],
+        "operator_text": "set line 1 picking order to prioritize tooling other than scissors",
+        "request_type": "MANIPULATOR_PRIORITY_UPDATE",
+        "request_types": [
+          "MANIPULATOR_PRIORITY_UPDATE"
+        ],
+        "simulation_config_updates": {},
+        "target_lines": [
+          "line_1"
+        ],
+        "target_scope": "SINGLE_LINE"
+      },
+      {
+        "affected_lines": [
+          "line_1",
+          "line_2",
+          "line_3",
+          "line_4"
+        ],
+        "operation_paths": [],
+        "operator_text": "with two production lines remaining set simulated tooling count per production line to 5",
+        "request_type": "SIMULATION_CONFIG_UPDATE",
+        "request_types": [
+          "SIMULATION_CONFIG_UPDATE"
+        ],
+        "simulation_config_updates": {
+          "add_reference_number": 5,
+          "num_envs": 2
+        },
+        "target_lines": [],
+        "target_scope": "ALL_LINES"
+      }
+    ],
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [
+      "/lines/line_1/manipulator_priority"
+    ],
+    "affected_lines": [
+      "line_1"
+    ],
+    "intent_text": "set line 1 picking order to prioritize tooling other than scissors and with two production lines remaining set simulated tooling count per production line to 5",
+    "reason": "m12 seed"
+  },
+  "created_at_utc": "2026-06-25T06:38:04.619156Z",
+  "current_trt_path": "/app/data/trt/current_trt.json",
+  "operator_decision": {
+    "comment": "M12 manual comparison test TC1-INTENT_006",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-06-25T06:38:04.735190Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1782369481300",
+  "previous_trt_version": "v74",
+  "release_id": "rel_b89a37a1-61e4-4c6a-9946-32bd876ea4fb",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "trt_version": "v75",
+  "updated_at_utc": "2026-06-25T06:38:04.735190Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  },
+  "version_path": "/app/data/trt_versions/trt-demo_v75.json"
+}

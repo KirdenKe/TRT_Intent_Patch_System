@@ -1,0 +1,42 @@
+{
+  "audit_id": "audit-54250382-2c72-44fc-9f58-910abf1d37ab",
+  "intent_text": "set line 1 tooling picking target to scissors and set simulated tooling count per production line to 6 and run this as a two-production-line simulation (M12 full test target total simulated tooling: 12)",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "FCFS",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/tooling_policy/required_scope",
+      "value": "SELECTED_TOOLING"
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1783095977943",
+  "reason": "m12 seed",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-07-03T16:26:22.038134Z",
+  "trt_after_hash": "1c825c84352c8f528a5b6755daf488d75fca1d4503334c9d05e71c2bf04acf36",
+  "trt_after_version": "v105",
+  "trt_before_hash": "f8f60f8898e21f34e8aab419b03d8c233595b514048be111e34c044987e7f9b4",
+  "trt_before_version": "v104",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

@@ -109,6 +109,11 @@ def _command_args_from_host_request(host_request: dict[str, Any]) -> dict[str, A
         raw_args = _model_to_dict(raw_args)
     defaults = _model_to_dict(IsaacCommandArgs())
     args = {**defaults, **dict(raw_args)}
+    # args["allowed_overlap_ratio"] = 0.9
+    # args["chosen_intervention_mode"] = "continue-until-arrival"
+    # args["travel_time"] = 4.0
+    # args["fix_duration"] = 5.0
+    # args["resume_delay"] = 0.5
     if not args.get("seed_db_path") and os.environ.get("ISAAC_SEED_DB_PATH"):
         args["seed_db_path"] = os.environ["ISAAC_SEED_DB_PATH"]
     return args

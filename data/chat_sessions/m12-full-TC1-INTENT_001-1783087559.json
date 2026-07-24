@@ -1,0 +1,23 @@
+{
+  "conversation": [],
+  "latest_dialogue_decision": null,
+  "normalized_request": {
+    "intent_text": "set line 1 throughput/hr to at least 90 and set simulated tooling count per production line to 4 and run this as a two-production-line simulation (M12 full test target total simulated tooling: 8)",
+    "operator_id": null,
+    "reason": null
+  },
+  "pending_intent": {
+    "intent_text": "set line 1 throughput/hr to at least 90 and set simulated tooling count per production line to 4 and run this as a two-production-line simulation (M12 full test target total simulated tooling: 8)",
+    "missing_fields": [
+      "operator_id",
+      "reason"
+    ],
+    "operator_id": null,
+    "original_intent_text": "set line 1 throughput/hr to at least 90 and set simulated tooling count per production line to 4 and run this as a two-production-line simulation (M12 full test target total simulated tooling: 8)",
+    "pending_status": "WAITING_FOR_REQUIRED_FIELDS",
+    "reason": null
+  },
+  "session_id": "m12-full-TC1-INTENT_001-1783087559",
+  "state": "WAITING_FOR_REQUIRED_FIELDS",
+  "updated_at": "2026-07-03T14:06:03.138848Z"
+}

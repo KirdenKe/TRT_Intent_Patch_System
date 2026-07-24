@@ -1,0 +1,31 @@
+{
+  "audit_id": "audit-b8e65efd-056e-4e79-987f-ce34f860a620",
+  "intent_text": "set line 1 throughput/hr to at least 90",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/min_throughput_per_hour",
+      "value": 90
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1782361895333",
+  "reason": "m12 seed",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-06-25T04:32:12.407371Z",
+  "trt_after_hash": "7df868e18583bec9b9a7001765c22c675166824bdcc508749cc5b098d56aa787",
+  "trt_after_version": "v69",
+  "trt_before_hash": "f0a57256ec926c78da1a2be7d92a2eaaea6cd6acd295d5af1c9c7cb983b7e2cd",
+  "trt_before_version": "v68",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

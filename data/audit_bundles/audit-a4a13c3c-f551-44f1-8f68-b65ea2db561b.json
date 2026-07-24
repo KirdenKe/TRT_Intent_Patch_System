@@ -1,0 +1,46 @@
+{
+  "audit_id": "audit-a4a13c3c-f551-44f1-8f68-b65ea2db561b",
+  "intent_text": "set all production lines throughput/hr to at least 120 and set simulated tooling count per production line to 3 (M12 full test target total simulated tooling: 12)",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/min_throughput_per_hour",
+      "value": 120
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/kpi/min_throughput_per_hour",
+      "value": 120
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/kpi/min_throughput_per_hour",
+      "value": 120
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/kpi/min_throughput_per_hour",
+      "value": 120
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1783093696448",
+  "reason": "m12 seed",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-07-03T15:48:21.515715Z",
+  "trt_after_hash": "ffe38d692dfbe321443a50f3217952b2dea62776602972ded7cd7be75801cd3f",
+  "trt_after_version": "v100",
+  "trt_before_hash": "d47359537219b7e9a98423622ca027a82d258b1558bcb0efabd7c7690ec3be9a",
+  "trt_before_version": "v99",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}
