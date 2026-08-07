@@ -55,11 +55,13 @@ class ScenarioGenerationRequest:
     template_id: str | None = None
     release_id: str | None = None
     candidate_strategy_id: str | None = None
+    strategy_batch_id: str | None = None
     include_waiting_scenarios: bool = False
     line_bindings: list[dict[str, Any]] | None = None
     required_line_ids: list[str] | None = None
     simulation_scope: dict[str, Any] | str | None = None
     simulation_config_override: dict[str, Any] | None = None
+    line_policy_overrides: dict[str, dict[str, Any]] | None = None
 
 
 def now_utc() -> str:

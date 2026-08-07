@@ -1,0 +1,12 @@
+{
+  "fix_duration": 3.0,
+  "resume_delay": 1.0,
+  "run_id": "sim_93f8833a-a53e-4116-ab6d-aba99e6daf33",
+  "scenario_spec_id": "scn_95731763-9598-4762-80a5-a31b23fe0ef9",
+  "source": "DEPLOYED_SIMULATION_DEFAULTS",
+  "source_reference": "data/digital_twin/default_simulation_config.json",
+  "state_record_type": "TIME_ARRIVAL_MODEL",
+  "state_version": 1,
+  "travel_time": 1.0,
+  "updated_at_utc": "2026-06-29T23:55:30.301246Z"
+}

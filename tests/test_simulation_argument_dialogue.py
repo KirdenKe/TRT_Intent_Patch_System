@@ -216,7 +216,78 @@ def test_dry_run_time_arrival_updates_are_reviewed_and_compile_to_command_args()
     assert args["add_reference_number"] == 6
 
 
-def test_exact_time_arrival_request_repairs_incomplete_model_extraction():
+def test_relative_time_arrival_request_accepts_gemma_derived_values():
+    text = (
+        "with two production lines remaining, reduce the current arrival time by 0.5 seconds, "
+        "reduce the current entanglement fix time by 1 second, make the current recovery delay "
+        "1 second slower, and simulate 4 tooling per line"
+    )
+    data = candidate(text)
+    data.update(
+        {
+            "request_types": ["SIMULATION_CONFIG_UPDATE"],
+            "simulation_config_updates": {
+                "num_envs": 2,
+                "travel_time": 0.5,
+                "fix_duration": 2,
+                "resume_delay": 2,
+                "add_reference_number": 4,
+            },
+        }
+    )
+
+    patch = normalize_domain_candidate(
+        data,
+        current_trt(),
+        time_arrival_baseline={
+            "travel_time": 1.0,
+            "fix_duration": 3.0,
+            "resume_delay": 1.0,
+        },
+    )
+
+    assert patch["simulation_config_updates"] == {
+        "num_envs": 2,
+        "travel_time": 0.5,
+        "fix_duration": 2.0,
+        "resume_delay": 2.0,
+        "add_reference_number": 4,
+    }
+
+
+def test_relative_time_arrival_request_rejects_incorrect_gemma_derivation():
+    text = (
+        "with two production lines remaining, reduce the current arrival time by 0.5 seconds, "
+        "reduce the current entanglement fix time by 1 second, make the current recovery delay "
+        "1 second slower, and simulate 4 tooling per line"
+    )
+    data = candidate(text)
+    data.update(
+        {
+            "request_types": ["SIMULATION_CONFIG_UPDATE"],
+            "simulation_config_updates": {
+                "num_envs": 2,
+                "travel_time": 0,
+                "fix_duration": 2,
+                "resume_delay": 2,
+                "add_reference_number": 4,
+            },
+        }
+    )
+
+    with pytest.raises(ValueError, match="Gemma derived an inconsistent travel_time value"):
+        normalize_domain_candidate(
+            data,
+            current_trt(),
+            time_arrival_baseline={
+                "travel_time": 1.0,
+                "fix_duration": 3.0,
+                "resume_delay": 1.0,
+            },
+        )
+
+
+def test_exact_time_arrival_request_preserves_valid_model_derivation():
     text = (
         "okay, two production lines fucked up today. i want to confirm that with only two production lines "
         "remaining, my arrival time can be reduced by about 2.5 seconds, and the time to resolve entanglements "
@@ -233,15 +304,24 @@ def test_exact_time_arrival_request_repairs_incomplete_model_extraction():
             "request_types": ["SIMULATION_CONFIG_UPDATE"],
             "simulation_config_updates": {
                 "num_envs": 2,
+                "chosen_intervention_mode": "immediate-stop",
                 "travel_time": 2.5,
                 "fix_duration": 6.5,
-                "resume_delay": 0.0,
+                "resume_delay": 2.5,
                 "add_reference_number": 5,
             },
         }
     )
 
-    patch = normalize_domain_candidate(data, current_trt())
+    patch = normalize_domain_candidate(
+        data,
+        current_trt(),
+        time_arrival_baseline={
+            "travel_time": 5.0,
+            "fix_duration": 8.0,
+            "resume_delay": 0.5,
+        },
+    )
 
     assert patch["simulation_config_updates"] == {
         "num_envs": 2,
@@ -267,3 +347,82 @@ def test_exact_time_arrival_request_repairs_incomplete_model_extraction():
     assert args["fix_duration"] == 6.5
     assert args["resume_delay"] == 2.5
     assert args["add_reference_number"] == 5
+
+
+def test_explicit_simulation_values_reject_inconsistent_model_output():
+    text = (
+        "today there are two production lines. my arrival time is 4 seconds, the time required "
+        "to resolve the tangling issue is 5 seconds, and the recovery time is 0.5 seconds. "
+        "continue until i arrive at the production line. the allow overlap ratio is 0.9"
+    )
+    data = candidate(text)
+    data["simulation_config_updates"] = {
+        "num_envs": 2,
+        "travel_time": 3,
+        "fix_duration": 2,
+        "resume_delay": 1.5,
+    }
+
+    with pytest.raises(ValueError, match="inconsistent travel_time"):
+        normalize_domain_candidate(
+            data,
+            current_trt(),
+            time_arrival_baseline={
+                "travel_time": 1.0,
+                "fix_duration": 3.0,
+                "resume_delay": 1.0,
+            },
+        )
+
+
+def test_explicit_simulation_values_accept_complete_consistent_model_output():
+    text = (
+        "today there are two production lines. my arrival time is 4 seconds, the time required "
+        "to resolve the tangling issue is 5 seconds, and the recovery time is 0.5 seconds. "
+        "continue until i arrive at the production line. the allow overlap ratio is 0.9"
+    )
+    data = candidate(text)
+    data.update(
+        {
+            "request_types": ["SIMULATION_CONFIG_UPDATE"],
+            "simulation_config_updates": {
+                "num_envs": 2,
+                "travel_time": 4.0,
+                "fix_duration": 5.0,
+                "resume_delay": 0.5,
+                "chosen_intervention_mode": "continue-until-arrival",
+                "allowed_overlap_ratio": 0.9,
+            },
+        }
+    )
+
+    patch = normalize_domain_candidate(
+        data,
+        current_trt(),
+        time_arrival_baseline={
+            "travel_time": 1.0,
+            "fix_duration": 3.0,
+            "resume_delay": 1.0,
+        },
+    )
+
+    assert patch["simulation_config_updates"] == data["simulation_config_updates"]
+
+
+def test_intervention_mode_format_variant_is_canonicalized_without_regeneration():
+    text = "continue until i arrive at the production line"
+    data = candidate(text)
+    data.update(
+        {
+            "request_types": ["SIMULATION_CONFIG_UPDATE"],
+            "simulation_config_updates": {
+                "chosen_intervention_mode": "CONTINUE_UNTIL_ARRIVAL"
+            },
+        }
+    )
+
+    patch = normalize_domain_candidate(data, current_trt())
+
+    assert patch["simulation_config_updates"]["chosen_intervention_mode"] == (
+        "continue-until-arrival"
+    )

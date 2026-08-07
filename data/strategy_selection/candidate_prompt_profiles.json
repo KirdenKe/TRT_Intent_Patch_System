@@ -1,0 +1,39 @@
+{
+  "profile_version": "candidate-personas-v1.0",
+  "rigid_profile": {
+    "profile_id": "OPERATOR_FAITHFUL",
+    "candidate_name": "Operator-faithful baseline",
+    "candidate_rationale": "Applies the released TRT and operator-locked simulation settings without speculative changes.",
+    "prompt_instruction": "Reproduce the supplied operator_faithful_baseline exactly. Apply only the changes explicitly approved by the operator and introduce no optional policy changes."
+  },
+  "exploratory_profiles": [
+    {
+      "profile_id": "THROUGHPUT_ORIENTED",
+      "prompt_instruction": "Explore an allowed manipulator-priority alternative that may improve measured throughput while preserving every locked field and mandatory constraint."
+    },
+    {
+      "profile_id": "REQUIRED_TOOL_FLOW",
+      "prompt_instruction": "Explore an allowed priority policy that favors timely completion of required tooling without changing operator-selected targets or intervention settings."
+    },
+    {
+      "profile_id": "LINE_BALANCE",
+      "prompt_instruction": "Explore allowed line-specific priority differences that may reduce imbalance across affected lines without changing operator-locked behavior."
+    },
+    {
+      "profile_id": "MINIMAL_POLICY_VARIATION",
+      "prompt_instruction": "Explore the smallest behaviorally distinct allowed policy change beyond the rigid baseline."
+    },
+    {
+      "profile_id": "BOTTLENECK_AWARE",
+      "prompt_instruction": "Use aligned state records to explore an allowed priority alternative for a plausible bottleneck, without claiming feasibility before simulation."
+    },
+    {
+      "profile_id": "RECOVERY_FLOW",
+      "prompt_instruction": "Explore an allowed manipulator-priority alternative intended to support orderly post-anomaly task flow while preserving the locked intervention mode."
+    },
+    {
+      "profile_id": "CONTRASTING_VALID_POLICY",
+      "prompt_instruction": "Generate a final behaviorally distinct allowed priority policy that contrasts with earlier candidates and remains within all supplied constraints."
+    }
+  ]
+}

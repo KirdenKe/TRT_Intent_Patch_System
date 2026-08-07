@@ -1,0 +1,1263 @@
+{
+  "aligned_state_records": [
+    {
+      "active_set_id": "ENT_SURGICAL_TOOLING_SET",
+      "active_trt_id": "trt-demo",
+      "active_trt_version": "v81",
+      "checkpoint": "NONE",
+      "completed_tool_ids": [],
+      "current_instruments": [],
+      "current_task": null,
+      "deployment_source": "DIGITAL_TWIN_EVIDENCE_APPROVED_BY_OPERATOR",
+      "deployment_status": "DEPLOYED",
+      "entanglement": {
+        "detected": false,
+        "requires_operator": false,
+        "severity": null,
+        "tool_ids": []
+      },
+      "last_deployed_run_id": "sim_93f8833a-a53e-4116-ab6d-aba99e6daf33",
+      "last_deployed_scenario_spec_id": "scn_95731763-9598-4762-80a5-a31b23fe0ef9",
+      "last_deployment_id": "deploy_a5c38c42-6961-4d9a-863c-ab6287a3657a",
+      "last_exception": null,
+      "line_id": "line_1",
+      "locked_resources": [],
+      "mode": "RUNNING",
+      "pending_tool_ids": [],
+      "robot_id": "ur5_line_1",
+      "selected_tool_ids": [],
+      "wip_count": 0,
+      "workspace_id": "workspace_line_1"
+    },
+    {
+      "active_set_id": "ENT_SURGICAL_TOOLING_SET",
+      "active_trt_id": "trt-demo",
+      "active_trt_version": "v81",
+      "checkpoint": "NONE",
+      "completed_tool_ids": [],
+      "current_instruments": [],
+      "current_task": null,
+      "deployment_source": "DIGITAL_TWIN_EVIDENCE_APPROVED_BY_OPERATOR",
+      "deployment_status": "DEPLOYED",
+      "entanglement": {
+        "detected": false,
+        "requires_operator": false,
+        "severity": null,
+        "tool_ids": []
+      },
+      "last_deployed_run_id": "sim_93f8833a-a53e-4116-ab6d-aba99e6daf33",
+      "last_deployed_scenario_spec_id": "scn_95731763-9598-4762-80a5-a31b23fe0ef9",
+      "last_deployment_id": "deploy_a5c38c42-6961-4d9a-863c-ab6287a3657a",
+      "last_exception": null,
+      "line_id": "line_2",
+      "locked_resources": [],
+      "mode": "RUNNING",
+      "pending_tool_ids": [],
+      "robot_id": "ur5_line_2",
+      "selected_tool_ids": [],
+      "wip_count": 0,
+      "workspace_id": "workspace_line_2"
+    },
+    {
+      "active_set_id": "ENT_SURGICAL_TOOLING_SET",
+      "active_trt_id": "trt-demo",
+      "active_trt_version": "v81",
+      "checkpoint": "NONE",
+      "completed_tool_ids": [],
+      "current_instruments": [],
+      "current_task": null,
+      "deployment_source": "DIGITAL_TWIN_EVIDENCE_APPROVED_BY_OPERATOR",
+      "deployment_status": "DEPLOYED",
+      "entanglement": {
+        "detected": false,
+        "requires_operator": false,
+        "severity": null,
+        "tool_ids": []
+      },
+      "last_deployed_run_id": "sim_93f8833a-a53e-4116-ab6d-aba99e6daf33",
+      "last_deployed_scenario_spec_id": "scn_95731763-9598-4762-80a5-a31b23fe0ef9",
+      "last_deployment_id": "deploy_a5c38c42-6961-4d9a-863c-ab6287a3657a",
+      "last_exception": null,
+      "line_id": "line_3",
+      "locked_resources": [],
+      "mode": "RUNNING",
+      "pending_tool_ids": [],
+      "robot_id": "ur5_line_3",
+      "selected_tool_ids": [],
+      "wip_count": 0,
+      "workspace_id": "workspace_line_3"
+    },
+    {
+      "active_set_id": "ENT_SURGICAL_TOOLING_SET",
+      "active_trt_id": "trt-demo",
+      "active_trt_version": "v81",
+      "checkpoint": "NONE",
+      "completed_tool_ids": [],
+      "current_instruments": [],
+      "current_task": null,
+      "deployment_source": "DIGITAL_TWIN_EVIDENCE_APPROVED_BY_OPERATOR",
+      "deployment_status": "DEPLOYED",
+      "entanglement": {
+        "detected": false,
+        "requires_operator": false,
+        "severity": null,
+        "tool_ids": []
+      },
+      "last_deployed_run_id": "sim_93f8833a-a53e-4116-ab6d-aba99e6daf33",
+      "last_deployed_scenario_spec_id": "scn_95731763-9598-4762-80a5-a31b23fe0ef9",
+      "last_deployment_id": "deploy_a5c38c42-6961-4d9a-863c-ab6287a3657a",
+      "last_exception": null,
+      "line_id": "line_4",
+      "locked_resources": [],
+      "mode": "RUNNING",
+      "pending_tool_ids": [],
+      "robot_id": "ur5_line_4",
+      "selected_tool_ids": [],
+      "wip_count": 0,
+      "workspace_id": "workspace_line_4"
+    }
+  ],
+  "base_simulation_config": {
+    "add_reference_number": 5,
+    "allowed_overlap_ratio": 0.99,
+    "chosen_intervention_mode": "immediate-stop",
+    "episode_success_requires_reset_cycles": 1,
+    "fix_duration": 3.0,
+    "headless": false,
+    "layout_source": "auto",
+    "num_envs": 2,
+    "resume_delay": 1.0,
+    "reuse_verified_seed": true,
+    "travel_time": 1.0
+  },
+  "candidate_count": 2,
+  "candidate_runs": [
+    {
+      "artifact_created_at_utc": "2026-08-06T16:02:15.829893Z",
+      "candidate_strategy_id": "operator_faithful_baseline",
+      "candidate_worker_wall_seconds": 451.08391673601,
+      "completed_at_utc": "2026-08-06T16:02:15.844543Z",
+      "evidence_created_at_utc": "2026-08-06T16:02:15.844530Z",
+      "evidence_summary": {
+        "acknowledged_risks": [],
+        "data_quality_warnings": [],
+        "deployment_allowed": true,
+        "deployment_recommended": true,
+        "dry_run_only": false,
+        "failed_checks": [],
+        "failed_lines": [],
+        "failure_summary": null,
+        "inconclusive_lines": [],
+        "kpi_evaluation_scope": "FULL_ENVIRONMENT_SCOPE",
+        "kpi_table": [
+          {
+            "actual_kpis": {
+              "completed_count": 5,
+              "cycle_time_seconds": 194.5099956523627,
+              "downtime_seconds": 0.0,
+              "entanglement_count": 1,
+              "misplaced_count": 0,
+              "recorded_cycle_time_seconds": 194.5099956523627,
+              "recorded_throughput_per_hour": 92.54023136255906,
+              "throughput_per_hour": 92.54023136255906,
+              "throughput_reliable": true,
+              "unwanted_completed_count": 0,
+              "wanted_completed_count": 5
+            },
+            "batch_gating": {
+              "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+              "status": "PASS"
+            },
+            "completion_durations": {
+              "all_sorting_completion_seconds": 194.5099956523627,
+              "required_tray_completion_seconds": 194.5099956523627,
+              "unwanted_box_completion_seconds": null
+            },
+            "deployment_blocking": false,
+            "downtime_pass": true,
+            "downtime_seconds": 0.0,
+            "failed_check_ids": [],
+            "failed_checks": [],
+            "failure_reason": null,
+            "line_id": "line_1",
+            "max_downtime_seconds": null,
+            "operator_reason": "line_1 sorted all 5 tools shown in the simulation. The completed set contained 5 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+            "placement": {
+              "reason": "No misplaced tools or placement validation warnings were recorded.",
+              "status": "PASS"
+            },
+            "priority_deviation_count": 3,
+            "priority_pass": true,
+            "priority_policy": "UNWANTED_FIRST",
+            "priority_required_first": {
+              "reason": "UNWANTED_FIRST does not require ENT-required tools to be picked first.",
+              "status": "NOT_APPLICABLE"
+            },
+            "simulated_tools_completed": 5,
+            "status": "PASS",
+            "target_kpis": {
+              "deadline_minutes": null,
+              "max_downtime_seconds": null,
+              "min_throughput_per_hour": 85.0
+            },
+            "target_min_throughput_per_hour": 85.0,
+            "throughput_pass": true,
+            "throughput_per_hour": 92.54023136255906,
+            "unwanted_completed_count": 0,
+            "unwanted_completion_time_seconds": null,
+            "wanted_completed_count": 5,
+            "wanted_completion_time_seconds": 194.5099956523627,
+            "warning_check_ids": [],
+            "warnings": []
+          },
+          {
+            "actual_kpis": {
+              "completed_count": 5,
+              "cycle_time_seconds": 188.80999577976763,
+              "downtime_seconds": 0.0,
+              "entanglement_count": 1,
+              "misplaced_count": 0,
+              "recorded_cycle_time_seconds": 188.80999577976763,
+              "recorded_throughput_per_hour": 95.33393571490578,
+              "throughput_per_hour": 95.33393571490578,
+              "throughput_reliable": true,
+              "unwanted_completed_count": 1,
+              "wanted_completed_count": 4
+            },
+            "batch_gating": {
+              "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+              "status": "PASS"
+            },
+            "completion_durations": {
+              "all_sorting_completion_seconds": 188.80999577976763,
+              "required_tray_completion_seconds": 188.80999577976763,
+              "unwanted_box_completion_seconds": 117.8099973667413
+            },
+            "deployment_blocking": false,
+            "downtime_pass": true,
+            "downtime_seconds": 0.0,
+            "failed_check_ids": [],
+            "failed_checks": [],
+            "failure_reason": null,
+            "line_id": "line_2",
+            "max_downtime_seconds": null,
+            "operator_reason": "line_2 sorted all 5 tools shown in the simulation. The completed set contained 4 required ENT tools and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+            "placement": {
+              "reason": "No misplaced tools or placement validation warnings were recorded.",
+              "status": "PASS"
+            },
+            "priority_deviation_count": 0,
+            "priority_pass": true,
+            "priority_policy": "FCFS",
+            "priority_required_first": {
+              "reason": "FCFS does not require ENT-required tools to be picked first.",
+              "status": "NOT_APPLICABLE"
+            },
+            "simulated_tools_completed": 5,
+            "status": "PASS",
+            "target_kpis": {
+              "deadline_minutes": null,
+              "max_downtime_seconds": null,
+              "min_throughput_per_hour": 85.0
+            },
+            "target_min_throughput_per_hour": 85.0,
+            "throughput_pass": true,
+            "throughput_per_hour": 95.33393571490578,
+            "unwanted_completed_count": 1,
+            "unwanted_completion_time_seconds": 117.8099973667413,
+            "wanted_completed_count": 4,
+            "wanted_completion_time_seconds": 188.80999577976763,
+            "warning_check_ids": [],
+            "warnings": []
+          }
+        ],
+        "likely_root_cause": null,
+        "line_findings": [
+          {
+            "deployment_blocking": false,
+            "line_id": "line_1",
+            "operator_text": "line_1 sorted all 5 tools shown in the simulation. The completed set contained 5 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+            "severity": "INFO"
+          },
+          {
+            "deployment_blocking": false,
+            "line_id": "line_2",
+            "operator_text": "line_2 sorted all 5 tools shown in the simulation. The completed set contained 4 required ENT tools and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+            "severity": "INFO"
+          }
+        ],
+        "line_results": [
+          {
+            "actual_kpis": {
+              "completed_count": 5,
+              "cycle_time_seconds": 194.5099956523627,
+              "downtime_seconds": 0.0,
+              "entanglement_count": 1,
+              "misplaced_count": 0,
+              "recorded_cycle_time_seconds": 194.5099956523627,
+              "recorded_throughput_per_hour": 92.54023136255906,
+              "throughput_per_hour": 92.54023136255906,
+              "throughput_reliable": true,
+              "unwanted_completed_count": 0,
+              "wanted_completed_count": 5
+            },
+            "batch_gating": {
+              "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+              "status": "PASS"
+            },
+            "completion_durations": {
+              "all_sorting_completion_seconds": 194.5099956523627,
+              "required_tray_completion_seconds": 194.5099956523627,
+              "unwanted_box_completion_seconds": null
+            },
+            "deployment_blocking": false,
+            "downtime_pass": true,
+            "downtime_seconds": 0.0,
+            "failed_check_ids": [],
+            "failed_checks": [],
+            "failure_reason": null,
+            "line_id": "line_1",
+            "max_downtime_seconds": null,
+            "operator_reason": "line_1 sorted all 5 tools shown in the simulation. The completed set contained 5 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+            "placement": {
+              "reason": "No misplaced tools or placement validation warnings were recorded.",
+              "status": "PASS"
+            },
+            "priority_deviation_count": 3,
+            "priority_pass": true,
+            "priority_policy": "UNWANTED_FIRST",
+            "priority_required_first": {
+              "reason": "UNWANTED_FIRST does not require ENT-required tools to be picked first.",
+              "status": "NOT_APPLICABLE"
+            },
+            "simulated_tools_completed": 5,
+            "status": "PASS",
+            "target_kpis": {
+              "deadline_minutes": null,
+              "max_downtime_seconds": null,
+              "min_throughput_per_hour": 85.0
+            },
+            "target_min_throughput_per_hour": 85.0,
+            "throughput_pass": true,
+            "throughput_per_hour": 92.54023136255906,
+            "unwanted_completed_count": 0,
+            "unwanted_completion_time_seconds": null,
+            "wanted_completed_count": 5,
+            "wanted_completion_time_seconds": 194.5099956523627,
+            "warning_check_ids": [],
+            "warnings": []
+          },
+          {
+            "actual_kpis": {
+              "completed_count": 5,
+              "cycle_time_seconds": 188.80999577976763,
+              "downtime_seconds": 0.0,
+              "entanglement_count": 1,
+              "misplaced_count": 0,
+              "recorded_cycle_time_seconds": 188.80999577976763,
+              "recorded_throughput_per_hour": 95.33393571490578,
+              "throughput_per_hour": 95.33393571490578,
+              "throughput_reliable": true,
+              "unwanted_completed_count": 1,
+              "wanted_completed_count": 4
+            },
+            "batch_gating": {
+              "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+              "status": "PASS"
+            },
+            "completion_durations": {
+              "all_sorting_completion_seconds": 188.80999577976763,
+              "required_tray_completion_seconds": 188.80999577976763,
+              "unwanted_box_completion_seconds": 117.8099973667413
+            },
+            "deployment_blocking": false,
+            "downtime_pass": true,
+            "downtime_seconds": 0.0,
+            "failed_check_ids": [],
+            "failed_checks": [],
+            "failure_reason": null,
+            "line_id": "line_2",
+            "max_downtime_seconds": null,
+            "operator_reason": "line_2 sorted all 5 tools shown in the simulation. The completed set contained 4 required ENT tools and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+            "placement": {
+              "reason": "No misplaced tools or placement validation warnings were recorded.",
+              "status": "PASS"
+            },
+            "priority_deviation_count": 0,
+            "priority_pass": true,
+            "priority_policy": "FCFS",
+            "priority_required_first": {
+              "reason": "FCFS does not require ENT-required tools to be picked first.",
+              "status": "NOT_APPLICABLE"
+            },
+            "simulated_tools_completed": 5,
+            "status": "PASS",
+            "target_kpis": {
+              "deadline_minutes": null,
+              "max_downtime_seconds": null,
+              "min_throughput_per_hour": 85.0
+            },
+            "target_min_throughput_per_hour": 85.0,
+            "throughput_pass": true,
+            "throughput_per_hour": 95.33393571490578,
+            "unwanted_completed_count": 1,
+            "unwanted_completion_time_seconds": 117.8099973667413,
+            "wanted_completed_count": 4,
+            "wanted_completion_time_seconds": 188.80999577976763,
+            "warning_check_ids": [],
+            "warnings": []
+          }
+        ],
+        "next_action": "ASK_DEPLOY_APPROVAL",
+        "operator_detail_summary": "Simulation completed. KPI evidence supports deployment, but please review the measured results first.\n\nSimulation scope:\n- Simulated lines: line_1, line_2\n- Simulated tooling count per line: 5\n- Intervention mode: continue-until-arrival\n- Arrival time: 4 seconds\n- Entanglement fix time: 5 seconds\n- Recovery delay: 0.5 seconds\n\nKPI comparison:\nline_1:\n- Target minimum throughput: 85 tools/hour\n- Actual throughput: 92.5402 tools/hour\n- Completed: 5/5 simulated tools\n- Required tray: 5 tools, completed in 194.51 seconds\n- Unwanted box: 0 tools, completed in not applicable\n- All sorting completed in 194.51 seconds\n- Entanglements: 1\n- Downtime: 0 seconds\n- Result: PASS\n\nline_2:\n- Target minimum throughput: 85 tools/hour\n- Actual throughput: 95.3339 tools/hour\n- Completed: 5/5 simulated tools\n- Required tray: 4 tools, completed in 188.81 seconds\n- Unwanted box: 1 tools, completed in 117.81 seconds\n- All sorting completed in 188.81 seconds\n- Entanglements: 1\n- Downtime: 0 seconds\n- Result: PASS\n\nData quality:\n- No data-quality warnings were recorded.",
+        "operator_next_action": "DEPLOY, DO_NOT_DEPLOY, REQUEST_REVISION",
+        "operator_options": [
+          "DEPLOY",
+          "DO_NOT_DEPLOY",
+          "REQUEST_REVISION"
+        ],
+        "operator_summary": "Simulation completed and KPI evidence supports deployment. Passing lines: line_1, line_2.",
+        "overall_result": "PASS",
+        "passed_lines": [
+          "line_1",
+          "line_2"
+        ],
+        "requires_operator_acknowledgement": false,
+        "risk_summary": "Evidence supports deployment.",
+        "risk_tier": "INFO",
+        "simulation_config": {
+          "add_reference_number": 5,
+          "allowed_overlap_ratio": 0.0,
+          "chosen_intervention_mode": "continue-until-arrival",
+          "episode_success_requires_reset_cycles": 1,
+          "fix_duration": 5.0,
+          "full_environment_tooling_count": null,
+          "full_scene_required": false,
+          "headless": false,
+          "layout_source": "auto",
+          "line_binding_source": "line_registry",
+          "num_envs": 2,
+          "resume_delay": 0.5,
+          "reuse_verified_seed": true,
+          "simulated_tooling_count": 5,
+          "supported_line_type_values": [
+            "UR5_SORTING_CELL"
+          ],
+          "template_scope": "DATA_DRIVEN",
+          "travel_time": 4.0
+        },
+        "summary_message": "All deterministic KPI checks passed.",
+        "technical_findings": [],
+        "warning_checks": [],
+        "warnings": []
+      },
+      "measurements": {
+        "C_reset_completed": 0,
+        "C_reset_requested": 0,
+        "N_failed_tool_storage": 0,
+        "N_tool_storage_passed": 10,
+        "N_tool_storage_total": 10,
+        "R_reset": null,
+        "R_reset_is_mandatory_constraint": false,
+        "R_storage": 1.0,
+        "batch_gating_compliance_source": "EVIDENCE_SUMMARY",
+        "batch_gating_failed_lines": [],
+        "batch_gating_violation_count": 0,
+        "blocking_reasons": [],
+        "data_quality_status": "DATA_INCOMPLETE",
+        "deployment_allowed": true,
+        "diagnostic_warnings": [
+          "RESET_EVIDENCE_MISSING"
+        ],
+        "each_line_throughput_target_met": true,
+        "eligible": true,
+        "missing_metrics": [
+          "R_reset"
+        ],
+        "priority_compliance_failed_lines": [],
+        "priority_compliance_source": "EVIDENCE_SUMMARY",
+        "priority_deviation_count": 3,
+        "strategy_simulation_seconds": null,
+        "throughput_actual_by_line": {
+          "line_1": 92.54023136255906,
+          "line_2": 95.33393571490578
+        },
+        "throughput_attainment": 1.1051421592792048,
+        "throughput_attainment_by_line": {
+          "line_1": 1.0887086042654006,
+          "line_2": 1.1215757142930092
+        },
+        "throughput_below_target_lines": [],
+        "throughput_missing_lines": [],
+        "throughput_target_by_line": {
+          "line_1": 85.0,
+          "line_2": 85.0
+        }
+      },
+      "run_id": "sim_0a95d9a4-41f2-48d0-8fcb-9fa9a28d4916",
+      "scenario_created_at_utc": "2026-08-06T15:54:44.861294Z",
+      "scenario_spec_id": "scn_6beee41e-994b-42da-86be-1f3933d94883",
+      "scenario_spec_path": "outputs/scenario_specs/scn_6beee41e-994b-42da-86be-1f3933d94883.json",
+      "simulation_error_code": null,
+      "simulation_errors": [],
+      "simulation_status": "COMPLETED",
+      "started_at_utc": "2026-08-06T15:54:44.778579Z",
+      "status": "EVALUATED",
+      "timing": {
+        "automated_verification_seconds": 4.236599488649517e-05,
+        "end_to_end_seconds": null,
+        "environment_wait_seconds": 0.03174,
+        "isaac_command_started_at_utc": "2026-08-06T15:54:44.926029Z",
+        "isaac_startup_reference_at_utc": "2026-08-06T15:56:37.059450Z",
+        "isaac_startup_reference_pattern": "NON_ROOT_ARTICULATION_TRANSFORM",
+        "isaac_startup_reference_source": "SYSTEM_LOG_CAPTURE",
+        "kpi_calculation_seconds": 0.01456871499249246,
+        "llm_generation_seconds": 17.729933,
+        "manual_review_seconds": null,
+        "reset_seconds": null,
+        "simulation_startup_and_execution_seconds": 450.96912867799983,
+        "simulation_startup_seconds": 112.13999999999942,
+        "specification_parsing_seconds": 0.06727907901222352,
+        "strategy_simulation_seconds": null,
+        "timing_scope_status": "ISAAC_STARTUP_EXCLUDED_USING_SYSTEM_LOG_CAPTURE",
+        "verification_excluding_startup_seconds": 338.8291286780004
+      }
+    },
+    {
+      "artifact_created_at_utc": "2026-08-06T16:08:00.137344Z",
+      "candidate_strategy_id": "throughput_optimized_line_2_fcfs",
+      "candidate_worker_wall_seconds": 344.2895071429957,
+      "completed_at_utc": "2026-08-06T16:08:00.137395Z",
+      "measurements": {
+        "blocking_reasons": [
+          "SIMULATION_NOT_COMPLETED"
+        ],
+        "data_quality_status": "DATA_INCOMPLETE",
+        "eligible": false
+      },
+      "run_id": "sim_157d44c6-217b-4e3e-93a8-9ff30aa61f50",
+      "scenario_created_at_utc": "2026-08-06T16:02:15.921019Z",
+      "scenario_spec_id": "scn_5a0bf527-9548-4e73-839d-6e022bb6b760",
+      "scenario_spec_path": "outputs/scenario_specs/scn_5a0bf527-9548-4e73-839d-6e022bb6b760.json",
+      "simulation_error_code": null,
+      "simulation_errors": [],
+      "simulation_status": "FAILED",
+      "started_at_utc": "2026-08-06T16:02:15.859565Z",
+      "status": "FAILED",
+      "timing": {
+        "automated_verification_seconds": null,
+        "end_to_end_seconds": null,
+        "environment_wait_seconds": 451.112726,
+        "isaac_command_started_at_utc": "2026-08-06T16:02:15.965732Z",
+        "isaac_startup_reference_at_utc": "2026-08-06T16:07:59.470960Z",
+        "isaac_startup_reference_pattern": "GPU_MEMORY_BUDGET_FACTORY_WARNING",
+        "isaac_startup_reference_source": "SYSTEM_LOG_CAPTURE",
+        "kpi_calculation_seconds": null,
+        "llm_generation_seconds": 17.729933,
+        "manual_review_seconds": null,
+        "reset_seconds": null,
+        "simulation_startup_and_execution_seconds": 344.21262345400464,
+        "simulation_startup_seconds": 343.5,
+        "specification_parsing_seconds": 0.04713139100931585,
+        "strategy_simulation_seconds": null,
+        "timing_scope_status": "ISAAC_STARTUP_EXCLUDED_USING_SYSTEM_LOG_CAPTURE",
+        "verification_excluding_startup_seconds": 0.7126234540046426
+      }
+    }
+  ],
+  "candidates": [
+    {
+      "candidate_strategy_id": "operator_faithful_baseline",
+      "line_policy_overrides": {},
+      "name": "Operator-faithful baseline",
+      "rationale": "Applies the released TRT and operator-locked simulation settings without speculative changes.",
+      "simulation_config_overrides": {}
+    },
+    {
+      "candidate_strategy_id": "throughput_optimized_line_2_fcfs",
+      "line_policy_overrides": {
+        "line_2": {
+          "abnormal_strategy": "CONTINUE_FEASIBLE_TASKS",
+          "manipulator_priority": {
+            "enabled": true,
+            "ordered_normalized_types": [],
+            "ordered_tool_ids": [],
+            "policy": "REQUIRED_FIRST",
+            "tie_breaker": "FCFS"
+          }
+        }
+      },
+      "name": "Throughput-oriented line 2",
+      "rationale": "Adjusts line 2 priority to REQUIRED_FIRST to optimize throughput while respecting line 1 locks.",
+      "simulation_config_overrides": {
+        "chosen_intervention_mode": "continue-until-arrival"
+      }
+    }
+  ],
+  "completed_at_utc": "2026-08-06T16:08:00.157979Z",
+  "created_at_utc": "2026-08-06T15:54:26.977903Z",
+  "execution_request": {
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "headless": false,
+    "include_waiting_scenarios": false,
+    "line_decisions": [
+      {
+        "decision": "NO_CHANGE",
+        "degraded_strategy": null,
+        "line_id": "line_1",
+        "next_action": "No supervisor action required.",
+        "reason": "Target TRT does not change this line.",
+        "required_checkpoint": null,
+        "risk_flags": []
+      },
+      {
+        "decision": "NO_CHANGE",
+        "degraded_strategy": null,
+        "line_id": "line_2",
+        "next_action": "No supervisor action required.",
+        "reason": "Target TRT does not change this line.",
+        "required_checkpoint": null,
+        "risk_flags": []
+      },
+      {
+        "decision": "NO_CHANGE",
+        "degraded_strategy": null,
+        "line_id": "line_3",
+        "next_action": "No supervisor action required.",
+        "reason": "Target TRT does not change this line.",
+        "required_checkpoint": null,
+        "risk_flags": []
+      },
+      {
+        "decision": "NO_CHANGE",
+        "degraded_strategy": null,
+        "line_id": "line_4",
+        "next_action": "No supervisor action required.",
+        "reason": "Target TRT does not change this line.",
+        "required_checkpoint": null,
+        "risk_flags": []
+      }
+    ],
+    "reconciliation_plan_id": "rec_a617b097-ba79-475c-8e4b-c08f10a00d43",
+    "release_id": "rel_116377a4-2bc2-4852-8b69-3cc467b8610e",
+    "scenario_template_id": null,
+    "simulation_scope": null,
+    "timeout_seconds": null,
+    "trt_id": "trt-demo",
+    "trt_version": "v177"
+  },
+  "generation_provenance": {
+    "attempt_count": 3,
+    "attempts": [
+      {
+        "attempt": 1,
+        "completed_at_utc": "2026-08-06T15:54:34.414786Z",
+        "started_at_utc": "2026-08-06T15:54:26.977925Z",
+        "status": "INVALID_OUTPUT",
+        "validation_error": "Accepted 0 of 2 exploratory candidates: The model modified the immutable operator-faithful baseline.; Candidate throughput_optimized_fcfs changes operator-locked line_1.manipulator_priority.; Candidate tool_flow_required_first changes operator-locked line_1.manipulator_priority."
+      },
+      {
+        "attempt": 2,
+        "completed_at_utc": "2026-08-06T15:54:39.666764Z",
+        "started_at_utc": "2026-08-06T15:54:34.414834Z",
+        "status": "INVALID_OUTPUT",
+        "validation_error": "Accepted 1 of 2 exploratory candidates: Candidate strategies must be behaviorally distinct."
+      },
+      {
+        "attempt": 3,
+        "completed_at_utc": "2026-08-06T15:54:44.707819Z",
+        "started_at_utc": "2026-08-06T15:54:39.666783Z",
+        "status": "INVALID_OUTPUT",
+        "validation_error": "Accepted 1 of 2 exploratory candidates: Candidate strategies must be behaviorally distinct.; Candidate strategies must be behaviorally distinct."
+      }
+    ],
+    "baseline_candidate_id": "operator_faithful_baseline",
+    "baseline_candidate_source": "DETERMINISTIC_OPERATOR_FAITHFUL",
+    "candidate_prompt_profiles": {
+      "exploratory_profiles": [
+        {
+          "profile_id": "THROUGHPUT_ORIENTED",
+          "prompt_instruction": "Explore an allowed manipulator-priority alternative that may improve measured throughput while preserving every locked field and mandatory constraint."
+        },
+        {
+          "profile_id": "REQUIRED_TOOL_FLOW",
+          "prompt_instruction": "Explore an allowed priority policy that favors timely completion of required tooling without changing operator-selected targets or intervention settings."
+        }
+      ],
+      "profile_version": "candidate-personas-v1.0",
+      "rigid_profile": {
+        "candidate_name": "Operator-faithful baseline",
+        "candidate_rationale": "Applies the released TRT and operator-locked simulation settings without speculative changes.",
+        "profile_id": "OPERATOR_FAITHFUL",
+        "prompt_instruction": "Reproduce the supplied operator_faithful_baseline exactly. Apply only the changes explicitly approved by the operator and introduce no optional policy changes."
+      }
+    },
+    "completed_at_utc": "2026-08-06T15:54:44.707836Z",
+    "endpoint": "http://192.168.50.168:29987/v1/chat/completions",
+    "exploratory_candidates_accepted": 1,
+    "exploratory_candidates_requested": 2,
+    "exploratory_generation_status": "PARTIAL",
+    "generated_by": "trt_core.strategy_selection.generate_candidate_batch",
+    "model": "cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit",
+    "model_confirmed_baseline": true,
+    "prompt_version": "candidate-strategy-v1.4",
+    "sampling_parameters_sent": [],
+    "server_sampling_configuration": "SERVER_PRESET_NOT_OVERRIDDEN",
+    "started_at_utc": "2026-08-06T15:54:26.977903Z",
+    "usage": {
+      "completion_tokens": 475,
+      "prompt_tokens": 2687,
+      "prompt_tokens_details": null,
+      "total_tokens": 3162
+    }
+  },
+  "locked_line_policy_fields": {
+    "line_1": {
+      "manipulator_priority": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "UNWANTED_FIRST",
+        "tie_breaker": "FCFS"
+      }
+    }
+  },
+  "locked_simulation_config": {
+    "allowed_overlap_ratio": 0,
+    "chosen_intervention_mode": "continue-until-arrival",
+    "episode_success_requires_reset_cycles": null,
+    "fix_duration": 5,
+    "num_envs": 2,
+    "resume_delay": 0.5,
+    "travel_time": 4
+  },
+  "queued_at_utc": "2026-08-06T15:54:44.746839Z",
+  "reconciliation_plan_id": "rec_a617b097-ba79-475c-8e4b-c08f10a00d43",
+  "requested_candidate_count": 3,
+  "selection": {
+    "all_candidates_conclusively_evaluated": false,
+    "failure_classification": null,
+    "objective": {
+      "description": "Reject candidates that fail mandatory physical placement, ordering, throughput, or evidence constraints; report reset completion as a non-blocking diagnostic and rank eligible candidates only by measured throughput attainment.",
+      "hard_constraints": [
+        "RUN_ARTIFACT_COMPLETED",
+        "EVIDENCE_ALLOWS_DEPLOYMENT",
+        "PLACEMENT_VERIFICATION_PASSED",
+        "PRIORITY_COMPLIANCE_PASSED",
+        "BATCH_GATING_COMPLIANCE_PASSED",
+        "THROUGHPUT_EVIDENCE_PRESENT",
+        "EACH_LINE_THROUGHPUT_TARGET_MET"
+      ],
+      "objective_id": "constraint_gated_throughput_v3",
+      "tie_breakers": [
+        "LOWER_STRATEGY_SIMULATION_SECONDS",
+        "LEXICOGRAPHIC_CANDIDATE_STRATEGY_ID"
+      ],
+      "weights": {
+        "throughput_attainment": 1.0
+      }
+    },
+    "objective_score": 1.1051421592792048,
+    "operator_refinement_required": false,
+    "post_simulation_regeneration_performed": false,
+    "ranked_candidates": [
+      {
+        "artifact_created_at_utc": "2026-08-06T16:02:15.829893Z",
+        "candidate_strategy_id": "operator_faithful_baseline",
+        "candidate_worker_wall_seconds": 451.08391673601,
+        "completed_at_utc": "2026-08-06T16:02:15.844543Z",
+        "evidence_created_at_utc": "2026-08-06T16:02:15.844530Z",
+        "evidence_summary": {
+          "acknowledged_risks": [],
+          "data_quality_warnings": [],
+          "deployment_allowed": true,
+          "deployment_recommended": true,
+          "dry_run_only": false,
+          "failed_checks": [],
+          "failed_lines": [],
+          "failure_summary": null,
+          "inconclusive_lines": [],
+          "kpi_evaluation_scope": "FULL_ENVIRONMENT_SCOPE",
+          "kpi_table": [
+            {
+              "actual_kpis": {
+                "completed_count": 5,
+                "cycle_time_seconds": 194.5099956523627,
+                "downtime_seconds": 0.0,
+                "entanglement_count": 1,
+                "misplaced_count": 0,
+                "recorded_cycle_time_seconds": 194.5099956523627,
+                "recorded_throughput_per_hour": 92.54023136255906,
+                "throughput_per_hour": 92.54023136255906,
+                "throughput_reliable": true,
+                "unwanted_completed_count": 0,
+                "wanted_completed_count": 5
+              },
+              "batch_gating": {
+                "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+                "status": "PASS"
+              },
+              "completion_durations": {
+                "all_sorting_completion_seconds": 194.5099956523627,
+                "required_tray_completion_seconds": 194.5099956523627,
+                "unwanted_box_completion_seconds": null
+              },
+              "deployment_blocking": false,
+              "downtime_pass": true,
+              "downtime_seconds": 0.0,
+              "failed_check_ids": [],
+              "failed_checks": [],
+              "failure_reason": null,
+              "line_id": "line_1",
+              "max_downtime_seconds": null,
+              "operator_reason": "line_1 sorted all 5 tools shown in the simulation. The completed set contained 5 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+              "placement": {
+                "reason": "No misplaced tools or placement validation warnings were recorded.",
+                "status": "PASS"
+              },
+              "priority_deviation_count": 3,
+              "priority_pass": true,
+              "priority_policy": "UNWANTED_FIRST",
+              "priority_required_first": {
+                "reason": "UNWANTED_FIRST does not require ENT-required tools to be picked first.",
+                "status": "NOT_APPLICABLE"
+              },
+              "simulated_tools_completed": 5,
+              "status": "PASS",
+              "target_kpis": {
+                "deadline_minutes": null,
+                "max_downtime_seconds": null,
+                "min_throughput_per_hour": 85.0
+              },
+              "target_min_throughput_per_hour": 85.0,
+              "throughput_pass": true,
+              "throughput_per_hour": 92.54023136255906,
+              "unwanted_completed_count": 0,
+              "unwanted_completion_time_seconds": null,
+              "wanted_completed_count": 5,
+              "wanted_completion_time_seconds": 194.5099956523627,
+              "warning_check_ids": [],
+              "warnings": []
+            },
+            {
+              "actual_kpis": {
+                "completed_count": 5,
+                "cycle_time_seconds": 188.80999577976763,
+                "downtime_seconds": 0.0,
+                "entanglement_count": 1,
+                "misplaced_count": 0,
+                "recorded_cycle_time_seconds": 188.80999577976763,
+                "recorded_throughput_per_hour": 95.33393571490578,
+                "throughput_per_hour": 95.33393571490578,
+                "throughput_reliable": true,
+                "unwanted_completed_count": 1,
+                "wanted_completed_count": 4
+              },
+              "batch_gating": {
+                "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+                "status": "PASS"
+              },
+              "completion_durations": {
+                "all_sorting_completion_seconds": 188.80999577976763,
+                "required_tray_completion_seconds": 188.80999577976763,
+                "unwanted_box_completion_seconds": 117.8099973667413
+              },
+              "deployment_blocking": false,
+              "downtime_pass": true,
+              "downtime_seconds": 0.0,
+              "failed_check_ids": [],
+              "failed_checks": [],
+              "failure_reason": null,
+              "line_id": "line_2",
+              "max_downtime_seconds": null,
+              "operator_reason": "line_2 sorted all 5 tools shown in the simulation. The completed set contained 4 required ENT tools and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+              "placement": {
+                "reason": "No misplaced tools or placement validation warnings were recorded.",
+                "status": "PASS"
+              },
+              "priority_deviation_count": 0,
+              "priority_pass": true,
+              "priority_policy": "FCFS",
+              "priority_required_first": {
+                "reason": "FCFS does not require ENT-required tools to be picked first.",
+                "status": "NOT_APPLICABLE"
+              },
+              "simulated_tools_completed": 5,
+              "status": "PASS",
+              "target_kpis": {
+                "deadline_minutes": null,
+                "max_downtime_seconds": null,
+                "min_throughput_per_hour": 85.0
+              },
+              "target_min_throughput_per_hour": 85.0,
+              "throughput_pass": true,
+              "throughput_per_hour": 95.33393571490578,
+              "unwanted_completed_count": 1,
+              "unwanted_completion_time_seconds": 117.8099973667413,
+              "wanted_completed_count": 4,
+              "wanted_completion_time_seconds": 188.80999577976763,
+              "warning_check_ids": [],
+              "warnings": []
+            }
+          ],
+          "likely_root_cause": null,
+          "line_findings": [
+            {
+              "deployment_blocking": false,
+              "line_id": "line_1",
+              "operator_text": "line_1 sorted all 5 tools shown in the simulation. The completed set contained 5 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+              "severity": "INFO"
+            },
+            {
+              "deployment_blocking": false,
+              "line_id": "line_2",
+              "operator_text": "line_2 sorted all 5 tools shown in the simulation. The completed set contained 4 required ENT tools and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+              "severity": "INFO"
+            }
+          ],
+          "line_results": [
+            {
+              "actual_kpis": {
+                "completed_count": 5,
+                "cycle_time_seconds": 194.5099956523627,
+                "downtime_seconds": 0.0,
+                "entanglement_count": 1,
+                "misplaced_count": 0,
+                "recorded_cycle_time_seconds": 194.5099956523627,
+                "recorded_throughput_per_hour": 92.54023136255906,
+                "throughput_per_hour": 92.54023136255906,
+                "throughput_reliable": true,
+                "unwanted_completed_count": 0,
+                "wanted_completed_count": 5
+              },
+              "batch_gating": {
+                "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+                "status": "PASS"
+              },
+              "completion_durations": {
+                "all_sorting_completion_seconds": 194.5099956523627,
+                "required_tray_completion_seconds": 194.5099956523627,
+                "unwanted_box_completion_seconds": null
+              },
+              "deployment_blocking": false,
+              "downtime_pass": true,
+              "downtime_seconds": 0.0,
+              "failed_check_ids": [],
+              "failed_checks": [],
+              "failure_reason": null,
+              "line_id": "line_1",
+              "max_downtime_seconds": null,
+              "operator_reason": "line_1 sorted all 5 tools shown in the simulation. The completed set contained 5 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+              "placement": {
+                "reason": "No misplaced tools or placement validation warnings were recorded.",
+                "status": "PASS"
+              },
+              "priority_deviation_count": 3,
+              "priority_pass": true,
+              "priority_policy": "UNWANTED_FIRST",
+              "priority_required_first": {
+                "reason": "UNWANTED_FIRST does not require ENT-required tools to be picked first.",
+                "status": "NOT_APPLICABLE"
+              },
+              "simulated_tools_completed": 5,
+              "status": "PASS",
+              "target_kpis": {
+                "deadline_minutes": null,
+                "max_downtime_seconds": null,
+                "min_throughput_per_hour": 85.0
+              },
+              "target_min_throughput_per_hour": 85.0,
+              "throughput_pass": true,
+              "throughput_per_hour": 92.54023136255906,
+              "unwanted_completed_count": 0,
+              "unwanted_completion_time_seconds": null,
+              "wanted_completed_count": 5,
+              "wanted_completion_time_seconds": 194.5099956523627,
+              "warning_check_ids": [],
+              "warnings": []
+            },
+            {
+              "actual_kpis": {
+                "completed_count": 5,
+                "cycle_time_seconds": 188.80999577976763,
+                "downtime_seconds": 0.0,
+                "entanglement_count": 1,
+                "misplaced_count": 0,
+                "recorded_cycle_time_seconds": 188.80999577976763,
+                "recorded_throughput_per_hour": 95.33393571490578,
+                "throughput_per_hour": 95.33393571490578,
+                "throughput_reliable": true,
+                "unwanted_completed_count": 1,
+                "wanted_completed_count": 4
+              },
+              "batch_gating": {
+                "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+                "status": "PASS"
+              },
+              "completion_durations": {
+                "all_sorting_completion_seconds": 188.80999577976763,
+                "required_tray_completion_seconds": 188.80999577976763,
+                "unwanted_box_completion_seconds": 117.8099973667413
+              },
+              "deployment_blocking": false,
+              "downtime_pass": true,
+              "downtime_seconds": 0.0,
+              "failed_check_ids": [],
+              "failed_checks": [],
+              "failure_reason": null,
+              "line_id": "line_2",
+              "max_downtime_seconds": null,
+              "operator_reason": "line_2 sorted all 5 tools shown in the simulation. The completed set contained 4 required ENT tools and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded.",
+              "placement": {
+                "reason": "No misplaced tools or placement validation warnings were recorded.",
+                "status": "PASS"
+              },
+              "priority_deviation_count": 0,
+              "priority_pass": true,
+              "priority_policy": "FCFS",
+              "priority_required_first": {
+                "reason": "FCFS does not require ENT-required tools to be picked first.",
+                "status": "NOT_APPLICABLE"
+              },
+              "simulated_tools_completed": 5,
+              "status": "PASS",
+              "target_kpis": {
+                "deadline_minutes": null,
+                "max_downtime_seconds": null,
+                "min_throughput_per_hour": 85.0
+              },
+              "target_min_throughput_per_hour": 85.0,
+              "throughput_pass": true,
+              "throughput_per_hour": 95.33393571490578,
+              "unwanted_completed_count": 1,
+              "unwanted_completion_time_seconds": 117.8099973667413,
+              "wanted_completed_count": 4,
+              "wanted_completion_time_seconds": 188.80999577976763,
+              "warning_check_ids": [],
+              "warnings": []
+            }
+          ],
+          "next_action": "ASK_DEPLOY_APPROVAL",
+          "operator_detail_summary": "Simulation completed. KPI evidence supports deployment, but please review the measured results first.\n\nSimulation scope:\n- Simulated lines: line_1, line_2\n- Simulated tooling count per line: 5\n- Intervention mode: continue-until-arrival\n- Arrival time: 4 seconds\n- Entanglement fix time: 5 seconds\n- Recovery delay: 0.5 seconds\n\nKPI comparison:\nline_1:\n- Target minimum throughput: 85 tools/hour\n- Actual throughput: 92.5402 tools/hour\n- Completed: 5/5 simulated tools\n- Required tray: 5 tools, completed in 194.51 seconds\n- Unwanted box: 0 tools, completed in not applicable\n- All sorting completed in 194.51 seconds\n- Entanglements: 1\n- Downtime: 0 seconds\n- Result: PASS\n\nline_2:\n- Target minimum throughput: 85 tools/hour\n- Actual throughput: 95.3339 tools/hour\n- Completed: 5/5 simulated tools\n- Required tray: 4 tools, completed in 188.81 seconds\n- Unwanted box: 1 tools, completed in 117.81 seconds\n- All sorting completed in 188.81 seconds\n- Entanglements: 1\n- Downtime: 0 seconds\n- Result: PASS\n\nData quality:\n- No data-quality warnings were recorded.",
+          "operator_next_action": "DEPLOY, DO_NOT_DEPLOY, REQUEST_REVISION",
+          "operator_options": [
+            "DEPLOY",
+            "DO_NOT_DEPLOY",
+            "REQUEST_REVISION"
+          ],
+          "operator_summary": "Simulation completed and KPI evidence supports deployment. Passing lines: line_1, line_2.",
+          "overall_result": "PASS",
+          "passed_lines": [
+            "line_1",
+            "line_2"
+          ],
+          "requires_operator_acknowledgement": false,
+          "risk_summary": "Evidence supports deployment.",
+          "risk_tier": "INFO",
+          "simulation_config": {
+            "add_reference_number": 5,
+            "allowed_overlap_ratio": 0.0,
+            "chosen_intervention_mode": "continue-until-arrival",
+            "episode_success_requires_reset_cycles": 1,
+            "fix_duration": 5.0,
+            "full_environment_tooling_count": null,
+            "full_scene_required": false,
+            "headless": false,
+            "layout_source": "auto",
+            "line_binding_source": "line_registry",
+            "num_envs": 2,
+            "resume_delay": 0.5,
+            "reuse_verified_seed": true,
+            "simulated_tooling_count": 5,
+            "supported_line_type_values": [
+              "UR5_SORTING_CELL"
+            ],
+            "template_scope": "DATA_DRIVEN",
+            "travel_time": 4.0
+          },
+          "summary_message": "All deterministic KPI checks passed.",
+          "technical_findings": [],
+          "warning_checks": [],
+          "warnings": []
+        },
+        "measurements": {
+          "C_reset_completed": 0,
+          "C_reset_requested": 0,
+          "N_failed_tool_storage": 0,
+          "N_tool_storage_passed": 10,
+          "N_tool_storage_total": 10,
+          "R_reset": null,
+          "R_reset_is_mandatory_constraint": false,
+          "R_storage": 1.0,
+          "batch_gating_compliance_source": "EVIDENCE_SUMMARY",
+          "batch_gating_failed_lines": [],
+          "batch_gating_violation_count": 0,
+          "blocking_reasons": [],
+          "data_quality_status": "DATA_INCOMPLETE",
+          "deployment_allowed": true,
+          "diagnostic_warnings": [
+            "RESET_EVIDENCE_MISSING"
+          ],
+          "each_line_throughput_target_met": true,
+          "eligible": true,
+          "missing_metrics": [
+            "R_reset"
+          ],
+          "priority_compliance_failed_lines": [],
+          "priority_compliance_source": "EVIDENCE_SUMMARY",
+          "priority_deviation_count": 3,
+          "strategy_simulation_seconds": null,
+          "throughput_actual_by_line": {
+            "line_1": 92.54023136255906,
+            "line_2": 95.33393571490578
+          },
+          "throughput_attainment": 1.1051421592792048,
+          "throughput_attainment_by_line": {
+            "line_1": 1.0887086042654006,
+            "line_2": 1.1215757142930092
+          },
+          "throughput_below_target_lines": [],
+          "throughput_missing_lines": [],
+          "throughput_target_by_line": {
+            "line_1": 85.0,
+            "line_2": 85.0
+          }
+        },
+        "objective_score": 1.1051421592792048,
+        "rank": 1,
+        "run_id": "sim_0a95d9a4-41f2-48d0-8fcb-9fa9a28d4916",
+        "scenario_created_at_utc": "2026-08-06T15:54:44.861294Z",
+        "scenario_spec_id": "scn_6beee41e-994b-42da-86be-1f3933d94883",
+        "scenario_spec_path": "outputs/scenario_specs/scn_6beee41e-994b-42da-86be-1f3933d94883.json",
+        "selection_components": {
+          "throughput_attainment": 1.1051421592792048
+        },
+        "simulation_error_code": null,
+        "simulation_errors": [],
+        "simulation_status": "COMPLETED",
+        "started_at_utc": "2026-08-06T15:54:44.778579Z",
+        "status": "EVALUATED",
+        "timing": {
+          "automated_verification_seconds": 4.236599488649517e-05,
+          "end_to_end_seconds": null,
+          "environment_wait_seconds": 0.03174,
+          "isaac_command_started_at_utc": "2026-08-06T15:54:44.926029Z",
+          "isaac_startup_reference_at_utc": "2026-08-06T15:56:37.059450Z",
+          "isaac_startup_reference_pattern": "NON_ROOT_ARTICULATION_TRANSFORM",
+          "isaac_startup_reference_source": "SYSTEM_LOG_CAPTURE",
+          "kpi_calculation_seconds": 0.01456871499249246,
+          "llm_generation_seconds": 17.729933,
+          "manual_review_seconds": null,
+          "reset_seconds": null,
+          "simulation_startup_and_execution_seconds": 450.96912867799983,
+          "simulation_startup_seconds": 112.13999999999942,
+          "specification_parsing_seconds": 0.06727907901222352,
+          "strategy_simulation_seconds": null,
+          "timing_scope_status": "ISAAC_STARTUP_EXCLUDED_USING_SYSTEM_LOG_CAPTURE",
+          "verification_excluding_startup_seconds": 338.8291286780004
+        }
+      },
+      {
+        "artifact_created_at_utc": "2026-08-06T16:08:00.137344Z",
+        "candidate_strategy_id": "throughput_optimized_line_2_fcfs",
+        "candidate_worker_wall_seconds": 344.2895071429957,
+        "completed_at_utc": "2026-08-06T16:08:00.137395Z",
+        "measurements": {
+          "blocking_reasons": [
+            "SIMULATION_NOT_COMPLETED"
+          ],
+          "data_quality_status": "DATA_INCOMPLETE",
+          "eligible": false
+        },
+        "objective_score": null,
+        "rank": null,
+        "run_id": "sim_157d44c6-217b-4e3e-93a8-9ff30aa61f50",
+        "scenario_created_at_utc": "2026-08-06T16:02:15.921019Z",
+        "scenario_spec_id": "scn_5a0bf527-9548-4e73-839d-6e022bb6b760",
+        "scenario_spec_path": "outputs/scenario_specs/scn_5a0bf527-9548-4e73-839d-6e022bb6b760.json",
+        "selection_components": {
+          "throughput_attainment": null
+        },
+        "simulation_error_code": null,
+        "simulation_errors": [],
+        "simulation_status": "FAILED",
+        "started_at_utc": "2026-08-06T16:02:15.859565Z",
+        "status": "FAILED",
+        "timing": {
+          "automated_verification_seconds": null,
+          "end_to_end_seconds": null,
+          "environment_wait_seconds": 451.112726,
+          "isaac_command_started_at_utc": "2026-08-06T16:02:15.965732Z",
+          "isaac_startup_reference_at_utc": "2026-08-06T16:07:59.470960Z",
+          "isaac_startup_reference_pattern": "GPU_MEMORY_BUDGET_FACTORY_WARNING",
+          "isaac_startup_reference_source": "SYSTEM_LOG_CAPTURE",
+          "kpi_calculation_seconds": null,
+          "llm_generation_seconds": 17.729933,
+          "manual_review_seconds": null,
+          "reset_seconds": null,
+          "simulation_startup_and_execution_seconds": 344.21262345400464,
+          "simulation_startup_seconds": 343.5,
+          "specification_parsing_seconds": 0.04713139100931585,
+          "strategy_simulation_seconds": null,
+          "timing_scope_status": "ISAAC_STARTUP_EXCLUDED_USING_SYSTEM_LOG_CAPTURE",
+          "verification_excluding_startup_seconds": 0.7126234540046426
+        }
+      }
+    ],
+    "recovery_actions": [],
+    "refinement_suggestions": [],
+    "selected_at_utc": "2026-08-06T16:08:00.157962Z",
+    "selected_candidate_strategy_id": "operator_faithful_baseline",
+    "selected_run_id": "sim_0a95d9a4-41f2-48d0-8fcb-9fa9a28d4916",
+    "selected_scenario_spec_id": "scn_6beee41e-994b-42da-86be-1f3933d94883",
+    "selection_is_deterministic": true,
+    "status": "SELECTED"
+  },
+  "selection_objective": {
+    "description": "Reject candidates that fail mandatory physical placement, ordering, throughput, or evidence constraints; report reset completion as a non-blocking diagnostic and rank eligible candidates only by measured throughput attainment.",
+    "hard_constraints": [
+      "RUN_ARTIFACT_COMPLETED",
+      "EVIDENCE_ALLOWS_DEPLOYMENT",
+      "PLACEMENT_VERIFICATION_PASSED",
+      "PRIORITY_COMPLIANCE_PASSED",
+      "BATCH_GATING_COMPLIANCE_PASSED",
+      "THROUGHPUT_EVIDENCE_PRESENT",
+      "EACH_LINE_THROUGHPUT_TARGET_MET"
+    ],
+    "objective_id": "constraint_gated_throughput_v3",
+    "tie_breakers": [
+      "LOWER_STRATEGY_SIMULATION_SECONDS",
+      "LEXICOGRAPHIC_CANDIDATE_STRATEGY_ID"
+    ],
+    "weights": {
+      "throughput_attainment": 1.0
+    }
+  },
+  "simulation_line_ids": [
+    "line_1",
+    "line_2"
+  ],
+  "started_at_utc": "2026-08-06T15:54:44.763539Z",
+  "status": "SELECTED",
+  "strategy_batch_id": "strategy_batch_54b4d103-0bdc-43d0-9104-330841d41acb",
+  "time_arrival_state": {
+    "fix_duration": 3.0,
+    "resume_delay": 1.0,
+    "run_id": "sim_93f8833a-a53e-4116-ab6d-aba99e6daf33",
+    "scenario_spec_id": "scn_95731763-9598-4762-80a5-a31b23fe0ef9",
+    "source": "DEPLOYED_SIMULATION_DEFAULTS",
+    "source_reference": "data/digital_twin/default_simulation_config.json",
+    "state_record_type": "TIME_ARRIVAL_MODEL",
+    "state_version": 1,
+    "travel_time": 1.0,
+    "updated_at_utc": "2026-06-29T23:55:30.301246Z"
+  },
+  "trt_id": "trt-demo",
+  "trt_version": "v177",
+  "updated_at_utc": "2026-08-06T16:08:00.157979Z"
+}

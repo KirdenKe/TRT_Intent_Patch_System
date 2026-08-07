@@ -1,0 +1,103 @@
+{
+  "audit_id": "audit-7c3f40be-c597-4564-80ce-56f7686f46b2",
+  "intent_text": "today there are two production lines. my arrival time is 4 seconds, the time required to resolve the tangling issue is 5 seconds, and the recovery time is 0.5 seconds. in the event of an anomaly, pls configure the logic so that continue until i arrive at the production line. the allow overlap ratio is 0.9. adjust the throughput/hr for all production lines to at least 85; set the tooling picking target for production lines 2 to knife handle; and adjust the tooling picking order for production lines 1 to prioritize picking tooling other than ent tooling set.",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/abnormal_strategy",
+      "value": "CONTINUE_FEASIBLE_TASKS"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/abnormal_strategy",
+      "value": "CONTINUE_FEASIBLE_TASKS"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/abnormal_strategy",
+      "value": "CONTINUE_FEASIBLE_TASKS"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/abnormal_strategy",
+      "value": "CONTINUE_FEASIBLE_TASKS"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/min_throughput_per_hour",
+      "value": 85
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/kpi/min_throughput_per_hour",
+      "value": 85
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_3/kpi/min_throughput_per_hour",
+      "value": 85
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_4/kpi/min_throughput_per_hour",
+      "value": 85
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/tooling_policy/required_scope",
+      "value": "SELECTED_TOOLING"
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/selected_tool_ids",
+      "value": [
+        "tool_16",
+        "tool_17",
+        "tool_18"
+      ]
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_2/selected_normalized_types",
+      "value": [
+        "KNIFE_HANDLE"
+      ]
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/manipulator_priority",
+      "value": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "UNWANTED_FIRST",
+        "tie_breaker": "FCFS"
+      }
+    },
+    {
+      "op": "replace",
+      "path": "/lines/line_1/target_set_id",
+      "value": "ENT_SURGICAL_TOOLING_SET"
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1786029938807",
+  "reason": "testing",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-08-06T15:25:48.748797Z",
+  "trt_after_hash": "a52b43f78c32da86491760b53945cdcbeb282c7343b5852200fc6e737f913173",
+  "trt_after_version": "v176",
+  "trt_before_hash": "414ffa03ae80dfe8d2a311eb35c855062988d96d1252907d5226d638368671b4",
+  "trt_before_version": "v175",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

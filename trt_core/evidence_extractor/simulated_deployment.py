@@ -11,6 +11,7 @@ from uuid import uuid4
 from trt_core.evidence_extractor.evidence_summary_builder import build_evidence_summary
 from trt_core.repository import TRTRepository
 from trt_core.state_records import save_current_state
+from trt_core.time_arrival_state import save_time_arrival_state
 
 
 DEPLOYABLE_SIMULATION_CONFIG_KEYS = {
@@ -155,6 +156,36 @@ def simulated_deploy(
             "message": "ScenarioSpec ID mismatch.",
             "errors": [f"Expected {scenario_spec_id}, found {scenario_spec.get('scenario_spec_id')}"],
         }
+    strategy_batch_id = (scenario_spec.get("governance_metadata") or {}).get("strategy_batch_id")
+    if strategy_batch_id:
+        try:
+            strategy_batch = repository.load_strategy_batch(str(strategy_batch_id))
+        except Exception as exc:
+            return {
+                "status": "REJECTED",
+                "deployment_id": None,
+                "trt_id": trt_id,
+                "trt_version": trt_version,
+                "message": "Deployment rejected because candidate-strategy selection evidence is unavailable.",
+                "errors": [str(exc)],
+            }
+        selection = strategy_batch.get("selection") or {}
+        if (
+            selection.get("status") != "SELECTED"
+            or selection.get("selected_scenario_spec_id") != scenario_spec_id
+            or selection.get("selected_run_id") != run_id
+        ):
+            return {
+                "status": "REJECTED",
+                "deployment_id": None,
+                "trt_id": trt_id,
+                "trt_version": trt_version,
+                "message": "Deployment rejected because this run is not the selected candidate strategy.",
+                "errors": [
+                    f"Selected scenario/run: {selection.get('selected_scenario_spec_id')}/"
+                    f"{selection.get('selected_run_id')}; requested: {scenario_spec_id}/{run_id}."
+                ],
+            }
     deployment_id = f"deploy_{uuid4()}"
     state_records = repository.load_state_records()
     updated_records = _update_state_records(
@@ -233,6 +264,14 @@ def simulated_deploy(
                 f"{expected_count} but persisted default is {saved_config.get('add_reference_number')}."
             ],
         }
+    save_time_arrival_state(
+        saved_config,
+        repository=repository,
+        source="SIMULATED_DEPLOYMENT",
+        source_reference=str(defaults_path.relative_to(repository.root)),
+        run_id=run_id,
+        scenario_spec_id=scenario_spec_id,
+    )
 
     audit_dir = repository.root / "data" / "deployments"
     audit_dir.mkdir(parents=True, exist_ok=True)

@@ -20,9 +20,9 @@
         "allowed_overlap_ratio": 0.99,
         "reuse_verified_seed": true,
         "chosen_intervention_mode": "continue-until-arrival",
-        "travel_time": 5.0,
-        "fix_duration": 8.0,
-        "resume_delay": 0.5
+        "travel_time": 1.0,
+        "fix_duration": 3.0,
+        "resume_delay": 1.0
       },
       "line_bindings": [
         {
@@ -35,9 +35,9 @@
         }
       ],
       "operator_model": {
-        "travel_time": 5.0,
-        "fix_duration": 8.0,
-        "resume_delay": 0.5
+        "travel_time": 1.0,
+        "fix_duration": 3.0,
+        "resume_delay": 1.0
       },
       "abnormal_event_policy": {
         "entanglement": {
@@ -73,9 +73,9 @@
         "allowed_overlap_ratio": 0.99,
         "reuse_verified_seed": true,
         "chosen_intervention_mode": "continue-until-arrival",
-        "travel_time": 5.0,
-        "fix_duration": 8.0,
-        "resume_delay": 0.5
+        "travel_time": 1.0,
+        "fix_duration": 3.0,
+        "resume_delay": 1.0
       },
       "line_bindings": [
         {
@@ -136,9 +136,9 @@
         }
       ],
       "operator_model": {
-        "travel_time": 5.0,
-        "fix_duration": 8.0,
-        "resume_delay": 0.5
+        "travel_time": 1.0,
+        "fix_duration": 3.0,
+        "resume_delay": 1.0
       },
       "abnormal_event_policy": {
         "entanglement": {
@@ -180,15 +180,15 @@
         "allowed_overlap_ratio": 0.99,
         "reuse_verified_seed": true,
         "chosen_intervention_mode": "continue-until-arrival",
-        "travel_time": 5.0,
-        "fix_duration": 8.0,
-        "resume_delay": 0.5
+        "travel_time": 1.0,
+        "fix_duration": 3.0,
+        "resume_delay": 1.0
       },
       "line_bindings": [],
       "operator_model": {
-        "travel_time": 5.0,
-        "fix_duration": 8.0,
-        "resume_delay": 0.5
+        "travel_time": 1.0,
+        "fix_duration": 3.0,
+        "resume_delay": 1.0
       },
       "abnormal_event_policy": {
         "entanglement": {

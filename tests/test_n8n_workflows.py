@@ -310,6 +310,16 @@ def test_intent_candidate_retry_branch_reaches_python_normalization_on_success()
     assert workflow["connections"]["LLM Proposes Patch?"]["main"][0][0]["node"] == "Normalize Domain Candidate with Python"
 
 
+def test_intent_prompts_cover_explicit_time_values_and_known_composite_semantics():
+    workflow = load_workflow("intent_to_patch_review.workflow.json")
+    for node_name in ("LLM Generate Intent Patch", "Retry LLM Generate Intent Patch"):
+        body = node_by_name(workflow, node_name)["parameters"]["jsonBody"]
+        assert "Explicit absolute values" in body
+        assert "continue until I arrive maps to chosen_intervention_mode" in body
+        assert 'selected_normalized_types=["KNIFE_HANDLE"]' in body
+        assert 'policy:"UNWANTED_FIRST"' in body
+
+
 def test_intent_python_business_rule_rejections_are_normalized_not_failed():
     workflow = load_workflow("intent_to_patch_review.workflow.json")
     http_node = node_by_name(workflow, "Normalize Domain Candidate with Python")
@@ -320,7 +330,12 @@ def test_intent_python_business_rule_rejections_are_normalized_not_failed():
     assert http_node["continueOnFail"] is True
     assert normalizer["type"] == "n8n-nodes-base.code"
     assert router["type"] == "n8n-nodes-base.if"
-    assert "status: 'REJECTED'" in normalizer_code
+    assert "const status = systemFailure ? 'ERROR' : 'REJECTED'" in normalizer_code
+    assert "Retry the same request unchanged" in normalizer_code
+    assert "status: 'NORMALIZED'" in normalizer_code
+    condition = router["parameters"]["conditions"]["conditions"][0]
+    assert condition["rightValue"] == "NORMALIZED"
+    assert condition["operator"]["operation"] == "equals"
     assert "Normalize Domain Candidate with Python" in normalizer_code
     assert "line_2 is currently in ERROR mode" in normalizer_code
     assert workflow["connections"]["Normalize Domain Candidate with Python"]["main"][0][0]["node"] == "Normalize Python Candidate Result"
@@ -346,6 +361,10 @@ def test_intent_candidate_retry_supports_old_and_all_lines_requests_without_user
     assert "lowest priority => priority=1" in body
     assert "Do not map priority language to goal." in body
     assert "Do not set goal=TRAUMA_SET_PRIORITY unless the user explicitly asks for Trauma Set priority." in body
+    assert "Explicit absolute values" in body
+    assert "continue until I arrive maps to chosen_intervention_mode" in body
+    assert 'selected_normalized_types=["KNIFE_HANDLE"]' in body
+    assert 'policy:"UNWANTED_FIRST"' in body
     assert "allowed_instruments is selected tooling for the strategy, not robot capability." in body
     assert "select no tooling or do not want all tooling selected => tooling_policy.required_scope=NONE" in body
     assert "select all tooling => tooling_policy.required_scope=ALL_SUPPORTED_TOOLING" in body
@@ -670,6 +689,20 @@ def test_revision_and_rejected_notification_outputs_are_code_nodes_with_array_er
 
 def node_by_name(workflow: dict, name: str) -> dict:
     return next(node for node in workflow["nodes"] if node["name"] == name)
+
+
+def test_system_evaluation_incomplete_message_is_deterministic_and_clears_stale_intent():
+    workflow = load_workflow("chat_operator_task_allocation.workflow.json")
+    formatter = node_by_name(workflow, "Normalize Formatted User Response")["parameters"]["jsCode"]
+    scenario_context = node_by_name(
+        workflow,
+        "Normalize Context After ScenarioSpec Generation",
+    )["parameters"]["jsCode"]
+
+    assert "SYSTEM_EVALUATION_INCOMPLETE" in formatter
+    assert "required_fields: []" in formatter
+    assert "suggested_reply: ''" in formatter
+    assert "pending_intent: null" in scenario_context
 
 
 def assignment_value(node: dict, field_name: str) -> str:

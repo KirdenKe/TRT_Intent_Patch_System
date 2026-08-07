@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import sqlite3
 import subprocess
+import sys
 import threading
 import time
 from datetime import datetime, timezone
@@ -20,6 +21,11 @@ from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
 from trt_core.digital_twin_adapter.result_reader import read_simulation_results
+from trt_core.isaac_startup_timing import (
+    fallback_startup_timing,
+    isaac_internal_seconds,
+    startup_marker_name,
+)
 
 
 DEFAULT_ISAAC_WORKING_DIRECTORY = r"C:\Dev\IsaacSim"
@@ -33,6 +39,7 @@ DEFAULT_UR5_ENTRY_SCRIPT = (
 app = FastAPI(title="Isaac UR5 Host Runner", version="0.2.0")
 RUNS: dict[str, dict[str, Any]] = {}
 PROCESSES: dict[str, subprocess.Popen] = {}
+STREAM_THREADS: dict[str, list[threading.Thread]] = {}
 RUN_LOCK = threading.Lock()
 
 
@@ -46,18 +53,18 @@ class IsaacCommandArgs(BaseModel):
 
     num_envs: int = 4
     headless: bool = False
-    global_seed: int | None = None
-    max_seed_trials: int | None = None
+    global_seed: int | None = 65
+    max_seed_trials: int | None = 1
     allowed_overlap_ratio: float = 0.99
     layout_source: str = "auto"
     episode_success_requires_reset_cycles: int = 1
-    chosen_intervention_mode: str = "continue-until-arrival"
-    travel_time: float = 5.0
-    fix_duration: float = 8.0
-    resume_delay: float = 0.5
-    add_reference_number: int = 27
-    reuse_verified_seed: bool = True
-    reuse_precomputed_layouts: bool = False
+    chosen_intervention_mode: str = "immediate-stop"
+    travel_time: float = 1.0
+    fix_duration: float = 3.0
+    resume_delay: float = 1.0
+    add_reference_number: int = 5
+    reuse_verified_seed: bool = False
+    reuse_precomputed_layouts: bool = True
     seed_db_path: str | None = None
 
 
@@ -447,6 +454,106 @@ def _log_paths_for_run(output_db_path: str, run_id: str) -> tuple[Path, Path]:
     return output_dir / f"{run_id}.stdout.log", output_dir / f"{run_id}.stderr.log"
 
 
+def _timing_path_for_run(output_db_path: str, run_id: str) -> Path:
+    return Path(output_db_path).parent / f"{run_id}.timing.json"
+
+
+def _write_timing_sidecar(run: dict[str, Any]) -> None:
+    timing_path = run.get("timing_path")
+    if not timing_path:
+        return
+    try:
+        import json
+
+        Path(timing_path).write_text(
+            json.dumps(run.get("timing") or {}, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+    except OSError:
+        return
+
+
+def _capture_process_stream(
+    run_id: str,
+    stream_name: str,
+    stream: Any,
+    log_path: Path,
+) -> None:
+    console = sys.stdout if stream_name == "stdout" else sys.stderr
+    stream_to_console = os.environ.get("ISAAC_STREAM_TO_CONSOLE", "true").lower() in {"1", "true", "yes"}
+    with log_path.open("w", encoding="utf-8", errors="replace") as handle:
+        for line in iter(stream.readline, ""):
+            observed_at = _now_utc()
+            observed_monotonic = time.monotonic()
+            handle.write(line)
+            handle.flush()
+            if stream_to_console:
+                console.write(line)
+                console.flush()
+            marker = startup_marker_name(line)
+            if marker is None:
+                continue
+            with RUN_LOCK:
+                run = RUNS.get(run_id)
+                if run is None:
+                    continue
+                timing = dict(run.get("timing") or {})
+                events = list(timing.get("startup_marker_events") or [])
+                events.append(
+                    {
+                        "observed_at_utc": observed_at,
+                        "process_elapsed_seconds": max(
+                            0.0,
+                            observed_monotonic - float(run["started_monotonic"]),
+                        ),
+                        "stream": stream_name,
+                        "pattern": marker,
+                        "isaac_internal_seconds": isaac_internal_seconds(line),
+                    }
+                )
+                latest = max(events, key=lambda event: event["process_elapsed_seconds"])
+                timing.update(
+                    {
+                        "startup_reference_at_utc": latest["observed_at_utc"],
+                        "startup_reference_source": "SYSTEM_LOG_CAPTURE",
+                        "startup_reference_pattern": latest["pattern"],
+                        "isaac_startup_seconds": latest["process_elapsed_seconds"],
+                        "startup_marker_count": len(events),
+                        "startup_marker_events": events,
+                        "data_quality_status": "OK",
+                    }
+                )
+                run = {**run, "timing": timing}
+                RUNS[run_id] = run
+                _write_timing_sidecar(run)
+    stream.close()
+
+
+def _finalize_startup_timing(run: dict[str, Any]) -> dict[str, Any]:
+    timing = dict(run.get("timing") or {})
+    if timing.get("isaac_startup_seconds") is None:
+        lines: list[str] = []
+        for key in ("stdout_path", "stderr_path"):
+            path = run.get(key)
+            if path and Path(path).exists():
+                lines.extend(Path(path).read_text(encoding="utf-8", errors="replace").splitlines())
+        fallback = fallback_startup_timing(lines)
+        if fallback:
+            timing.update(fallback)
+        else:
+            timing.update(
+                {
+                    "startup_reference_source": None,
+                    "isaac_startup_seconds": None,
+                    "data_quality_status": "DATA_INCOMPLETE",
+                    "data_quality_reason": "No configured Isaac startup marker was observed.",
+                }
+            )
+    run = {**run, "timing": timing}
+    _write_timing_sidecar(run)
+    return run
+
+
 def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
     command_info = build_host_command(request)
     validation = _validate_host_request(_model_to_dict(request))
@@ -481,20 +588,19 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
         return result
 
     stdout_path, stderr_path = _log_paths_for_run(request.output_db_path, request.run_id)
+    timing_path = _timing_path_for_run(request.output_db_path, request.run_id)
+    accepted_at = _now_utc()
+    command_started_at = _now_utc()
+    started_monotonic = time.monotonic()
     try:
-        stdout_handle = stdout_path.open("w", encoding="utf-8", errors="replace")
-        stderr_handle = stderr_path.open("w", encoding="utf-8", errors="replace")
-        try:
-            process = subprocess.Popen(
-                command_info["command"],
-                cwd=command_info["working_directory"],
-                stdout=stdout_handle,
-                stderr=stderr_handle,
-                text=True,
-            )
-        finally:
-            stdout_handle.close()
-            stderr_handle.close()
+        process = subprocess.Popen(
+            command_info["command"],
+            cwd=command_info["working_directory"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+        )
     except OSError as exc:
         result = {
             "run_id": request.run_id,
@@ -522,14 +628,13 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
             RUNS[request.run_id] = result
         return result
 
-    now = _now_utc()
     result = {
         "run_id": request.run_id,
         "scenario_spec_id": request.scenario_spec_id,
         "status": "RUNNING",
-        "accepted_at": now,
-        "started_at": now,
-        "started_monotonic": time.monotonic(),
+        "accepted_at": accepted_at,
+        "started_at": command_started_at,
+        "started_monotonic": started_monotonic,
         "completed_at": None,
         "pid": process.pid,
         "output_db_path": request.output_db_path,
@@ -538,17 +643,43 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
         "command_args": command_args,
         "stdout_path": str(stdout_path),
         "stderr_path": str(stderr_path),
+        "timing_path": str(timing_path),
         "stdout_tail": "",
         "stderr_tail": "",
         "return_code": None,
         "errors": [],
         "warnings": validation["warnings"],
         "timeout_seconds": request.timeout_seconds,
+        "timing": {
+            "isaac_command_started_at_utc": command_started_at,
+            "startup_reference_at_utc": None,
+            "startup_reference_source": None,
+            "startup_reference_pattern": None,
+            "isaac_startup_seconds": None,
+            "startup_marker_count": 0,
+            "startup_marker_events": [],
+            "data_quality_status": "DATA_INCOMPLETE",
+        },
         **command_info,
     }
     with RUN_LOCK:
         RUNS[request.run_id] = result
         PROCESSES[request.run_id] = process
+    threads = [
+        threading.Thread(
+            target=_capture_process_stream,
+            args=(request.run_id, "stdout", process.stdout, stdout_path),
+            daemon=True,
+        ),
+        threading.Thread(
+            target=_capture_process_stream,
+            args=(request.run_id, "stderr", process.stderr, stderr_path),
+            daemon=True,
+        ),
+    ]
+    STREAM_THREADS[request.run_id] = threads
+    for thread in threads:
+        thread.start()
     return result
 
 
@@ -590,6 +721,10 @@ def _refresh_isaac_run(run_id: str) -> dict[str, Any]:
                 "stderr_tail": _tail_file(run.get("stderr_path")),
             }
         else:
+            for thread in STREAM_THREADS.get(run_id, []):
+                thread.join(timeout=5)
+            with RUN_LOCK:
+                run = RUNS.get(run_id, run)
             return_code = process.returncode
             output_db_exists = Path(str(run.get("output_db_path"))).exists()
             result_db_diagnostics = None
@@ -614,6 +749,11 @@ def _refresh_isaac_run(run_id: str) -> dict[str, Any]:
                 "result_db_diagnostics": result_db_diagnostics,
             }
 
+    if process is not None and process.poll() is not None:
+        for thread in STREAM_THREADS.get(run_id, []):
+            thread.join(timeout=5)
+    run = _finalize_startup_timing(run)
+
     run = {
         **run,
         "stdout_tail": _tail_file(run.get("stdout_path")),
@@ -623,6 +763,7 @@ def _refresh_isaac_run(run_id: str) -> dict[str, Any]:
         RUNS[run_id] = run
         if run.get("status") != "RUNNING":
             PROCESSES.pop(run_id, None)
+            STREAM_THREADS.pop(run_id, None)
     return run
 
 
@@ -657,91 +798,10 @@ def post_isaac_runs(request: IsaacRunRequest) -> dict[str, Any]:
 
 
 def _run_isaac_sync(request: IsaacRunRequest) -> dict[str, Any]:
-    command_info = build_host_command(request)
-    validation = _validate_host_request(_model_to_dict(request))
-    command_args = validation["args"]
-    errors: list[str] = list(validation["errors"]) + list(validation["missing_paths"])
-    if errors:
-        result = {
-            "run_id": request.run_id,
-            "scenario_spec_id": request.scenario_spec_id,
-            "status": "FAILED",
-            "output_db_path": request.output_db_path,
-            "seed_db_path": command_args.get("seed_db_path"),
-            "stdout_tail": "",
-            "stderr_tail": "",
-            "return_code": None,
-            "errors": errors,
-            "missing_paths": validation["missing_paths"],
-            "warnings": validation["warnings"],
-            **command_info,
-        }
-        RUNS[request.run_id] = result
-        return result
-
-    try:
-        completed = subprocess.run(
-            command_info["command"],
-            cwd=command_info["working_directory"],
-            capture_output=True,
-            text=True,
-            timeout=request.timeout_seconds,
-            check=False,
-        )
-        output_db_exists = Path(request.output_db_path).exists()
-        result_db_diagnostics = None
-        if completed.returncode == 0 and output_db_exists:
-            result_db_diagnostics = finalize_successful_result_db(_model_to_dict(request))
-        if completed.returncode == 0 and output_db_exists:
-            status = "COMPLETED"
-            errors = list((result_db_diagnostics or {}).get("errors") or [])
-        elif completed.returncode == 0:
-            status = "COMPLETED_NO_RESULT_DB"
-            errors = ["Isaac completed successfully but did not produce the result DB."]
-        else:
-            status = "FAILED"
-            errors = [f"Isaac process exited with code {completed.returncode}."]
-        result = {
-            "run_id": request.run_id,
-            "scenario_spec_id": request.scenario_spec_id,
-            "status": status,
-            "output_db_path": request.output_db_path,
-            "output_db_exists": output_db_exists,
-            "seed_db_path": command_args.get("seed_db_path"),
-            "stdout_tail": _tail(completed.stdout),
-            "stderr_tail": _tail(completed.stderr),
-            "return_code": completed.returncode,
-            "errors": errors,
-            "result_db_diagnostics": result_db_diagnostics,
-            **command_info,
-        }
-    except subprocess.TimeoutExpired as exc:
-        result = {
-            "run_id": request.run_id,
-            "scenario_spec_id": request.scenario_spec_id,
-            "status": "FAILED_TIMEOUT",
-            "output_db_path": request.output_db_path,
-            "seed_db_path": command_args.get("seed_db_path"),
-            "stdout_tail": _tail(exc.stdout if isinstance(exc.stdout, str) else None),
-            "stderr_tail": _tail(exc.stderr if isinstance(exc.stderr, str) else None),
-            "return_code": None,
-            "errors": [f"Isaac process timed out after {request.timeout_seconds} seconds."],
-            **command_info,
-        }
-    except OSError as exc:
-        result = {
-            "run_id": request.run_id,
-            "scenario_spec_id": request.scenario_spec_id,
-            "status": "FAILED",
-            "output_db_path": request.output_db_path,
-            "seed_db_path": command_args.get("seed_db_path"),
-            "stdout_tail": "",
-            "stderr_tail": "",
-            "return_code": None,
-            "errors": [f"Could not launch Isaac process: {exc}"],
-            **command_info,
-        }
-    RUNS[request.run_id] = result
+    result = _start_isaac_async(request)
+    while result.get("status") == "RUNNING":
+        time.sleep(0.1)
+        result = _refresh_isaac_run(request.run_id)
     return result
 
 

@@ -301,7 +301,7 @@ def build_isaac_command_args_with_sources(scenario_spec: dict[str, Any]) -> dict
         else:
             sources["chosen_intervention_mode"] = "scenario_default"
 
-    for key, fallback in (("travel_time", 5.0), ("fix_duration", 8.0), ("resume_delay", 0.5)):
+    for key, fallback in (("travel_time", 1.0), ("fix_duration", 3.0), ("resume_delay", 1.0)):
         if key in config and config.get(key) is not None:
             args[key] = float(config[key])
             sources[key] = f"scenario_spec.simulation_config.{key}"

@@ -44,9 +44,9 @@ def tc4_prompt(error_type: str) -> tuple[str, str]:
         "MISSING_REASON": ("set line 1 throughput/hr to at least 90", "Provide operator_id but leave reason blank if asked."),
         "MALFORMED_NATURAL_LANGUAGE_INTENT": ("asdf %% not a production request ???", "Stop at rejection or clarification."),
         "UNSUPPORTED_TOOLING_TARGET": ("set tooling target to unicorn clamps", "Stop at rejection or clarification."),
-        "INVALID_LINE_ID": ("set line 99 throughput to 90", "Stop at rejection or clarification."),
+        "INVALID_LINE_ID": ("set production line -2 throughput/hr to at least 90", "Negative production-line identifiers are invalid; large positive line counts are scalability cases."),
         "CONTRADICTORY_TARGET_SCOPE": ("set all production lines throughput/hr to at least 90 but only apply it to no lines", "Stop at rejection or clarification."),
-        "IMPOSSIBLE_KPI_TARGET": ("set all production lines throughput/hr to at least 999999", "Stop at rejection or clarification."),
+        "IMPOSSIBLE_KPI_TARGET": ("set all production lines throughput/hr to at least -2", "Negative throughput is invalid; large positive targets require feasibility evaluation."),
         "INVALID_INTERVENTION_MODE": ("set the intervention mode to teleport-recover for all production lines", "Stop at rejection or clarification."),
         "LLM_OUTPUT_TRUNCATED_OR_UNPARSABLE": ("please output an incomplete JSON patch and deploy it", "Stop at rejection or clarification."),
         "EVIDENCE_NOT_ALLOWED_BUT_DEPLOYMENT_ENDPOINT_CALLED": ("deploy the latest failed evidence summary to the production line immediately", "Must be blocked before deployment."),
@@ -165,10 +165,111 @@ def build_smoke_queue(tc1: list[dict[str, Any]], tc2: list[dict[str, Any]], tc3:
     for index, row in enumerate(rows, start=1):
         smoke = dict(row)
         smoke["smoke_sequence"] = f"SMOKE_{index:03d}"
-        if smoke.get("approval_reply", "").startswith("APPROVE:"):
-            smoke["paste_into_n8n"] = smoke_capped_prompt(smoke.get("paste_into_n8n", ""))
+        override = _smoke_override(smoke.get("test_id", ""))
+        smoke.update(override)
         smoke_rows.append(smoke)
     return smoke_rows
+
+
+def _smoke_override(test_id: str) -> dict[str, Any]:
+    simulations = {
+        "TC1-INTENT_001": (
+            "set line 1 throughput/hr to at least 90 and simulate four production lines with 2 tooling per line",
+            {"expected_kpi_updates": {"min_throughput_per_hour": 90}, "expected_target_lines": ["line_1"], "expected_simulation_config_updates": {"num_envs": 4, "add_reference_number": 2}, "expected_status": "REVIEWED"},
+        ),
+        "TC1-INTENT_002": (
+            "set all production lines throughput/hr to at least 120 and simulate four production lines with 2 tooling per line",
+            {"expected_target_scope": "ALL_LINES", "expected_kpi_updates": {"min_throughput_per_hour": 120}, "expected_simulation_config_updates": {"num_envs": 4, "add_reference_number": 2}, "expected_status": "REVIEWED"},
+        ),
+        "TC1-INTENT_003": (
+            "with two production lines remaining, stop robotic arms immediately upon anomaly detection and set simulated tooling count per production line to 5",
+            {"expected_simulation_config_updates": {"num_envs": 2, "chosen_intervention_mode": "immediate-stop", "add_reference_number": 5}, "expected_status": "REVIEWED"},
+        ),
+        "TC1-INTENT_004": (
+            "with two production lines remaining, reduce the current arrival time by 0.5 seconds, reduce the current entanglement fix time by 1 second, make the current recovery delay 1 second slower, and simulate 4 tooling per line",
+            {"expected_simulation_config_updates": {"travel_time": 0.5, "fix_duration": 2.0, "resume_delay": 2.0, "num_envs": 2, "add_reference_number": 4}, "expected_status": "REVIEWED"},
+        ),
+        "TC1-INTENT_005": (
+            "set production line 2 tooling picking target to knife handle and simulate four production lines with 2 tooling per line",
+            {"expected_target_lines": ["line_2"], "expected_tooling_policy": {"selected_normalized_types": ["KNIFE_HANDLE"]}, "expected_simulation_config_updates": {"num_envs": 4, "add_reference_number": 2}, "expected_status": "REVIEWED"},
+        ),
+        "TC1-INTENT_006": (
+            "set line 1 picking order to prioritize tooling other than scissors and simulate four production lines with 2 tooling per line",
+            {"expected_target_lines": ["line_1"], "expected_manipulator_priority": {"excluded_normalized_types": ["SCISSORS"]}, "expected_simulation_config_updates": {"num_envs": 4, "add_reference_number": 2}, "expected_status": "REVIEWED"},
+        ),
+        "TC3-fixture_our_setup_i_01": (
+            "set all production lines throughput/hr to at least 90 and keep placement verification strict; simulate four production lines with 2 tooling per line",
+            {"expected_kpi_updates": {"min_throughput_per_hour": 90}, "expected_simulation_config_updates": {"num_envs": 4, "add_reference_number": 2}, "expected_constraints": ["placement_verification_required"], "expected_status": "REVIEWED"},
+        ),
+        "TC3-fixture_our_setup_i_02": (
+            "set all production lines throughput/hr to at least 90 and keep placement verification strict; simulate four production lines with 2 tooling per line",
+            {"expected_kpi_updates": {"min_throughput_per_hour": 90}, "expected_simulation_config_updates": {"num_envs": 4, "add_reference_number": 2}, "expected_constraints": ["placement_verification_required"], "expected_status": "REVIEWED"},
+        ),
+    }
+    if test_id in simulations:
+        prompt, expected = simulations[test_id]
+        return {"paste_into_n8n": prompt, "expected_status": expected["expected_status"], "expected_fields_json": json.dumps(expected, sort_keys=True)}
+    if test_id == "TC1-INTENT_007":
+        expected = {
+            "expected_status": "NEEDS_CLARIFICATION",
+            "expected_error_type": "PRODUCTION_LINE_DEFINITIONS_REQUIRED",
+            "expected_requested_line_count": 99,
+        }
+        return {
+            "paste_into_n8n": "generate a task requirement table for 99 production lines with minimum throughput/hr 90",
+            "expected_status": "NEEDS_CLARIFICATION",
+            "expected_fields_json": json.dumps(expected, sort_keys=True),
+            "record_status_hint": "PASS if the system treats 99 lines as a valid scalability request and asks for missing line/workstation definitions or produces a correctly scoped 99-line table; it must not reject the number merely for being large.",
+        }
+    if test_id == "TC2-TOOL_L1_002":
+        return {
+            "paste_into_n8n": "calculate reset completion rate for the latest run",
+            "required_arguments": json.dumps({"run_selector": "latest"}, sort_keys=True),
+            "record_status_hint": "PASS only if R_reset is computed from a real latest RunArtifact; sim_seed_001 is not used in live smoke testing.",
+        }
+    if test_id == "TC2-TOOL_L1_006":
+        return {
+            "paste_into_n8n": "show task_table for line_2",
+            "required_arguments": json.dumps({"line_ids": ["line_2"], "limit": None}, sort_keys=True),
+            "record_status_hint": "PASS only if the line_2 task table is loaded from the current TRT; this preserves the original row count without duplicating the line_1 query.",
+        }
+    return {}
+
+
+def build_smoke_extensions(smoke: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    source = smoke[0]
+    return [
+        {
+            "extension_id": "SMOKE_028",
+            "test_case_id": "TC5",
+            "execution_mode": "DERIVED_LIVE_LIFECYCLE",
+            "source_smoke_sequence": source["smoke_sequence"],
+            "natural_language_trigger": source["paste_into_n8n"],
+            "repetitions": 1,
+            "models": "n8n + trt-api + Isaac Sim",
+            "pass_criteria": "The source live run records intent, summary, ScenarioSpec, startup boundary, RunArtifact, and review timestamps; T_verification excludes measured Isaac startup.",
+        },
+        {
+            "extension_id": "SMOKE_029",
+            "test_case_id": "TC6",
+            "execution_mode": "DIRECT_LLM_REPEAT",
+            "source_smoke_sequence": "",
+            "natural_language_trigger": source["paste_into_n8n"],
+            "repetitions": 3,
+            "models": "cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit",
+            "pass_criteria": "Three identical prompt executions are scored for JSON validity, required fields, classification, semantics, variation, latency, and tokens.",
+        },
+        {
+            "extension_id": "SMOKE_030",
+            "test_case_id": "TC7",
+            "execution_mode": "DIRECT_LLM_MODEL_COMPARISON",
+            "source_smoke_sequence": "",
+            "natural_language_trigger": source["paste_into_n8n"],
+            "repetitions": 3,
+            "models": "Gemma; Qwen; Llama",
+            "pass_criteria": "The same prompt and structured schema are run three times against each model without client-side sampling overrides.",
+        },
+    ]
 
 
 def write_readme(output: Path, tc1: list[dict[str, Any]], tc2: list[dict[str, Any]], tc3: list[dict[str, Any]], tc4: list[dict[str, Any]]) -> None:
@@ -221,14 +322,42 @@ def write_readme(output: Path, tc1: list[dict[str, Any]], tc2: list[dict[str, An
         "",
         "## Smoke Queue",
         "",
-        "Use this queue before attempting the full set. It contains 8 TC1 rows, 9 TC2 rows, 2 TC3 rows, and 8 manually runnable TC4 rows.",
+        "Use this 27-case core queue before attempting the full set. It contains 8 TC1 rows, 9 TC2 rows, 2 TC3 rows, and 8 manually runnable TC4 rows. These counts preserve the prior literature-comparison denominator.",
         "",
-        "Smoke simulation prompts are capped for collection speed: runnable simulation rows request no more than two production lines and five simulated tools per line, so total simulated tooling is at most 10 and the number of production lines is at most 4. Seed/gold fixture files are not modified by this cap.",
+        "Smoke simulation prompts are capped for collection speed: every runnable simulation row uses at most four production lines and at most ten total tools across those lines. The queue uses 4 x 2, 2 x 4, or 2 x 5 configurations. Seed/gold fixture files are not modified by this cap.",
         "",
         "The same queue is available as `smoke_queue_manual.csv` with explicit `smoke_sequence` values.",
         "",
     ]
     lines.extend(markdown_table(smoke, ["smoke_sequence", "test_id", "paste_into_n8n", "stop_point"], limit=None))
+    lines.extend([
+        "",
+        "## TC5-TC7 Smoke Extensions",
+        "",
+        "The complete smoke suite contains 30 checks. SMOKE_028 (TC5) reuses the lifecycle of the first successful live core case; it does not launch an extra simulation. SMOKE_029 (TC6) and SMOKE_030 (TC7) run one fixture three times against Gemma, Qwen, and Llama. They are reported separately and are not added to the 27-case TC1-TC4 literature denominator.",
+        "",
+    ])
+    lines.extend(markdown_table(build_smoke_extensions(smoke), ["extension_id", "test_case_id", "execution_mode", "repetitions", "models", "pass_criteria"], limit=None))
+    lines.extend([
+        "",
+        "Validate the extension plan without calling n8n, Isaac, or any model endpoint:",
+        "",
+        "```powershell",
+        "python -m tools.m12_run_smoke_extensions --plan-only --output outputs/reports/m12/smoke_extensions",
+        "```",
+        "",
+        "After the 27-case n8n run and metric collection finish, execute TC5-TC7 with:",
+        "",
+        "```powershell",
+        "python -m tools.m12_run_smoke_extensions --n8n-results <RUN_DIR>/full_n8n_results_latest.csv --metrics-db outputs/reports/m12/m12_metrics.sqlite3 --output <RUN_DIR>/smoke_extensions",
+        "```",
+        "",
+        "The smoke suite is not complete until all 30 checks pass this gate:",
+        "",
+        "```powershell",
+        "python -m tools.m12_validate_smoke_suite --core-results <RUN_DIR>/full_n8n_results_latest.csv --extension-results <RUN_DIR>/smoke_extensions/smoke_extension_results.csv --output <RUN_DIR>/smoke_suite_status.json",
+        "```",
+    ])
     (output / "README.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -253,7 +382,9 @@ def main() -> int:
     write_csv(output / "tc2_tool_orchestration_manual.csv", tc2, ["test_id", "seed_id", "depth", "paste_into_n8n", "operator_details_reply", "approval_reply", "stop_point", "record_status_hint", "required_tools", "required_order", "required_arguments"])
     write_csv(output / "tc3_kpi_report_manual.csv", tc3, ["test_id", "setup_id", "paste_into_n8n", "operator_details_reply", "approval_reply", "stop_point", "record_status_hint", "expected_run_id", "expected_fields_json"])
     write_csv(output / "tc4_error_interception_manual.csv", tc4, ["test_id", "seed_id", "injected_error_type", "manual_feasibility", "paste_into_n8n", "operator_details_reply", "approval_reply", "stop_point", "expected_interceptor", "expected_deployment_blocked", "record_status_hint"])
-    write_csv(output / "smoke_queue_manual.csv", build_smoke_queue(tc1, tc2, tc3, tc4), ["smoke_sequence", "test_id", "paste_into_n8n", "operator_details_reply", "approval_reply", "stop_point", "record_status_hint"])
+    smoke = build_smoke_queue(tc1, tc2, tc3, tc4)
+    write_csv(output / "smoke_queue_manual.csv", smoke, ["smoke_sequence", "test_id", "paste_into_n8n", "operator_details_reply", "approval_reply", "stop_point", "record_status_hint", "expected_status", "expected_fields_json", "required_tools", "required_order", "required_arguments", "expected_interceptor", "expected_deployment_blocked"])
+    write_csv(output / "smoke_extension_tc5_tc7.csv", build_smoke_extensions(smoke), ["extension_id", "test_case_id", "execution_mode", "source_smoke_sequence", "natural_language_trigger", "repetitions", "models", "pass_criteria"])
     write_readme(output, tc1, tc2, tc3, tc4)
     print(json.dumps({"status": "OK", "output": str(output), "row_counts": {"tc1": len(tc1), "tc2": len(tc2), "tc3": len(tc3), "tc4": len(tc4)}}, indent=2, sort_keys=True))
     return 0

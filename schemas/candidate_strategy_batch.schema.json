@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["candidates"],
+  "additionalProperties": false,
+  "properties": {
+    "candidates": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "required": [
+          "candidate_strategy_id",
+          "name",
+          "rationale",
+          "line_policy_overrides",
+          "simulation_config_overrides"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "candidate_strategy_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,119}$"
+          },
+          "name": {"type": "string", "minLength": 1, "maxLength": 120},
+          "rationale": {"type": "string", "minLength": 1, "maxLength": 1000},
+          "line_policy_overrides": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "abnormal_strategy": {
+                  "type": "string",
+                  "enum": ["STOP_LINE", "CONTINUE_FEASIBLE_TASKS"]
+                },
+                "manipulator_priority": {
+                  "type": "object",
+                  "required": ["policy", "ordered_tool_ids", "ordered_normalized_types", "tie_breaker", "enabled"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "policy": {
+                      "enum": ["FCFS", "REQUIRED_FIRST", "UNWANTED_FIRST", "EXPLICIT_TOOL_ORDER", "EXPLICIT_TYPE_ORDER"]
+                    },
+                    "ordered_tool_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+                    "ordered_normalized_types": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+                    "prioritize": {"type": "string", "enum": ["NON_MATCHING_TYPES_FIRST"]},
+                    "reference_normalized_types": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+                    "tie_breaker": {"const": "FCFS"},
+                    "enabled": {"type": "boolean"}
+                  }
+                }
+              }
+            }
+          },
+          "simulation_config_overrides": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "chosen_intervention_mode": {
+                "type": "string",
+                "enum": ["immediate-stop", "continue-until-arrival"]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

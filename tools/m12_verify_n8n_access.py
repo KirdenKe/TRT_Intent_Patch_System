@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -46,6 +47,42 @@ def workflow_list_payload(body: Any) -> list[dict[str, Any]]:
     if isinstance(body, list):
         return [item for item in body if isinstance(item, dict)]
     return []
+
+
+def has_human_facing_chat_response(body: Any) -> bool:
+    if isinstance(body, str):
+        return bool(body.strip())
+    if isinstance(body, list):
+        return bool(body)
+    if not isinstance(body, dict):
+        return False
+    if body.get("executionStarted") is True and body.get("resumeToken"):
+        return False
+    for field in ("output", "response", "message", "text", "operator_message"):
+        value = body.get(field)
+        if isinstance(value, str) and value.strip():
+            return True
+        if isinstance(value, (dict, list)) and value:
+            return True
+    return False
+
+
+def cleanup_probe_execution(base_url: str, api_key: str, execution_id: str) -> None:
+    last_error: Exception | None = None
+    for attempt in range(5):
+        if attempt:
+            time.sleep(0.5)
+        try:
+            request_json(
+                f"{base_url}/api/v1/executions/{execution_id}",
+                api_key=api_key,
+                method="DELETE",
+            )
+            return
+        except Exception as exc:
+            last_error = exc
+    if last_error is not None:
+        raise last_error
 
 
 def node_names(workflow: dict[str, Any]) -> list[str]:
@@ -177,10 +214,25 @@ def probe() -> dict[str, Any]:
             report["chat_session_id"] = session_id
             report["chat_raw_response"] = response["body"]
             body = response["body"]
-            text = json.dumps(body) if not isinstance(body, str) else body
-            report["chat_response_received"] = bool(text.strip())
+            report["chat_response_received"] = has_human_facing_chat_response(body)
             if isinstance(body, dict):
                 report["workflow_execution_id"] = body.get("executionId") or body.get("execution_id")
+                if body.get("executionStarted") is True and body.get("resumeToken"):
+                    report["chat_probe_mode"] = "ASYNC_RESPONSE_NODE_HANDSHAKE"
+                    report["chat_reason"] = (
+                        "Chat trigger accepted the request asynchronously, but the probe did not receive "
+                        "the human-facing response. Use the n8n chat client to consume the resume token."
+                    )
+                    execution_id = report.get("workflow_execution_id")
+                    if base_url and api_key and execution_id:
+                        try:
+                            cleanup_probe_execution(base_url, api_key, str(execution_id))
+                            report["probe_execution_cleaned_up"] = True
+                        except Exception as cleanup_exc:
+                            report["probe_execution_cleaned_up"] = False
+                            report["errors"].append(
+                                f"chat probe execution cleanup failed: {cleanup_exc}"
+                            )
         except Exception as exc:
             report["errors"].append(f"chat endpoint probe failed: {exc}")
 

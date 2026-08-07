@@ -5,6 +5,7 @@ import csv
 import json
 import os
 import re
+import sqlite3
 import subprocess
 import time
 import urllib.error
@@ -16,6 +17,7 @@ from typing import Any
 
 from websockets.sync.client import connect
 
+from trt_core.experiment_evaluation import derive_checkpoint_record
 from trt_core.repository import PROJECT_ROOT
 from tools.m12_check_full_test_readiness import packet_audit, plan_audit, runner_audit
 from tools.m12_packet_scorer import score_combined
@@ -40,6 +42,7 @@ def load_env() -> dict[str, str]:
         "N8N_API_KEY": os.environ.get("N8N_API_KEY", ""),
         "N8N_URL": os.environ.get("N8N_URL") or os.environ.get("N8N_BASE_URL") or "http://localhost:5678",
         "N8N_CHAT_URL": os.environ.get("N8N_CHAT_URL") or os.environ.get("N8N_WEBHOOK_URL") or "",
+        "TRT_API_URL": os.environ.get("TRT_API_URL") or "http://localhost:8000",
     }
     missing = [key for key, value in env.items() if key != "N8N_URL" and not value]
     if missing and os.name == "nt":
@@ -82,6 +85,36 @@ def append_jsonl(path: Path, payload: dict[str, Any]) -> None:
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(payload, sort_keys=True))
         handle.write("\n")
+
+
+def build_evaluation_fields(
+    row: dict[str, str],
+    packet_score: dict[str, Any],
+    *,
+    scenario_spec_id: str = "",
+    run_id: str = "",
+    turn_labels: list[str] | None = None,
+    system_error: bool = False,
+) -> dict[str, Any]:
+    artifact_exists = bool(
+        run_id
+        and any(
+            (PROJECT_ROOT / "outputs" / "run_artifacts" / f"{run_id}{suffix}").exists()
+            for suffix in (".sqlite", ".sqlite3")
+        )
+    )
+    should_launch = row.get("should_launch_isaac", "") != "false"
+    return derive_checkpoint_record(
+        suite=row.get("suite", ""),
+        prompt=row.get("paste_into_n8n", ""),
+        expected_status=row.get("expected_status", ""),
+        should_launch_isaac=should_launch,
+        scenario_spec_id=scenario_spec_id,
+        run_artifact_exists=artifact_exists,
+        packet_score=packet_score,
+        turn_labels=turn_labels or [],
+        system_error=system_error,
+    )
 
 
 def http_json(url: str, *, method: str = "GET", api_key: str | None = None, payload: dict[str, Any] | None = None, timeout: int = 60) -> dict[str, Any]:
@@ -265,6 +298,37 @@ def extract_ids_from_payload(value: Any) -> tuple[str, str]:
     return first_match(RUN_ID_RE, text), first_match(SCENARIO_ID_RE, text)
 
 
+def extract_strategy_selection(value: Any) -> dict[str, Any]:
+    best: dict[str, Any] = {}
+    for item in walk(value):
+        if not isinstance(item, dict):
+            continue
+        selection = item.get("selection")
+        if isinstance(selection, dict) and (
+            selection.get("selected_candidate_strategy_id")
+            or selection.get("status") == "NO_ELIGIBLE_STRATEGY"
+            or "ranked_candidates" in selection
+        ):
+            candidate_runs = item.get("candidate_runs") or selection.get("ranked_candidates") or []
+            best = {
+                "strategy_batch_id": item.get("strategy_batch_id"),
+                "candidate_count": item.get("candidate_count") or len(candidate_runs),
+                "candidate_run_ids": [
+                    row.get("run_id") for row in candidate_runs
+                    if isinstance(row, dict) and row.get("run_id")
+                ],
+                "selected_candidate_strategy_id": selection.get("selected_candidate_strategy_id"),
+                "selected_scenario_spec_id": selection.get("selected_scenario_spec_id"),
+                "selected_run_id": selection.get("selected_run_id"),
+                "objective_id": (selection.get("objective") or {}).get("objective_id"),
+                "objective_score": selection.get("objective_score"),
+                "operator_refinement_required": selection.get("operator_refinement_required"),
+                "post_simulation_regeneration_performed": selection.get("post_simulation_regeneration_performed"),
+                "ranked_candidates": selection.get("ranked_candidates") or [],
+            }
+    return best
+
+
 def response_requests_operator_details(text: str) -> bool:
     lower = text.lower()
     required_phrases = [
@@ -335,6 +399,9 @@ def load_smoke_rows(packet_dir: Path) -> list[dict[str, str]]:
                 "is_smoke": "true",
             }
         )
+        for field in ("expected_status", "expected_fields_json", "expected_interceptor", "expected_deployment_blocked"):
+            if smoke.get(field):
+                base[field] = smoke[field]
         if "suite" not in base:
             if packet_test_id.startswith("TC1-"):
                 base["suite"] = "TC1"
@@ -437,14 +504,29 @@ def fetch_execution_snapshots(env: dict[str, str], execution_ids: list[str], exe
                 timeout=60,
             )
         except Exception as exc:
-            snapshots.append(
-                {
-                    "execution_id": execution_id,
-                    "fetch_status": "ERROR",
-                    "error": f"{type(exc).__name__}: {exc}",
-                }
-            )
-            continue
+            try:
+                local = fetch_local_execution_snapshot(execution_id)
+                path = execution_dir / f"execution_{execution_id}_local_db.json"
+                path.write_text(json.dumps(local, indent=2, sort_keys=True), encoding="utf-8")
+                snapshots.append(
+                    {
+                        "execution_id": execution_id,
+                        "fetch_status": "OK_LOCAL_N8N_DATABASE",
+                        "path": str(path),
+                        "api_error": f"{type(exc).__name__}: {exc}",
+                        "body": local,
+                    }
+                )
+                continue
+            except Exception as local_exc:
+                snapshots.append(
+                    {
+                        "execution_id": execution_id,
+                        "fetch_status": "ERROR",
+                        "error": f"API={type(exc).__name__}: {exc}; LOCAL_DB={type(local_exc).__name__}: {local_exc}",
+                    }
+                )
+                continue
         path = execution_dir / f"execution_{execution_id}_include_data.json"
         path.write_text(json.dumps(response["body"], indent=2, sort_keys=True), encoding="utf-8")
         snapshots.append(
@@ -456,6 +538,56 @@ def fetch_execution_snapshots(env: dict[str, str], execution_ids: list[str], exe
             }
         )
     return snapshots
+
+
+def fetch_local_execution_snapshot(execution_id: str) -> dict[str, Any]:
+    database_path = Path(os.environ.get("N8N_DATABASE_PATH") or (PROJECT_ROOT.parent / "database.sqlite"))
+    if not database_path.exists():
+        raise FileNotFoundError(f"n8n database not found: {database_path}")
+    connection = sqlite3.connect(f"file:{database_path.resolve()}?mode=ro", uri=True, timeout=30)
+    connection.row_factory = sqlite3.Row
+    try:
+        row = connection.execute(
+            """
+            SELECT e.*, d.workflowData, d.data, d.workflowVersionId
+            FROM execution_entity e
+            JOIN execution_data d ON d.executionId = e.id
+            WHERE e.id = ?
+            """,
+            (int(execution_id),),
+        ).fetchone()
+    finally:
+        connection.close()
+    if row is None:
+        raise KeyError(f"n8n execution {execution_id} was not found in the local database")
+    flatted_module = os.environ.get(
+        "N8N_FLATTED_MODULE_PATH",
+        "/usr/local/lib/node_modules/n8n/node_modules/.pnpm/flatted@3.4.2/node_modules/flatted",
+    )
+    decoder = (
+        f"const {{parse}}=require('{flatted_module}');let s='';"
+        "process.stdin.on('data',d=>s+=d);"
+        "process.stdin.on('end',()=>process.stdout.write(JSON.stringify(parse(s))));"
+    )
+    decoded = subprocess.run(
+        ["docker", "exec", "-i", "n8n", "node", "-e", decoder],
+        input=row["data"],
+        text=True,
+        capture_output=True,
+        timeout=60,
+        check=True,
+    )
+    entity_fields = {
+        key: row[key]
+        for key in row.keys()
+        if key not in {"data", "workflowData"}
+    }
+    return {
+        **entity_fields,
+        "workflowData": json.loads(row["workflowData"]),
+        "data": json.loads(decoded.stdout),
+        "execution_data_source": "LOCAL_N8N_SQLITE",
+    }
 
 
 def run_one(env: dict[str, str], row: dict[str, str], out_dir: Path, *, max_wait_seconds: int) -> dict[str, Any]:
@@ -479,10 +611,12 @@ def run_one(env: dict[str, str], row: dict[str, str], out_dir: Path, *, max_wait
             "n8n_execution_snapshots": [],
         }
         packet_score = score_combined(combined, PROJECT_ROOT)
+        evaluation_fields = build_evaluation_fields(row, packet_score)
         combined["status"] = packet_score["status"]
         combined["failure_stage"] = packet_score["failure_stage"]
         combined["failure_cause"] = packet_score["failure_cause"]
         combined["packet_score"] = packet_score
+        combined["checkpoint_evaluation"] = evaluation_fields
         combined_path = out_dir / "combined_executions" / f"{safe_id}.json"
         combined_path.parent.mkdir(parents=True, exist_ok=True)
         combined_path.write_text(json.dumps(combined, indent=2, sort_keys=True), encoding="utf-8")
@@ -536,6 +670,7 @@ def run_one(env: dict[str, str], row: dict[str, str], out_dir: Path, *, max_wait
             "should_launch_isaac": "false",
             "expected_validation_issue": row.get("expected_validation_issue", ""),
             "deployment_performed": False,
+            **evaluation_fields,
         }
     turns: list[dict[str, Any]] = []
     execution_ids: list[str] = []
@@ -631,14 +766,40 @@ def run_one(env: dict[str, str], row: dict[str, str], out_dir: Path, *, max_wait
     combined["run_id"] = run_id
     combined["scenario_spec_id"] = scenario_spec_id
     combined["n8n_execution_snapshots"] = fetch_execution_snapshots(env, execution_ids, execution_dir)
-    snapshot_run_id, snapshot_scenario_spec_id = extract_ids_from_payload(combined["n8n_execution_snapshots"])
-    if snapshot_run_id:
-        run_id = snapshot_run_id
-    if snapshot_scenario_spec_id:
-        scenario_spec_id = snapshot_scenario_spec_id
+    strategy_selection = extract_strategy_selection(combined["n8n_execution_snapshots"])
+    strategy_batch_id = strategy_selection.get("strategy_batch_id")
+    if strategy_batch_id and not strategy_selection.get("selected_run_id"):
+        try:
+            batch_response = http_json(
+                f"{env['TRT_API_URL'].rstrip('/')}/strategy/batches/{strategy_batch_id}",
+                timeout=30,
+            )
+            strategy_selection = extract_strategy_selection(batch_response.get("body")) or strategy_selection
+        except Exception as exc:
+            combined["strategy_batch_fetch_error"] = f"{type(exc).__name__}: {exc}"
+    selected_run_id = strategy_selection.get("selected_run_id")
+    selected_scenario_spec_id = strategy_selection.get("selected_scenario_spec_id")
+    if selected_run_id:
+        run_id = str(selected_run_id)
+    if selected_scenario_spec_id:
+        scenario_spec_id = str(selected_scenario_spec_id)
+    if not selected_run_id or not selected_scenario_spec_id:
+        snapshot_run_id, snapshot_scenario_spec_id = extract_ids_from_payload(combined["n8n_execution_snapshots"])
+        if snapshot_run_id and not selected_run_id:
+            run_id = snapshot_run_id
+        if snapshot_scenario_spec_id and not selected_scenario_spec_id:
+            scenario_spec_id = snapshot_scenario_spec_id
+    combined["strategy_selection"] = strategy_selection
     combined["run_id"] = run_id
     combined["scenario_spec_id"] = scenario_spec_id
     packet_score = score_combined(combined, PROJECT_ROOT)
+    evaluation_fields = build_evaluation_fields(
+        row,
+        packet_score,
+        scenario_spec_id=scenario_spec_id,
+        run_id=run_id,
+        turn_labels=[item["label"] for item in turns],
+    )
     status = packet_score["status"]
     failure_stage = packet_score["failure_stage"]
     failure_cause = packet_score["failure_cause"]
@@ -648,6 +809,7 @@ def run_one(env: dict[str, str], row: dict[str, str], out_dir: Path, *, max_wait
     combined["failure_stage"] = failure_stage
     combined["failure_cause"] = failure_cause
     combined["packet_score"] = packet_score
+    combined["checkpoint_evaluation"] = evaluation_fields
     combined_path = out_dir / "combined_executions" / f"{safe_id}.json"
     combined_path.parent.mkdir(parents=True, exist_ok=True)
     combined_path.write_text(json.dumps(combined, indent=2, sort_keys=True), encoding="utf-8")
@@ -699,6 +861,13 @@ def run_one(env: dict[str, str], row: dict[str, str], out_dir: Path, *, max_wait
         "expected_fields_json": row.get("expected_fields_json", ""),
         "scenario_spec_id": scenario_spec_id,
         "run_id": run_id,
+        "strategy_batch_id": strategy_selection.get("strategy_batch_id", ""),
+        "candidate_count": strategy_selection.get("candidate_count", ""),
+        "candidate_run_ids": ";".join(strategy_selection.get("candidate_run_ids") or []),
+        "selected_candidate_strategy_id": strategy_selection.get("selected_candidate_strategy_id", ""),
+        "selection_objective_id": strategy_selection.get("objective_id", ""),
+        "selection_objective_score": strategy_selection.get("objective_score", ""),
+        "post_simulation_regeneration_performed": strategy_selection.get("post_simulation_regeneration_performed", ""),
         "chat_session_id": session_id,
         "n8n_execution_ids": ";".join(execution_ids),
         "combined_execution_json": str(combined_path),
@@ -710,6 +879,7 @@ def run_one(env: dict[str, str], row: dict[str, str], out_dir: Path, *, max_wait
         "should_launch_isaac": row.get("should_launch_isaac", ""),
         "expected_validation_issue": row.get("expected_validation_issue", ""),
         "deployment_performed": False,
+        **evaluation_fields,
     }
     return result
 
@@ -749,7 +919,10 @@ def main() -> int:
         raise SystemExit(json.dumps(message, indent=2, sort_keys=True))
 
     env = load_env()
-    missing = [key for key in ["N8N_API_KEY", "N8N_URL", "N8N_CHAT_URL"] if not env.get(key)]
+    local_execution_db = Path(os.environ.get("N8N_DATABASE_PATH") or (PROJECT_ROOT.parent / "database.sqlite"))
+    missing = [key for key in ["N8N_URL", "N8N_CHAT_URL"] if not env.get(key)]
+    if not env.get("N8N_API_KEY") and not local_execution_db.exists():
+        missing.append("N8N_API_KEY or N8N_DATABASE_PATH")
     if missing:
         raise SystemExit(f"Missing n8n environment values: {', '.join(missing)}")
 
@@ -779,6 +952,19 @@ def main() -> int:
         try:
             result = run_one(env, row, out_dir, max_wait_seconds=args.max_wait_seconds)
         except Exception as exc:
+            packet_score = {
+                "status": "FAIL",
+                "failure_stage": "runner_exception",
+                "failure_cause": f"{type(exc).__name__}: {exc}",
+                "data_quality_status": "SYSTEM_ERROR",
+                "checks": {},
+                "scoring_method": "M12_RUNNER_EXCEPTION",
+            }
+            evaluation_fields = build_evaluation_fields(
+                row,
+                packet_score,
+                system_error=True,
+            )
             result = {
                 "created_at_utc": now_utc(),
                 "test_id": row["test_id"],
@@ -801,6 +987,7 @@ def main() -> int:
                 "should_launch_isaac": row.get("should_launch_isaac", ""),
                 "expected_validation_issue": row.get("expected_validation_issue", ""),
                 "deployment_performed": False,
+                **evaluation_fields,
             }
         append_jsonl(progress_path, result)
         append_jsonl(out_dir / "events.jsonl", {"event": "TEST_COMPLETED", **result})
@@ -830,6 +1017,13 @@ def main() -> int:
                 "expected_fields_json",
                 "scenario_spec_id",
                 "run_id",
+                "strategy_batch_id",
+                "candidate_count",
+                "candidate_run_ids",
+                "selected_candidate_strategy_id",
+                "selection_objective_id",
+                "selection_objective_score",
+                "post_simulation_regeneration_performed",
                 "chat_session_id",
                 "n8n_execution_ids",
                 "full_sequence",
@@ -839,6 +1033,22 @@ def main() -> int:
                 "should_launch_isaac",
                 "expected_validation_issue",
                 "deployment_performed",
+                "CP0",
+                "CP1",
+                "CP2",
+                "CP3",
+                "CP4",
+                "CP5",
+                "CP6",
+                "automated_result",
+                "manual_result",
+                "human_reviewed",
+                "manual_correction_used",
+                "manual_intervention_required",
+                "outcome_class",
+                "failure_cause_code",
+                "rejection_reason",
+                "correction_method",
                 "combined_execution_json",
                 "transcript",
             ],

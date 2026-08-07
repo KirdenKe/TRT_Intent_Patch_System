@@ -6,13 +6,18 @@ import json
 import math
 import re
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import yaml
 
 from trt_core.repository import PROJECT_ROOT
+from trt_core.experiment_evaluation import (
+    CHECKPOINTS,
+    auto_human_metrics,
+    completion_metrics,
+)
 
 
 M12_ROOT = PROJECT_ROOT / "outputs" / "reports" / "m12"
@@ -23,6 +28,77 @@ DEFAULT_OUTPUT = M12_ROOT / "reviewed_trial_20260706"
 def read_csv(path: Path) -> list[dict[str, str]]:
     with path.open(newline="", encoding="utf-8-sig") as handle:
         return list(csv.DictReader(handle))
+
+
+def optional_bool(value: Any) -> bool | None:
+    normalized = str(value or "").strip().lower()
+    if value is True or normalized in {"true", "1", "yes", "pass"}:
+        return True
+    if value is False or normalized in {"false", "0", "no", "fail"}:
+        return False
+    return None
+
+
+def load_manual_reviews(source_run_dir: Path) -> dict[str, dict[str, Any]]:
+    reviews: dict[str, dict[str, Any]] = {}
+    legacy = source_run_dir / "human_reviewed" / "m12_smoke_human_reviewed.csv"
+    if legacy.exists():
+        for row in read_csv(legacy):
+            reviews[row["test_id"]] = {
+                "manual_result": row.get("human_binary_status"),
+                "manual_reason": row.get("human_review_reason"),
+                "reviewer_type": "CODEX_SEMANTIC_REVIEW",
+                "reviewed_at_utc": row.get("reviewed_at_utc"),
+            }
+    for path in (source_run_dir / "semantic_reviews.jsonl", M12_ROOT / "semantic_reviews.jsonl"):
+        if not path.exists():
+            continue
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            test_id = str(row.get("test_id") or "")
+            if test_id:
+                reviews[test_id] = {
+                    "manual_result": row.get("review_result"),
+                    "manual_reason": row.get("review_reason"),
+                    "reviewer_type": row.get("reviewer_type"),
+                    "reviewed_at_utc": row.get("reviewed_at_utc"),
+                    "failure_cause_code": row.get("failure_cause"),
+                    "correction_method": row.get("correction_method"),
+                }
+    return reviews
+
+
+def read_full_transcript(path: Path) -> str:
+    if not path.exists():
+        return "DATA_INCOMPLETE - transcript file was not found."
+    return path.read_text(encoding="utf-8", errors="replace").strip()
+
+
+def finalized_outcome(
+    *,
+    recorded: str,
+    manual_result: str,
+    manual_correction_used: bool | None,
+    failure_stage: str,
+    failure_cause_code: str,
+) -> str:
+    """Classify completion of the test objective, including negative cases."""
+
+    if manual_result == "PASS":
+        return "MANUALLY_ASSISTED_SUCCESS" if manual_correction_used else "AUTONOMOUS_SUCCESS"
+    if manual_result != "FAIL":
+        return recorded or "EVALUATION_INCOMPLETE"
+    if failure_cause_code == "MANUAL_REJECTION" or failure_stage.lower() == "deployment":
+        return "MANUAL_REJECTION"
+    if failure_stage.lower() in {"runner_exception", "backend_injection", "system", "api"}:
+        return "SYSTEM_ERROR"
+    if failure_stage.lower() in {"simulation", "isaac_runtime", "scenario_generation"}:
+        return "SIMULATION_FAILURE"
+    if failure_stage.lower() in {"dialogue", "intent_validation", "required_fields"}:
+        return "INPUT_FAILURE"
+    return "VALIDATION_FAILURE"
 
 
 def write_csv(path: Path, rows: list[dict[str, Any]], fields: list[str]) -> None:
@@ -183,54 +259,88 @@ def load_packet_rows(packet_dir: Path) -> dict[str, dict[str, str]]:
 
 def build_rows(source_run_dir: Path, db_path: Path) -> list[dict[str, Any]]:
     results = read_csv(source_run_dir / "full_n8n_results_latest.csv")
-    reviewed = {
-        row["test_id"]: row
-        for row in read_csv(source_run_dir / "human_reviewed" / "m12_smoke_human_reviewed.csv")
-    }
+    reviewed = load_manual_reviews(source_run_dir)
     packet_rows = load_packet_rows(M12_ROOT / "manual_test_packet")
     metrics = load_metrics_by_run(db_path)
     rows: list[dict[str, Any]] = []
     for idx, result in enumerate(results, start=1):
         raw_id = result["test_id"]
         test_label = f"T{idx:02d}"
+        review = reviewed.get(raw_id, {})
         packet = packet_rows.get(result.get("packet_test_id", ""), {})
         combined = load_combined(result.get("combined_execution_json", ""))
         timing = timing_from_combined(combined)
         run_id = result.get("run_id", "")
         scenario_spec_id = result.get("scenario_spec_id", "")
         metric = metrics.get(run_id, {})
-        spec_path = PROJECT_ROOT / "outputs" / "scenario_specs" / f"{scenario_spec_id}.json"
-        artifact_path = PROJECT_ROOT / "outputs" / "run_artifacts" / f"{run_id}.sqlite"
-        file_verification = file_elapsed_seconds(spec_path, artifact_path) if run_id and scenario_spec_id else None
         db_verification = fnum(metric.get("T_verification_seconds"))
         if db_verification is not None and db_verification <= 0:
             db_verification = None
-        transcript_path = source_run_dir / "manual_transcripts_snapshot" / f"{raw_id}.txt"
+        transcript_value = str(result.get("transcript") or "")
+        transcript_path = Path(transcript_value) if transcript_value else source_run_dir / "manual_transcripts_snapshot" / f"{raw_id}.txt"
+        if not transcript_path.is_absolute():
+            transcript_path = PROJECT_ROOT / transcript_path
         total = fnum(metric.get("N_tool_storage_total"))
         failed = fnum(metric.get("N_failed_tool_storage"))
         passed = None if total is None or failed is None else max(0.0, total - failed)
+        manual_result = str(review.get("manual_result") or result.get("manual_result", "")).upper()
+        manual_correction_used = optional_bool(result.get("manual_correction_used"))
+        failure_stage = str(result.get("failure_stage") or "")
+        failure_cause_code_value = str(review.get("failure_cause_code") or result.get("failure_cause_code", ""))
+        outcome_class = finalized_outcome(
+            recorded=str(result.get("outcome_class") or "EVALUATION_INCOMPLETE"),
+            manual_result=manual_result,
+            manual_correction_used=manual_correction_used,
+            failure_stage=failure_stage,
+            failure_cause_code=failure_cause_code_value,
+        )
         rows.append(
             {
                 "test_label": test_label,
+                "test_id": raw_id,
                 "packet_test_id": result.get("packet_test_id", ""),
                 "suite": result.get("suite", ""),
                 "operator_instruction": packet.get("paste_into_n8n", ""),
                 "system_response_excerpt": transcript_response_excerpt(transcript_path),
+                "full_transcript": read_full_transcript(transcript_path),
+                "expected_criteria": json.dumps(packet, sort_keys=True),
                 "automated_status": result.get("status", ""),
-                "reviewed_status": reviewed.get(raw_id, {}).get("human_binary_status", ""),
-                "review_reason": reviewed.get(raw_id, {}).get("human_review_reason", ""),
+                "automated_result": result.get("automated_result") or result.get("status", ""),
+                "reviewed_status": manual_result,
+                "manual_result": manual_result,
+                "review_reason": review.get("manual_reason") or result.get("rejection_reason", ""),
+                "reviewer_type": review.get("reviewer_type") or ("UNREVIEWED" if not result.get("manual_result") else "UNSPECIFIED_MANUAL_REVIEW"),
+                "reviewed_at_utc": review.get("reviewed_at_utc"),
+                "outcome_class": outcome_class,
+                "manual_correction_used": manual_correction_used,
+                "manual_intervention_required": optional_bool(result.get("manual_intervention_required")),
+                "failure_stage": failure_stage,
+                "failure_cause": result.get("failure_cause", ""),
+                "failure_cause_code": failure_cause_code_value,
+                "correction_method": review.get("correction_method") or result.get("correction_method", ""),
+                "checkpoints": {cp: optional_bool(result.get(cp)) for cp in CHECKPOINTS},
                 "scenario_spec_id": scenario_spec_id,
                 "run_id": run_id,
+                "strategy_batch_id": result.get("strategy_batch_id", ""),
+                "candidate_count": result.get("candidate_count", ""),
+                "candidate_run_ids": result.get("candidate_run_ids", ""),
+                "selected_candidate_strategy_id": result.get("selected_candidate_strategy_id", ""),
+                "selection_objective_id": result.get("selection_objective_id", ""),
+                "selection_objective_score": result.get("selection_objective_score", ""),
                 "R_storage": fnum(metric.get("R_storage")),
                 "N_tool_storage_total": total,
                 "N_tool_storage_passed": passed,
                 "N_failed_tool_storage": failed,
                 "T_wait_seconds": timing["T_wait_seconds"],
-                "T_verification_seconds": db_verification if db_verification is not None else file_verification,
-                "T_verification_source": "metrics database lifecycle timestamps" if db_verification is not None else ("ScenarioSpec-to-RunArtifact file timestamps" if file_verification is not None else "DATA_INCOMPLETE"),
+                "T_verification_seconds": db_verification,
+                "T_verification_source": "metrics database with measured Isaac startup excluded" if db_verification is not None else "DATA_INCOMPLETE",
                 "T_loop_seconds": timing["T_loop_seconds"],
                 "data_source": "LIVE_N8N_CHAT",
                 "metric_data_quality_status": metric.get("data_quality_status", "DATA_INCOMPLETE" if run_id else "NO_RUN"),
+                "chat_session_id": result.get("chat_session_id", ""),
+                "n8n_execution_ids": result.get("n8n_execution_ids", ""),
+                "combined_execution_json": result.get("combined_execution_json", ""),
+                "transcript_path": str(transcript_path),
             }
         )
     return rows
@@ -428,6 +538,52 @@ def fmt_num(value: Any, digits: int = 2) -> str:
     return "null" if number is None else f"{number:.{digits}f}"
 
 
+WORKSTATIONS = [
+    ["Operator chat", "Receive intent and review decisions", "Natural language", "Clarify, approve, reject, or revise", "Chat turns and review decisions", "Human wording and response latency"],
+    ["Intent generator / trt-api", "Convert intent into a validated patch", "Chat turn and current TRT", "Classify, extract, normalize, validate", "IntentPatch or clarification", "Supported schema and validators"],
+    ["Supervisor / reconciliation", "Align approved requirements with state", "Released TRT and state records", "Reconcile affected lines and constraints", "Reconciliation plan", "Not a production scheduler"],
+    ["Candidate strategy generator", "Propose distinct policy alternatives", "Released TRT, aligned state, Time-Arrival state", "Generate 2-8 schema-valid candidates", "Candidate strategy batch", "One configured LLM endpoint per batch"],
+    ["Scenario adapter", "Compile each candidate", "Candidate strategy and scene contract", "Generate and validate ScenarioSpec", "Executable ScenarioSpec", "Cannot repair an infeasible objective"],
+    ["Isaac Sim digital twin", "Evaluate physical execution", "ScenarioSpec", "Simulate placement, ordering, reset, and timing", "RunArtifact and raw SQLite evidence", "Simulation fidelity and startup cost"],
+    ["Evidence and selector", "Gate and rank outcomes", "RunArtifacts and KPI constraints", "Reject constraint failures; rank eligible candidates by throughput", "Selected candidate or refinement request", "Depends on complete evidence"],
+]
+
+
+CASE_OBJECTIVES = {
+    "TC1": ["Natural-language intent and executable-plan correctness", "Incorrect extraction, schema, line scope, or policy semantics", "Validate CP0-CP4 before evidence ranking"],
+    "TC2": ["Tool and evidence-query orchestration", "Wrong tool, argument, dependency order, or fabricated answer", "Compare actual trace and answer with fixed L1/L2/L3 gold requirements"],
+    "TC3": ["KPI, timing, and graph-ready evidence", "Missing or invalid RunArtifact metrics and constraint evidence", "Run physical what-if scenarios and collect Equations 3.2-3.6"],
+    "TC4": ["Deployment-relevant error interception", "Unsafe or invalid state proceeds beyond its required gate", "Inject a defined error and verify interception before deployment"],
+    "TC5": ["Human review and closed-loop timing", "Lifecycle events or review completion are missing", "Measure operator-facing wait, verification, and loop time"],
+    "TC6": ["Single-model repeated-generation stability", "Same prompt produces malformed, incomplete, or semantically inconsistent output", "Repeat the same prompt with the same model and server presets"],
+    "TC7": ["Cross-model structured-generation comparison", "Model-dependent format, semantic, latency, or token differences", "Run identical fixtures against Gemma, Qwen, and Llama"],
+}
+
+
+def checkpoint_summary(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    result: dict[str, dict[str, Any]] = {}
+    for cp in CHECKPOINTS:
+        entered = [row for row in rows if row["checkpoints"].get(cp) is not None]
+        passed = sum(row["checkpoints"].get(cp) is True for row in entered)
+        result[cp] = {"entered": len(entered), "passed": passed, "rate": passed / len(entered) if entered else None}
+    return result
+
+
+def overall_compliance(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    eligible = [row for row in rows if row["suite"] in {"TC1", "TC2", "TC3", "TC5"}]
+    passed = 0
+    for row in eligible:
+        applicable = [value for cp, value in row["checkpoints"].items() if cp != "CP6" and value is not None]
+        if applicable and all(applicable) and row.get("manual_result") == "PASS":
+            passed += 1
+    return {
+        "entered": len(eligible),
+        "passed": passed,
+        "rate": passed / len(eligible) if eligible else None,
+        "mandatory_criteria": "All recorded applicable CP0-CP5 checks pass, required ScenarioSpec/RunArtifact evidence exists, no mandatory KPI or safety constraint fails, and manual review is PASS. TC4 negative/error-injection cases are reported separately.",
+    }
+
+
 def markdown_table(rows: list[list[str]]) -> str:
     if not rows:
         return ""
@@ -438,6 +594,91 @@ def markdown_table(rows: list[list[str]]) -> str:
         if index == 0:
             lines.append("| " + " | ".join("-" * widths[i] for i in range(len(row))) + " |")
     return "\n".join(lines)
+
+
+def write_detailed_appendix(output: Path, rows: list[dict[str, Any]]) -> None:
+    lines = [
+        "# Appendix: Detailed Trial Evidence",
+        "",
+        "This appendix contains every evaluated case. `Manual review` denotes a recorded semantic adjudication; reviewer provenance is retained so a Codex or engineer review is not misrepresented as an operator deployment decision.",
+        "",
+    ]
+    for row in rows:
+        objective = CASE_OBJECTIVES.get(row["suite"], ["Not registered", "Not registered", "Not registered"])
+        checkpoint_rows = [["Checkpoint", "Result", "Test object", "Pass criterion"]]
+        for cp in CHECKPOINTS:
+            value = row["checkpoints"][cp]
+            checkpoint_rows.append([
+                cp,
+                "PASS" if value is True else ("FAIL" if value is False else "NOT ENTERED / DATA_INCOMPLETE"),
+                CHECKPOINTS[cp]["test_object"],
+                CHECKPOINTS[cp]["pass_criteria"],
+            ])
+        lines.extend([
+            f"## {row['test_label']} - {row['suite']} / {row['packet_test_id']}",
+            "",
+            "### Test Objective",
+            "",
+            f"- Purpose: {objective[0]}",
+            f"- Expected problem: {objective[1]}",
+            f"- Methodology/checkpoint: {objective[2]}",
+            "",
+            "### Operator Instruction",
+            "",
+            row["operator_instruction"] or "DATA_INCOMPLETE - operator instruction missing.",
+            "",
+            "### Expected Criteria And Stop Rule",
+            "",
+            "```json",
+            row["expected_criteria"],
+            "```",
+            "",
+            "### Full Recorded Interaction",
+            "",
+            "```text",
+            row["full_transcript"].replace("```", "'''"),
+            "```",
+            "",
+            "### Checkpoint Results",
+            "",
+            markdown_table(checkpoint_rows),
+            "",
+            "### Automated And Manual Review",
+            "",
+            f"- Automated result: `{row['automated_result'] or 'DATA_INCOMPLETE'}`",
+            f"- Manual review result: `{row['manual_result'] or 'DATA_INCOMPLETE'}`",
+            f"- Reviewer type: `{row['reviewer_type']}`",
+            f"- Review reason: {row['review_reason'] or 'DATA_INCOMPLETE'}",
+            f"- Outcome class: `{row['outcome_class']}`",
+            f"- Manual correction used: `{row['manual_correction_used']}`",
+            "",
+            "### Failure And Correction Evidence",
+            "",
+            f"- Failure stage: `{row['failure_stage'] or 'NONE_RECORDED'}`",
+            f"- Failure source: `{row['failure_cause_code'] or 'NONE_RECORDED'}`",
+            f"- Detailed reason: {row['failure_cause'] or 'No failure detail recorded.'}",
+            f"- Correction method: {row['correction_method'] or 'No correction recorded.'}",
+            "",
+            "### IDs, Provenance, And Metrics",
+            "",
+            f"- Chat session ID: `{row['chat_session_id'] or 'null'}`",
+            f"- n8n execution IDs: `{row['n8n_execution_ids'] or 'null'}`",
+            f"- ScenarioSpec ID: `{row['scenario_spec_id'] or 'null'}`",
+            f"- RunArtifact ID: `{row['run_id'] or 'null'}`",
+            f"- Strategy batch ID: `{row['strategy_batch_id'] or 'null'}`",
+            f"- Candidate count: `{row['candidate_count'] or 'null'}`",
+            f"- Candidate RunArtifact IDs: `{row['candidate_run_ids'] or 'null'}`",
+            f"- System-selected candidate: `{row['selected_candidate_strategy_id'] or 'null'}`",
+            f"- Selection objective: `{row['selection_objective_id'] or 'null'}`; score=`{row['selection_objective_score'] or 'null'}`",
+            f"- Data source: `{row['data_source']}`",
+            f"- R_storage: `{fmt_num(row['R_storage'], 6)}` from passed=`{fmt_num(row['N_tool_storage_passed'], 0)}` / total=`{fmt_num(row['N_tool_storage_total'], 0)}`",
+            f"- T_wait: `{fmt_num(row['T_wait_seconds'], 6)}` seconds",
+            f"- T_verification: `{fmt_num(row['T_verification_seconds'], 6)}` seconds; source: {row['T_verification_source']}",
+            f"- T_loop: `{fmt_num(row['T_loop_seconds'], 6)}` seconds",
+            f"- Data quality: `{row['metric_data_quality_status']}`",
+            "",
+        ])
+    (output / "APPENDIX_DETAILED_TRIAL_EVIDENCE.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def write_report(output: Path, rows: list[dict[str, Any]], summary: dict[str, Any]) -> None:
@@ -454,7 +695,7 @@ def write_report(output: Path, rows: list[dict[str, Any]], summary: dict[str, An
             "Suite",
             "Operator instruction",
             "System response excerpt",
-            "Reviewed result",
+            "Manual review result",
             "Reason",
         ]
     ]
@@ -486,33 +727,122 @@ def write_report(output: Path, rows: list[dict[str, Any]], summary: dict[str, An
                 row.get("T_verification_source", ""),
             ]
         )
+    checkpoints = checkpoint_summary(rows)
+    completion = completion_metrics(rows)
+    judgments = auto_human_metrics(rows)
+    compliance = overall_compliance(rows)
+    outcome_counts: dict[str, int] = {}
+    for row in rows:
+        outcome_counts[row["outcome_class"]] = outcome_counts.get(row["outcome_class"], 0) + 1
+    checkpoint_table = [["Checkpoint", "Object", "Entered", "Passed", "Pass rate", "Mode"]]
+    for cp, definition in CHECKPOINTS.items():
+        values = checkpoints[cp]
+        checkpoint_table.append([
+            cp,
+            definition["test_object"],
+            str(values["entered"]),
+            str(values["passed"]),
+            fmt_num(values["rate"], 4),
+            "Manual review" if definition["mode"] == "MANUAL" else definition["mode"],
+        ])
+    case_table = [["Case", "Purpose", "Expected problem", "Methodology"]] + [
+        [case, values[0], values[1], values[2]] for case, values in CASE_OBJECTIVES.items()
+    ]
+    failure_table = [["Trial", "Failure stage", "Failure source", "Automated result", "Manual result", "Rejection reason", "Correction method"]]
+    for row in rows:
+        if row["manual_result"] == "FAIL" or row["failure_cause_code"]:
+            failure_table.append([
+                row["test_label"],
+                row["failure_stage"] or "DATA_INCOMPLETE",
+                row["failure_cause_code"] or "DATA_INCOMPLETE",
+                row["automated_result"] or "DATA_INCOMPLETE",
+                row["manual_result"] or "DATA_INCOMPLETE",
+                short(row["review_reason"] or row["failure_cause"], 160),
+                short(row["correction_method"], 120) or "Not recorded",
+            ])
+    disagreement_ids = set(judgments["automated_pass_manual_fail"] + judgments["automated_fail_manual_pass"])
+    disagreement_table = [["Trial", "Automated", "Manual review", "Reason"]] + [
+        [row["test_label"], row["automated_result"], row["manual_result"], short(row["review_reason"], 180)]
+        for row in rows if row.get("test_id") in disagreement_ids
+    ]
+    llm_manifest = M12_ROOT / "llm_comparison" / "llm_generation_benchmark_manifest.json"
+    llm_status = (
+        f"Measured benchmark manifest: `{llm_manifest}`"
+        if llm_manifest.exists()
+        else "DATA_INCOMPLETE - TC6/TC7 are defined, but no post-improvement model benchmark has been run."
+    )
     lines = [
         "# Milestone 12 Reviewed Trial Engineering Technical Report",
         "",
-        "Date generated: 2026-07-09",
+        f"Date generated: {datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')}",
         "",
         "## 1. Purpose",
         "",
-        "This document summarizes the reviewed Milestone 12 trial run used before a larger comparison campaign. The run exercised natural-language operator requests, n8n chat routing, TRT patch review, ScenarioSpec generation, Isaac Sim execution, evidence extraction, and deployment-safety checks.",
+        "This document summarizes the manually reviewed Milestone 12 trial run used before a larger comparison campaign. The run exercised natural-language operator requests, n8n chat routing, TRT patch review, ScenarioSpec generation, Isaac Sim execution, evidence extraction, and deployment-safety checks.",
         "",
-        "The final result uses reviewed binary adjudication rather than the raw automated status. The automated runner is treated as an evidence collector and first-pass classifier.",
+        "The final result uses manual-review binary adjudication rather than the raw automated status. The automated runner is treated as an evidence collector and first-pass classifier; reviewer provenance remains explicit.",
         "",
         "## 2. Result Summary",
         "",
-        f"- Reviewed PASS: {summary['pass_count']}",
-        f"- Reviewed FAIL: {summary['fail_count']}",
-        f"- Reviewed pass rate: {summary['pass_rate']:.4f}",
+        f"- Manual-review PASS: {summary['pass_count']}",
+        f"- Manual-review FAIL: {summary['fail_count']}",
+        f"- Manual-review pass rate: {summary['pass_rate']:.4f}",
         f"- Live simulation rows: {summary['simulation_rows']}",
         f"- Mean R_storage: {fmt_num(summary['R_storage_mean'], 4)}",
         f"- Mean T_wait: {fmt_num(summary['T_wait_mean_seconds'], 2)} seconds",
         f"- Mean T_verification: {fmt_num(summary['T_verification_mean_seconds'], 2)} seconds",
         f"- Mean T_loop: {fmt_num(summary['T_loop_mean_seconds'], 2)} seconds",
+        f"- Autonomous success rate: {fmt_num(completion['autonomous_success_rate'], 4)}",
+        f"- Assisted completion rate: {fmt_num(completion['assisted_completion_rate'], 4)}",
+        f"- Overall completion rate: {fmt_num(completion['overall_completion_rate'], 4)}",
         "",
-        "## 3. Suite-Level Outcomes",
+        "Outcome classes are reported separately: Autonomous Success, Manually Assisted Success, Validation Failure, Input Failure, Simulation Failure, System Error, Manual Rejection, and Evaluation Incomplete when evidence is insufficient. A manually assisted completion is never counted as autonomous success.",
+        "",
+        markdown_table([["Outcome class", "Count"]] + [[name, str(count)] for name, count in sorted(outcome_counts.items())]),
+        "",
+        "## 3. Test Environment And Workstations",
+        "",
+        markdown_table([["Workstation", "Function", "Input", "Task", "Output", "Major limitations"]] + WORKSTATIONS),
+        "",
+        "Different workstations perform different ownership-scoped tasks. Policy ordering may vary only within the candidate-strategy fields allowed by schema; operator-locked targets, task meaning, KPI constraints, line scope, and Time-Arrival values cannot be substituted or transferred by the candidate generator.",
+        "",
+        "## 4. Case Studies And Research Checkpoints",
+        "",
+        markdown_table(case_table),
+        "",
+        "## 5. Checkpoint Performance",
+        "",
+        markdown_table(checkpoint_table),
+        "",
+        "A checkpoint denominator includes only cases that entered that checkpoint. `NOT ENTERED` is not silently converted to pass or fail.",
+        "",
+        "## 6. Automated Checks And Manual Review",
+        "",
+        f"- Auto-check pass rate: {fmt_num(judgments['automated_pass_rate'], 4)}",
+        f"- Manual-review pass rate: {fmt_num(judgments['manual_verification_pass_rate'], 4)}",
+        f"- Auto-manual agreement rate: {fmt_num(judgments['auto_human_agreement_rate'], 4)}",
+        "",
+        "Cases where automated and manual results disagree:",
+        "",
+        markdown_table(disagreement_table) if len(disagreement_table) > 1 else "No recorded disagreements, or manual review is incomplete.",
+        "",
+        "## 7. Overall Compliance Pass Rate",
+        "",
+        f"Overall Compliance Pass Rate = {compliance['passed']} / {compliance['entered']} = {fmt_num(compliance['rate'], 4)}.",
+        "",
+        f"Mandatory criteria: {compliance['mandatory_criteria']}",
+        "",
+        "## 8. LLM Stability And Model Comparison",
+        "",
+        llm_status,
+        "",
+        "TC6 records repeated-output JSON accuracy, required-field completeness, intent-classification consistency, field-content consistency, semantic accuracy, output variants, latency, tokens, prompt version, server sampling provenance, and hardware description. TC7 applies the same fixtures to Gemma, Qwen, and Llama. Client requests do not set temperature, top-p, top-k, min-p, presence penalty, or repetition penalty; unreported server preset values remain null.",
+        "",
+        "## 9. Suite-Level Outcomes",
         "",
         markdown_table([["Suite", "PASS", "FAIL"]] + [[suite, str(counts["PASS"]), str(counts["FAIL"])] for suite, counts in sorted(suite_counts.items())]),
         "",
-        "## 4. Figures",
+        "## 10. Figures",
         "",
         "The figures below are SVG-only. Placement verification is shown by run rather than as a distribution, because the metric is a pass rate with meaningful per-run raw counts. Timing distributions use equal-width bins and include mean and maximum markers.",
         "",
@@ -548,7 +878,29 @@ def write_report(output: Path, rows: list[dict[str, Any]], summary: dict[str, An
         "",
         "![Closed Loop Time Distribution](figures/fig_08_T_loop_distribution.svg)",
         "",
-        "## 5. Engineering Findings",
+        "### Checkpoint Pass Rates",
+        "",
+        "![Checkpoint Pass Rates](figures/fig_09_checkpoint_pass_rates.svg)",
+        "",
+        "### Automated And Manual Review Rates",
+        "",
+        "![Automated And Manual Review Rates](figures/fig_10_automated_manual_review_rates.svg)",
+        "",
+        "### Outcome Classification",
+        "",
+        "![Outcome Classification](figures/fig_11_outcome_classification.svg)",
+        "",
+        "## 11. Timing Scope",
+        "",
+        "`T_verification = T_artifact_created - T_scenario_created` is an end-to-end lifecycle interval and therefore includes host queueing, Isaac startup, rendering when headless mode is false, reset/initialization, strategy simulation, artifact persistence, and any inseparable host overhead between those timestamps. It is not the isolated strategy validation time.",
+        "",
+        "`strategy_simulation_seconds` is derived from in-simulation sorting evidence and excludes the initial Isaac launch/render wall time. The worker separately records `simulation_startup_and_execution_seconds`; startup alone remains null with `SIMULATION_STARTUP_NOT_SEPARABLE_FROM_HOST_WALL_TIME` unless the host runner exposes a dedicated event.",
+        "",
+        "## 12. Failure Sources",
+        "",
+        markdown_table(failure_table) if len(failure_table) > 1 else "No failed cases were recorded.",
+        "",
+        "## 13. Engineering Findings",
         "",
         "The system successfully answered several configuration and state queries that the automated trace scorer originally marked as failed. This shows that internal tool-trace matching is too brittle to serve as the final experimental judgment.",
         "",
@@ -572,9 +924,11 @@ def write_report(output: Path, rows: list[dict[str, Any]], summary: dict[str, An
         "",
         "### A.3 Verification Time",
         "",
-        "`T_verification = T_artifact_created - T_scenario_created`",
+        "`T_verification_wall = T_artifact_created - T_scenario_created`",
         "",
-        "The report prefers a positive formal `m12_run_metrics.T_verification_seconds` value computed from lifecycle timestamps. File timestamps from `outputs/scenario_specs/<scenario_spec_id>.json` and `outputs/run_artifacts/<run_id>.sqlite` are used only as a fallback when lifecycle timestamps are missing or non-positive. This matters because copied/regenerated files can make modification-time deltas larger than the actual closed-loop chat duration, while incomplete lifecycle rows can produce zero-duration artifacts.",
+        "`T_verification = T_verification_wall - T_isaac_startup`",
+        "",
+        "`T_isaac_startup` begins when the host runner launches the Isaac command and ends at the last configured startup warning observed with a host system timestamp. The two articulation warnings match any `Env<id>`; the GPU memory-budget warning is also recognized. An Isaac internal timestamp is accepted only as an explicit fallback. File modification times are not used. If the startup boundary is unavailable, `T_verification` remains null and is labelled `DATA_INCOMPLETE`.",
         "",
         "### A.4 Closed-Loop Elapsed Time",
         "",
@@ -584,7 +938,7 @@ def write_report(output: Path, rows: list[dict[str, Any]], summary: dict[str, An
         "",
         "The summary mean for `T_loop` is calculated over all reviewed trial rows that have chat-turn timestamps, including fast query, clarification, and rejection cases. The summary mean for `T_verification` is calculated only over simulation rows. Therefore the two summary means are not a nested timing comparison; use Appendix C for row-level simulation comparisons.",
         "",
-        "### A.5 Reviewed Pass/Fail",
+        "### A.5 Manual Review Pass/Fail",
         "",
         "A row was marked `PASS` if the actual test purpose was satisfied. It was marked `FAIL` if the system did not satisfy the test purpose, if a safety-critical invalid value reached candidate approval, or if missing evidence prevented proving success.",
         "",
@@ -626,15 +980,23 @@ def main() -> int:
     fig_dir.mkdir(parents=True, exist_ok=True)
     refs = load_reference()
     rows = build_rows(source_run_dir, db_path)
+    source_rows = [{**row, **row["checkpoints"]} for row in rows]
     write_csv(
         output / "reviewed_trial_source_data.csv",
-        rows,
+        source_rows,
         [
-            "test_label", "packet_test_id", "suite", "operator_instruction",
-            "system_response_excerpt", "automated_status", "reviewed_status", "review_reason",
-            "scenario_spec_id", "run_id", "R_storage", "N_tool_storage_total", "N_tool_storage_passed",
+            "test_label", "test_id", "packet_test_id", "suite", "operator_instruction",
+            "expected_criteria", "full_transcript", "transcript_path", "system_response_excerpt",
+            "automated_status", "automated_result", "reviewed_status", "manual_result", "review_reason",
+            "reviewer_type", "reviewed_at_utc", "outcome_class", "manual_correction_used",
+            "manual_intervention_required", "CP0", "CP1", "CP2", "CP3", "CP4", "CP5", "CP6",
+            "failure_stage", "failure_cause", "failure_cause_code", "correction_method",
+            "scenario_spec_id", "run_id", "strategy_batch_id", "candidate_count", "candidate_run_ids",
+            "selected_candidate_strategy_id", "selection_objective_id", "selection_objective_score",
+            "R_storage", "N_tool_storage_total", "N_tool_storage_passed",
             "N_failed_tool_storage", "T_wait_seconds", "T_verification_seconds", "T_verification_source",
-            "T_loop_seconds", "data_source", "metric_data_quality_status",
+            "T_loop_seconds", "data_source", "metric_data_quality_status", "chat_session_id",
+            "n8n_execution_ids", "combined_execution_json",
         ],
     )
     tc2 = [row for row in rows if row["suite"] == "TC2"]
@@ -673,7 +1035,7 @@ def main() -> int:
             {"label": "MAKA no critic F1", "value": refs["MAKA"]["critic_ablation"]["no_critic_mean_f1"], "series": "Literature", "display": "0.2919", "note": "reference degraded routing"},
             {"label": "MAKA critic F1", "value": refs["MAKA"]["critic_ablation"]["critic_enabled_mean_f1"], "series": "Literature", "display": "0.6697", "note": "reference critic enabled"},
             {"label": "MAKA KG MC acc.", "value": refs["MAKA"]["kg_ablation"]["kg_mean_mc_accuracy"], "series": "Literature", "display": "0.5733", "note": "reference KG multiple-choice accuracy"},
-            {"label": "This study's TC2 pass", "value": tc2_pass / len(tc2), "series": "This study (proxy)", "display": f"{tc2_pass}/{len(tc2)}", "note": "reviewed query rows"},
+            {"label": "This study's TC2 pass", "value": tc2_pass / len(tc2) if tc2 else 0, "series": "This study (proxy)", "display": f"{tc2_pass}/{len(tc2)}", "note": "reviewed query rows"},
         ],
     )
     svg_grouped_horizontal(
@@ -685,7 +1047,7 @@ def main() -> int:
         rows=[
             {"label": "MAKA full recovery", "value": refs["MAKA"]["critic_ablation"]["full_recovery_rate"], "series": "Literature", "display": "0.6119", "note": "reference recovery rate"},
             {"label": "FactoryFlow taxonomy", "value": 1.0, "series": "Literature", "display": f'{len(refs["FactoryFlow"]["error_taxonomy"])} classes', "note": "reference error-taxonomy coverage"},
-            {"label": "This study's TC4 pass", "value": tc4_pass / len(tc4), "series": "This study (proxy)", "display": f"{tc4_pass}/{len(tc4)}", "note": "reviewed error rows"},
+            {"label": "This study's TC4 pass", "value": tc4_pass / len(tc4) if tc4 else 0, "series": "This study (proxy)", "display": f"{tc4_pass}/{len(tc4)}", "note": "reviewed error rows"},
             {"label": "This study's coverage", "value": min(1.0, len(tc4) / len(refs["FactoryFlow"]["error_taxonomy"])), "series": "This study", "display": f"{len(tc4)} rows", "note": "normalized to FactoryFlow taxonomy"},
         ],
     )
@@ -726,12 +1088,57 @@ def main() -> int:
         values=t_loop,
         source_note="Source: combined execution JSON turn timestamps; automated no-deploy loop.",
     )
+    cp_values = checkpoint_summary(rows)
+    svg_grouped_horizontal(
+        fig_dir / "fig_09_checkpoint_pass_rates.svg",
+        title="Checkpoint Pass Rates",
+        subtitle="Denominators include only cases that entered each checkpoint.",
+        x_label="pass rate",
+        max_value=1.0,
+        rows=[
+            {
+                "label": cp,
+                "value": values["rate"] or 0.0,
+                "series": "Measured",
+                "display": f"{values['passed']}/{values['entered']}" if values["entered"] else "DATA_INCOMPLETE",
+                "note": CHECKPOINTS[cp]["test_object"],
+            }
+            for cp, values in cp_values.items()
+        ],
+    )
+    judgment_values = auto_human_metrics(rows)
+    svg_grouped_horizontal(
+        fig_dir / "fig_10_automated_manual_review_rates.svg",
+        title="Automated And Manual Review Rates",
+        subtitle="Automated checks and manual review are reported separately.",
+        x_label="rate",
+        max_value=1.0,
+        rows=[
+            {"label": "Auto-check pass", "value": judgment_values["automated_pass_rate"] or 0.0, "series": "Automated", "display": fmt_num(judgment_values["automated_pass_rate"], 3), "note": "automated cases with binary result"},
+            {"label": "Manual-review pass", "value": judgment_values["manual_verification_pass_rate"] or 0.0, "series": "Manual review", "display": fmt_num(judgment_values["manual_verification_pass_rate"], 3), "note": "manually reviewed cases"},
+            {"label": "Auto-manual agreement", "value": judgment_values["auto_human_agreement_rate"] or 0.0, "series": "Agreement", "display": fmt_num(judgment_values["auto_human_agreement_rate"], 3), "note": "same binary determination"},
+        ],
+    )
+    outcome_counts: dict[str, int] = {}
+    for row in rows:
+        outcome_counts[row["outcome_class"]] = outcome_counts.get(row["outcome_class"], 0) + 1
+    svg_grouped_horizontal(
+        fig_dir / "fig_11_outcome_classification.svg",
+        title="Outcome Classification",
+        subtitle="Autonomous and manually assisted completions remain separate.",
+        x_label="case count",
+        max_value=max(1, max(outcome_counts.values(), default=1)),
+        rows=[
+            {"label": name.replace("_", " ").title(), "value": count, "series": "Outcome", "display": str(count), "note": "recorded outcome class"}
+            for name, count in sorted(outcome_counts.items())
+        ],
+    )
     write_csv(output / "time_distribution_source.csv", distribution_rows, ["metric", "bin_start", "bin_end", "count", "total", "probability", "mean", "max"])
     summary = {
         "rows": len(rows),
         "pass_count": pass_count,
         "fail_count": fail_count,
-        "pass_rate": pass_count / len(rows),
+        "pass_rate": pass_count / len(rows) if rows else None,
         "simulation_rows": len(sim_rows),
         "R_storage_mean": mean(r_storage),
         "T_wait_mean_seconds": mean(t_wait),
@@ -741,6 +1148,7 @@ def main() -> int:
     }
     (output / "reviewed_trial_summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
     write_report(output, rows, summary)
+    write_detailed_appendix(output, rows)
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0
 

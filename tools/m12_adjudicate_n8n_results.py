@@ -165,9 +165,11 @@ def adjudicate_combined(combined: dict[str, Any]) -> dict[str, Any]:
         "automated_status": automated_status,
         "automated_failure_stage": packet_score.get("failure_stage", ""),
         "automated_failure_cause": automated_reason,
-        "final_binary_status": final_status,
-        "adjudication_basis": basis,
-        "adjudication_reason": reason,
+        "secondary_automated_status": final_status,
+        "secondary_automated_basis": basis,
+        "secondary_automated_reason": reason,
+        "manual_result": "",
+        "human_reviewed": False,
         "scenario_spec_id": combined.get("scenario_spec_id", ""),
         "run_id": combined.get("run_id", ""),
         "chat_session_id": combined.get("session_id", ""),
@@ -177,7 +179,12 @@ def adjudicate_combined(combined: dict[str, Any]) -> dict[str, Any]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Create binary reviewed M12 adjudication results from n8n combined executions.")
+    parser = argparse.ArgumentParser(
+        description=(
+            "Create a secondary automated M12 assessment. This command does "
+            "not perform or claim human review."
+        )
+    )
     parser.add_argument("--run-dir", required=True, help="Automated n8n run directory containing combined_executions/*.json.")
     parser.add_argument("--output", help="Output directory. Defaults to <run-dir>/adjudicated_results.")
     args = parser.parse_args()
@@ -206,46 +213,64 @@ def main() -> int:
         "automated_status",
         "automated_failure_stage",
         "automated_failure_cause",
-        "final_binary_status",
-        "adjudication_basis",
-        "adjudication_reason",
+        "secondary_automated_status",
+        "secondary_automated_basis",
+        "secondary_automated_reason",
+        "manual_result",
+        "human_reviewed",
         "scenario_spec_id",
         "run_id",
         "chat_session_id",
         "n8n_execution_ids",
         "combined_execution_json",
     ]
-    write_csv(output / "m12_binary_adjudicated_results.csv", rows, fields)
+    write_csv(output / "m12_secondary_automated_assessment.csv", rows, fields)
 
     summary = {
         "run_dir": str(run_dir),
         "rows": len(rows),
-        "final_binary_counts": dict(Counter(row["final_binary_status"] for row in rows)),
-        "suite_binary_counts": dict(Counter(f"{row['suite']}:{row['final_binary_status']}" for row in rows)),
-        "basis_counts": dict(Counter(row["adjudication_basis"] for row in rows)),
+        "secondary_automated_counts": dict(Counter(row["secondary_automated_status"] for row in rows)),
+        "suite_secondary_automated_counts": dict(
+            Counter(f"{row['suite']}:{row['secondary_automated_status']}" for row in rows)
+        ),
+        "basis_counts": dict(Counter(row["secondary_automated_basis"] for row in rows)),
         "automated_status_counts": dict(Counter(f"{row['suite']}:{row['automated_status']}" for row in rows)),
+        "human_reviewed_rows": 0,
     }
-    (output / "m12_binary_adjudicated_summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    (output / "m12_secondary_automated_summary.json").write_text(
+        json.dumps(summary, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
 
     lines = [
-        "# M12 Binary Adjudication",
+        "# M12 Secondary Automated Assessment",
         "",
         f"Run directory: `{run_dir}`",
         f"Rows adjudicated: `{len(rows)}`",
         "",
-        "## Final Binary Counts",
+        "## Secondary Automated Counts",
         "",
     ]
-    for key, value in summary["final_binary_counts"].items():
+    for key, value in summary["secondary_automated_counts"].items():
         lines.append(f"- `{key}`: {value}")
     lines.extend(["", "## Suite Counts", ""])
-    for key, value in summary["suite_binary_counts"].items():
+    for key, value in summary["suite_secondary_automated_counts"].items():
         lines.append(f"- `{key}`: {value}")
     lines.extend(["", "## Notes", ""])
-    lines.append("- Automated scorer status is preserved separately from final binary adjudication.")
+    lines.append("- The packet scorer status is preserved separately from the secondary automated assessment.")
     lines.append("- TC2 can pass on operator-facing answer quality when the answer is correct but an implicit trace step was not captured.")
     lines.append("- TC4 counts clarification/refusal before deployment as successful interception.")
-    (output / "m12_binary_adjudicated_summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    lines.extend(
+        [
+            "",
+            "This output is a secondary automated interpretation. It is not a "
+            "manual verification result and must not be used as CP6.",
+        ]
+    )
+    (output / "m12_secondary_automated_summary.md").write_text(
+        "\n".join(lines) + "\n",
+        encoding="utf-8",
+    )
 
     print(json.dumps({"status": "OK", "rows": len(rows), "output": str(output)}, indent=2, sort_keys=True))
     return 0

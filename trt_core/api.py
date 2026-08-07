@@ -6,8 +6,11 @@ import os
 import logging
 import json
 import sqlite3
+import threading
+import time
 import urllib.error
 import urllib.request
+from copy import deepcopy
 from typing import Any
 from uuid import uuid4
 
@@ -53,7 +56,9 @@ from trt_core.intent_normalizer import (
     IMPLEMENTED_MANIPULATOR_PRIORITY_POLICIES,
     build_target_set_aliases,
     build_tool_vocabulary,
+    explicit_simulation_config_expectations,
     normalize_domain_candidate,
+    relative_time_arrival_validation_errors,
     schema_for_current_trt,
 )
 from trt_core.line_registry import (
@@ -78,7 +83,21 @@ from trt_core.release import prepare_release, record_release_decision
 from trt_core.reconciliation import load_plan
 from trt_core.repository import TRTRepository
 from trt_core.state_records import load_current_state, save_current_state
+from trt_core.strategy_selection import (
+    candidate_measurements,
+    generate_candidate_batch,
+    locked_line_policy_fields_from_release,
+    merge_candidate_simulation_config,
+    now_utc as strategy_now_utc,
+    rank_candidate_runs,
+)
 from trt_core.supervisor import reconcile_current_trt
+from trt_core.time_arrival_state import (
+    load_time_arrival_state,
+    save_time_arrival_state,
+    time_arrival_prompt_context,
+)
+from trt_core.experiment_evaluation import elapsed_seconds
 from trt_core.validator import SUPPORTED_OPERATIONS
 from trt_core.validator import migrate_legacy_tooling_policy
 
@@ -87,6 +106,8 @@ app = FastAPI(title="TRT Intent Patch Core", version="0.1.0")
 repository = TRTRepository()
 logger = logging.getLogger(__name__)
 SIMULATION_RUNS: dict[str, dict[str, Any]] = {}
+STRATEGY_BATCH_WORKERS: dict[str, threading.Thread] = {}
+STRATEGY_SIMULATION_LOCK = threading.Lock()
 HOST_RUNNER_NOT_CONFIGURED_MESSAGE = (
     "ISAAC_HOST_RUNNER_URL is not configured. Start the Windows host runner service, "
     "then set ISAAC_HOST_RUNNER_URL=http://host.docker.internal:<port> in docker-compose.yml "
@@ -163,7 +184,12 @@ def _resolve_scenario_lines(
 ) -> dict[str, Any]:
     registry = load_line_registry(repository)
     registry_lines = registry["lines"]
-    enabled_line_ids = sorted(line_id for line_id, line in registry_lines.items() if line.get("enabled") is True)
+    trt_line_ids = set((released_trt.get("lines") or {}).keys())
+    enabled_line_ids = sorted(
+        line_id
+        for line_id, line in registry_lines.items()
+        if line.get("enabled") is True and line_id in trt_line_ids
+    )
     affected_lines = payload.get("affected_lines") or []
     if not isinstance(affected_lines, list):
         raise HTTPException(status_code=400, detail="affected_lines must be an array.")
@@ -610,6 +636,7 @@ def get_audit(audit_id: str) -> dict[str, Any]:
 def get_intent_context(trt_id: str | None = None) -> dict[str, Any]:
     try:
         context = build_intent_context(repository.get_current_trt(trt_id))
+        context["time_arrival_state"] = time_arrival_prompt_context(repository)
         logger.info(
             "intent_context.llm_candidate_generation_schema.properties.tooling_policy=%r",
             context["llm_candidate_generation_schema"]["properties"]["tooling_policy"],
@@ -656,8 +683,44 @@ def _post_json(url: str, body: dict[str, Any], timeout_seconds: float = 30.0) ->
         headers={"Content-Type": "application/json", "Accept": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
-        return json.loads(response.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace").strip()
+        if len(detail) > 2000:
+            detail = f"{detail[:2000]}..."
+        raise OSError(
+            f"Model server returned HTTP {exc.code}"
+            + (f": {detail}" if detail else ".")
+        ) from exc
+
+
+def _parse_json_object_content(content: Any) -> dict[str, Any]:
+    if isinstance(content, dict):
+        return content
+    if not isinstance(content, str):
+        raise ValueError("Model output must be a JSON object or JSON string.")
+    text = content.strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines and lines[0].strip().startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
+    try:
+        value = json.loads(text)
+    except json.JSONDecodeError:
+        start, end = text.find("{"), text.rfind("}")
+        if start < 0 or end <= start:
+            raise
+        value = json.loads(text[start : end + 1])
+    if isinstance(value, str):
+        value = json.loads(value)
+    if not isinstance(value, dict):
+        raise ValueError("Model JSON output must be an object.")
+    return value
 
 
 def _session_conversation(session: dict[str, Any], latest_user_message: str) -> list[dict[str, str]]:
@@ -830,6 +893,7 @@ def _build_dialogue_decision_prompt(payload: dict[str, Any], session: dict[str, 
     latest = str(payload.get("latest_user_message") or payload.get("raw_chat_input") or "")
     conversation = _session_conversation(session, latest)
     current_trt = repository.get_current_trt()
+    current_time_arrival = time_arrival_prompt_context(repository)
     pending_intent = session.get("pending_intent") or {}
     normalized_session_request = session.get("normalized_request") or {}
     active_request = {
@@ -862,6 +926,7 @@ def _build_dialogue_decision_prompt(payload: dict[str, Any], session: dict[str, 
             "SIMULATION_CONFIG_UPDATE",
             "KPI_UPDATE",
         ],
+        "time_arrival_state": current_time_arrival,
     }
     decision_input = {
         "latest_user_message": latest,
@@ -882,6 +947,10 @@ def _build_dialogue_decision_prompt(payload: dict[str, Any], session: dict[str, 
                 "Classify requests for help, usage guidance, or examples as HELP. "
                 "Classify casual greetings and filler as SMALL_TALK with normalized_request null. "
                 "Classify production-line KPI changes as TASK_REQUEST. "
+                "Classification and field extraction are separate judgments. If the operator clearly asks to change "
+                "production-line, simulation, Time-Arrival, KPI, tooling, or priority behavior, always classify the "
+                "turn as TASK_REQUEST even when one extracted field is uncertain or arithmetically invalid. Never "
+                "return UNKNOWN solely because simulation_config_updates is incomplete or fails semantic validation. "
                 "Classify questions about current configuration, current Time-Arrival Model parameters, current KPI targets, "
                 "state records, one production line's state, past requirement tables, current TRT, previous deployments, "
                 "ScenarioSpecs, run artifacts, or Isaac command configuration as CONFIG_QUERY. "
@@ -897,11 +966,12 @@ def _build_dialogue_decision_prompt(payload: dict[str, Any], session: dict[str, 
                 "Map 'number of tooling so only N remain' to simulation_config_updates.add_reference_number=N, "
                 "but never mention add_reference_number to the operator; say simulated tooling count. "
                 "For Time-Arrival Model dry-run requests, extract simulation_config_updates directly. "
-                "Use current defaults travel_time=5.0, fix_duration=8.0, and resume_delay=0.5 when the user asks for relative changes. "
+                "For relative Time-Arrival changes, use domain_context.time_arrival_state as the only baseline. "
+                "Interpret the operator's relative timing language and independently calculate the resulting absolute values. "
+                "A later IntentPatch validation stage will independently validate these values; this routing decision "
+                "must preserve the turn classification regardless of that later result. "
+                "Do not use memorized or example default values. "
                 "Map only two production lines remaining to simulation_config_updates.num_envs=2 and target_scope MULTIPLE_LINES. "
-                "Map arrival time reduced by about 2 seconds to travel_time=3.0. "
-                "Map time to resolve entanglements reduced by 2 seconds to fix_duration=6.0. "
-                "Map recovery time 1 second slower to resume_delay=1.5. "
                 "Map stop robotic arms immediately on anomaly to simulation_config_updates.chosen_intervention_mode='immediate-stop' "
                 "and include ABNORMAL_STRATEGY_UPDATE. If ABNORMAL_STRATEGY_UPDATE is included because the operator requested "
                 "immediate stopping on anomaly, the response is incomplete unless chosen_intervention_mode is present. "
@@ -934,13 +1004,9 @@ def _build_dialogue_decision_prompt(payload: dict[str, Any], session: dict[str, 
                 "dialogue_state CONFIG_QUERY, query_targets ['LINE_STATE'], line_ids ['line_1'], and normalized_request null. "
                 "Input 'show me the task requirements table' returns turn_type CONFIG_QUERY, "
                 "dialogue_state CONFIG_QUERY, query_targets ['TASK_REQUIREMENT_TABLE'], and normalized_request null. "
-                "Input containing 'only two production lines remaining', 'arrival time reduced by about 2 seconds', "
-                "'time to resolve entanglements reduced by 2 seconds', 'stop immediately upon detecting an anomaly', "
-                "'recovery time 1 second slower', and 'tooling per production line to 6' returns TASK_REQUEST and "
-                "READY_FOR_REVIEW when operator_id and reason are present, action PROPOSE_PATCH, dry_run_only false, request_types "
-                "['SIMULATION_CONFIG_UPDATE','ABNORMAL_STRATEGY_UPDATE'], and simulation_config_updates "
-                "{'num_envs':2,'chosen_intervention_mode':'immediate-stop','travel_time':3.0,'fix_duration':6.0,"
-                "'resume_delay':1.5,'add_reference_number':6}. "
+                "A composite Time-Arrival input returns TASK_REQUEST and READY_FOR_REVIEW when operator_id and reason "
+                "are present, action PROPOSE_PATCH, dry_run_only false, and includes both SIMULATION_CONFIG_UPDATE "
+                "and ABNORMAL_STRATEGY_UPDATE. Its numeric values must be derived from domain_context.time_arrival_state. "
                 "Input beginning 'dry run only' with the same Time-Arrival settings returns action PROPOSE_DRY_RUN, "
                 "dry_run_only true, and includes DRY_RUN_ONLY in request_types. "
                 "Return only JSON matching the schema."
@@ -949,6 +1015,26 @@ def _build_dialogue_decision_prompt(payload: dict[str, Any], session: dict[str, 
         {"role": "user", "content": json.dumps(decision_input, sort_keys=True)},
     ]
     return messages, decision_input
+
+
+def _dialogue_time_arrival_validation_errors(
+    decision: dict[str, Any],
+    decision_input: dict[str, Any],
+) -> list[str]:
+    normalized = decision.get("normalized_request")
+    if not isinstance(normalized, dict):
+        normalized = {}
+    candidate = {
+        **normalized,
+        "intent_text": (
+            normalized.get("intent_text")
+            or (decision_input.get("active_request") or {}).get("original_user_request")
+            or decision_input.get("latest_user_message")
+            or ""
+        ),
+    }
+    baseline = (decision_input.get("domain_context") or {}).get("time_arrival_state") or {}
+    return relative_time_arrival_validation_errors(candidate, baseline)
 
 
 def _resolved_dialogue_intent_text(normalized_request: dict[str, Any], fallback: str) -> str:
@@ -1390,7 +1476,6 @@ def _format_config_query_answer(answer: dict[str, Any]) -> dict[str, Any]:
     body = {
         "model": os.getenv("VLLM_MODEL", DEFAULT_VLLM_MODEL),
         "messages": messages,
-        "temperature": 0,
         "max_tokens": 4000,
         "structured_outputs": {"json": schema},
     }
@@ -1547,15 +1632,34 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
     body = {
         "model": os.getenv("VLLM_MODEL", DEFAULT_VLLM_MODEL),
         "messages": messages,
-        "temperature": 0,
         "max_tokens": 4000,
         "structured_outputs": {"json": _dialogue_decision_schema()},
     }
     url = os.getenv("VLLM_CHAT_COMPLETIONS_URL", DEFAULT_VLLM_CHAT_COMPLETIONS_URL)
+    semantic_attempts: list[dict[str, Any]] = []
     try:
-        raw = _post_json(url, body, float(os.getenv("VLLM_DIALOGUE_DECISION_TIMEOUT_SECONDS", "30")))
+        raw = _post_json(
+            url,
+            body,
+            float(os.getenv("VLLM_DIALOGUE_DECISION_TIMEOUT_SECONDS", "30")),
+        )
         content = raw.get("choices", [{}])[0].get("message", {}).get("content", raw)
         decision = json.loads(content) if isinstance(content, str) else content
+        if not isinstance(decision, dict):
+            raise ValueError("Dialogue decision output must be a JSON object.")
+        validation_errors = _dialogue_time_arrival_validation_errors(decision, decision_input)
+        semantic_attempts.append(
+            {
+                "attempt": 1,
+                "status": "VALID" if not validation_errors else "INVALID_DIAGNOSTIC",
+                "errors": validation_errors,
+                "classification_preserved": True,
+            }
+        )
+        if validation_errors:
+            decision["semantic_validation_status"] = "INVALID_DIAGNOSTIC"
+            decision["semantic_validation_errors"] = validation_errors
+        decision["llm_semantic_validation_attempts"] = semantic_attempts
     except (OSError, TimeoutError, urllib.error.URLError, ValueError, KeyError, TypeError) as exc:
         decision = {
             "dialogue_state": "UNKNOWN",
@@ -1565,12 +1669,24 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
             "missing_or_unclear_items": ["dialogue_state"],
             "approval_decision": None,
             "deployment_decision": None,
+            "llm_semantic_validation_attempts": semantic_attempts,
         }
 
     dialogue_state = str(decision.get("dialogue_state") or "UNKNOWN")
     turn_type = str(decision.get("turn_type") or _turn_type_for_dialogue_state(dialogue_state))
     if not decision.get("dialogue_state"):
         dialogue_state = _dialogue_state_for_turn(turn_type)
+    if turn_type in {"TASK_REQUEST", "CLARIFICATION_VALUES"} and dialogue_state == "UNKNOWN":
+        # Routing and extraction are separate decisions. An incomplete task payload may
+        # need clarification, but it is still a task rather than an unknown chat turn.
+        dialogue_state = "NEEDS_CLARIFICATION"
+        decision["dialogue_state"] = dialogue_state
+        decision.setdefault("routing_repairs", []).append(
+            {
+                "code": "TASK_CLASSIFICATION_PRESERVED",
+                "reason": "Task routing was preserved independently of field extraction quality.",
+            }
+        )
     if turn_type == "CANCEL":
         dialogue_state = "CANCELLED"
     elif turn_type == "HELP":
@@ -1782,7 +1898,11 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
             "failure_action_hint": normalized_request.get("failure_action_hint"),
         }
         try:
-            intent_patch = normalize_domain_candidate(candidate, current_trt)
+            intent_patch = normalize_domain_candidate(
+                candidate,
+                current_trt,
+                time_arrival_baseline=time_arrival_prompt_context(repository),
+            )
             intent_patch["dry_run_only"] = bool(dry_run_only)
             if dry_run_only:
                 intent_patch["deployment_allowed_after_success"] = False
@@ -1995,7 +2115,11 @@ def post_chat_session_merge_clarification(session_id: str, payload: dict[str, An
                 "excluded_instruments": None,
                 "status": "DRAFT",
             }
-            intent_patch = normalize_domain_candidate(candidate, current_trt)
+            intent_patch = normalize_domain_candidate(
+                candidate,
+                current_trt,
+                time_arrival_baseline=time_arrival_prompt_context(repository),
+            )
             manipulator_priority = None
             target_set_id = None
             for operation in intent_patch.get("operations", []):
@@ -2032,7 +2156,11 @@ def post_chat_session_merge_clarification(session_id: str, payload: dict[str, An
             "excluded_instruments": None,
             "status": "DRAFT",
         }
-        intent_patch = normalize_domain_candidate(candidate, current_trt)
+        intent_patch = normalize_domain_candidate(
+            candidate,
+            current_trt,
+            time_arrival_baseline=time_arrival_prompt_context(repository),
+        )
     except RepositoryError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -2241,6 +2369,205 @@ def post_debug_migrate_demo_trt_tooling_policy() -> dict[str, Any]:
     }
 
 
+def _regenerate_time_arrival_candidate(
+    candidate: dict[str, Any],
+    current_trt: dict[str, Any],
+    initial_errors: list[str],
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Ask Gemma to regenerate invalid requested simulation values; never rewrite them locally."""
+
+    baseline = time_arrival_prompt_context(repository)
+    _ = current_trt
+    metadata_fields = {
+        field: candidate.get(field)
+        for field in (
+            "patch_id",
+            "trt_id",
+            "base_version",
+            "operator_id",
+            "intent_text",
+            "reason",
+            "status",
+        )
+    }
+    timing_baseline = {
+        field: baseline.get(field)
+        for field in ("travel_time", "fix_duration", "resume_delay")
+    }
+    context = {
+        "operator_intent": candidate.get("intent_text"),
+        "recorded_time_arrival_state": timing_baseline,
+        "validation_errors": initial_errors,
+    }
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "Independently derive the simulation configuration explicitly requested by the operator. "
+                "Interpret relative timing language using only the recorded state supplied in the user message, "
+                "and preserve explicit absolute values exactly. Include explicitly requested intervention mode "
+                "and allowed overlap ratio. Use exactly 'immediate-stop' or 'continue-until-arrival' for "
+                "chosen_intervention_mode. For every relative timing phrase, first record your own derivation: "
+                "operator arrival time maps to travel_time, entanglement fix time maps to fix_duration, recovery "
+                "delay maps to resume_delay, production-line count maps to num_envs, and tooling per line maps to "
+                "add_reference_number. "
+                "copy the recorded baseline, identify ADD or SUBTRACT from the operator's wording, identify the "
+                "requested delta exactly as written (including decimal fractions), calculate the result once, and "
+                "copy that result into simulation_config_updates. The delta is the number in the operator's relative "
+                "phrase, not a value inferred from the previously rejected candidate. "
+                "Do not apply a delta twice. Do not invent fields that the operator did not request. Return an "
+                "object containing time_arrival_derivations and simulation_config_updates with only simulation "
+                "fields requested by the operator. A "
+                "deterministic validator will accept or reject your values but will never replace them. "
+                "Return JSON only."
+            ),
+        },
+        {"role": "user", "content": json.dumps(context, sort_keys=True)},
+    ]
+    body = {
+        "model": os.getenv("VLLM_MODEL", DEFAULT_VLLM_MODEL),
+        "messages": messages,
+        "max_tokens": int(os.getenv("VLLM_INTENT_REGENERATION_MAX_TOKENS", "6000")),
+    }
+    attempts: list[dict[str, Any]] = []
+    errors = list(initial_errors)
+    endpoint = os.getenv("VLLM_CHAT_COMPLETIONS_URL", DEFAULT_VLLM_CHAT_COMPLETIONS_URL)
+    max_attempts = max(1, int(os.getenv("VLLM_INTENT_SEMANTIC_ATTEMPTS", "3")))
+    last_updates: dict[str, Any] = {}
+    last_derivations: list[dict[str, Any]] = []
+    explicit_fields = set(
+        explicit_simulation_config_expectations(str(candidate.get("intent_text") or ""))
+    )
+    requested_fields = {
+        field
+        for field in (
+            "travel_time",
+            "fix_duration",
+            "resume_delay",
+            "chosen_intervention_mode",
+            "allowed_overlap_ratio",
+        )
+        if field in explicit_fields or any(field in error for error in initial_errors)
+    }
+    for attempt_number in range(1, max_attempts + 1):
+        raw = _post_json(
+            endpoint,
+            body,
+            float(os.getenv("VLLM_INTENT_GENERATION_TIMEOUT_SECONDS", "120")),
+        )
+        choice = raw.get("choices", [{}])[0]
+        message = choice.get("message", {})
+        content = message.get("content", raw)
+        try:
+            extracted = _parse_json_object_content(content)
+            derivations = extracted.get("time_arrival_derivations")
+            last_derivations = (
+                [item for item in derivations if isinstance(item, dict)]
+                if isinstance(derivations, list)
+                else []
+            )
+            model_time_updates = extracted.get("simulation_config_updates")
+            if not isinstance(model_time_updates, dict):
+                model_time_updates = {
+                    field: extracted[field]
+                    for field in (
+                        "travel_time",
+                        "fix_duration",
+                        "resume_delay",
+                        "chosen_intervention_mode",
+                        "allowed_overlap_ratio",
+                    )
+                    if field in extracted
+                }
+            if requested_fields:
+                model_time_updates = {
+                    field: value
+                    for field, value in model_time_updates.items()
+                    if field in requested_fields
+                }
+            regenerated_updates = {
+                **(candidate.get("simulation_config_updates") or {}),
+                **model_time_updates,
+            }
+            regenerated_sub_requests = []
+            for sub_request in candidate.get("sub_requests") or []:
+                if not isinstance(sub_request, dict):
+                    regenerated_sub_requests.append(sub_request)
+                    continue
+                request_types = set(
+                    sub_request.get("request_types")
+                    or [sub_request.get("request_type")]
+                )
+                if (
+                    "SIMULATION_CONFIG_UPDATE" in request_types
+                    or sub_request.get("simulation_config_updates")
+                ):
+                    sub_request = {
+                        **sub_request,
+                        "simulation_config_updates": {
+                            **(sub_request.get("simulation_config_updates") or {}),
+                            **model_time_updates,
+                        },
+                    }
+                regenerated_sub_requests.append(sub_request)
+            regenerated = {
+                **candidate,
+                "simulation_config_updates": regenerated_updates,
+                "sub_requests": regenerated_sub_requests or candidate.get("sub_requests"),
+                **metadata_fields,
+            }
+            last_updates = dict(regenerated.get("simulation_config_updates") or {})
+            errors = relative_time_arrival_validation_errors(regenerated, baseline)
+            attempts.append(
+                {
+                    "attempt": attempt_number,
+                    "status": "VALID" if not errors else "INVALID",
+                    "errors": errors,
+                    "model_simulation_config_updates": last_updates,
+                    "model_time_arrival_derivations": last_derivations,
+                    "reasoning_feature_used": bool(
+                        raw.get("choices", [{}])[0].get("message", {}).get("reasoning")
+                    ),
+                    "usage": raw.get("usage"),
+                }
+            )
+            if not errors:
+                return regenerated, attempts
+        except (ValueError, json.JSONDecodeError) as exc:
+            errors = [f"Gemma regeneration JSON could not be validated: {exc}"]
+            attempts.append(
+                {
+                    "attempt": attempt_number,
+                    "status": "INVALID",
+                    "errors": errors,
+                    "model_simulation_config_updates": last_updates,
+                    "model_time_arrival_derivations": last_derivations,
+                    "finish_reason": choice.get("finish_reason"),
+                    "content_type": type(content).__name__,
+                    "reasoning_feature_used": bool(message.get("reasoning")),
+                    "usage": raw.get("usage"),
+                }
+            )
+        body["messages"] = [
+            *messages,
+            {
+                "role": "user",
+                "content": (
+                    "The regenerated JSON still failed semantic validation: "
+                    + "; ".join(errors)
+                    + ". Re-evaluate the operator intent and recorded state, then return the complete JSON."
+                ),
+            },
+        ]
+    raise ValueError(
+        "Gemma could not derive valid requested simulation values after "
+        f"{max_attempts} regeneration attempts: "
+        + "; ".join(errors)
+        + f". Last model simulation_config_updates: {json.dumps(last_updates, sort_keys=True)}"
+        + f". Last model derivations: {json.dumps(last_derivations, sort_keys=True)}"
+    )
+
+
 @app.post("/intent/normalize")
 def post_intent_normalize(candidate: dict[str, Any]) -> dict[str, Any]:
     try:
@@ -2248,9 +2575,68 @@ def post_intent_normalize(candidate: dict[str, Any]) -> dict[str, Any]:
         logger.info("raw_llm_candidate.tooling_policy=%r", candidate.get("tooling_policy"))
         logger.info("request_body_sent_to_python.tooling_policy=%r", candidate.get("tooling_policy"))
         current_trt = repository.get_current_trt(candidate.get("trt_id"))
-        intent_patch = normalize_domain_candidate(candidate, current_trt)
+        baseline = time_arrival_prompt_context(repository)
+        semantic_errors = relative_time_arrival_validation_errors(candidate, baseline)
+        semantic_regeneration: list[dict[str, Any]] = []
+        explicit_values = explicit_simulation_config_expectations(
+            str(candidate.get("intent_text") or "")
+        )
+        if semantic_errors and explicit_values:
+            candidate = deepcopy(candidate)
+            candidate["simulation_config_updates"] = {
+                **(candidate.get("simulation_config_updates") or {}),
+                **explicit_values,
+            }
+            repaired_sub_requests = []
+            for sub_request in candidate.get("sub_requests") or []:
+                if not isinstance(sub_request, dict):
+                    repaired_sub_requests.append(sub_request)
+                    continue
+                request_types = set(
+                    sub_request.get("request_types")
+                    or [sub_request.get("request_type")]
+                )
+                if "SIMULATION_CONFIG_UPDATE" in request_types:
+                    sub_request = {
+                        **sub_request,
+                        "simulation_config_updates": {
+                            **(sub_request.get("simulation_config_updates") or {}),
+                            **explicit_values,
+                        },
+                    }
+                repaired_sub_requests.append(sub_request)
+            if repaired_sub_requests:
+                candidate["sub_requests"] = repaired_sub_requests
+            remaining_errors = relative_time_arrival_validation_errors(candidate, baseline)
+            semantic_regeneration.append(
+                {
+                    "attempt": 0,
+                    "status": "VALID" if not remaining_errors else "INVALID",
+                    "method": "DETERMINISTIC_EXPLICIT_VALUE_RECOVERY",
+                    "errors_before": semantic_errors,
+                    "errors": remaining_errors,
+                    "recovered_simulation_config_updates": explicit_values,
+                    "reasoning_feature_used": False,
+                }
+            )
+            semantic_errors = remaining_errors
+        if semantic_errors:
+            candidate, model_regeneration = _regenerate_time_arrival_candidate(
+                candidate,
+                current_trt,
+                semantic_errors,
+            )
+            semantic_regeneration.extend(model_regeneration)
+        intent_patch = normalize_domain_candidate(
+            candidate,
+            current_trt,
+            time_arrival_baseline=baseline,
+        )
         logger.info("normalize_domain_candidate.intent_patch.operations=%r", intent_patch.get("operations"))
-        return {"intent_patch": intent_patch}
+        return {
+            "intent_patch": intent_patch,
+            "llm_semantic_regeneration": semantic_regeneration,
+        }
     except RepositoryError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -2327,6 +2713,29 @@ def get_state_current() -> dict[str, Any]:
         return {"state_records": load_current_state(repository)}
     except RepositoryError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/state/time-arrival")
+def get_state_time_arrival() -> dict[str, Any]:
+    try:
+        return load_time_arrival_state(repository)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=500, detail=f"Time-Arrival state is invalid: {exc}") from exc
+
+
+@app.put("/state/time-arrival")
+def put_state_time_arrival(payload: dict[str, Any]) -> dict[str, Any]:
+    try:
+        return save_time_arrival_state(
+            payload,
+            repository=repository,
+            source=str(payload.get("source") or "MANUAL_STATE_UPDATE"),
+            source_reference=payload.get("source_reference"),
+            run_id=payload.get("run_id"),
+            scenario_spec_id=payload.get("scenario_spec_id"),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @app.post("/state/update")
@@ -2546,6 +2955,8 @@ def post_scenario_generate(payload: dict[str, Any]) -> dict[str, Any]:
             raise HTTPException(status_code=400, detail="line_decisions must contain objects.")
         line_decisions = request_line_decisions or reconciliation_plan.get("line_decisions") or []
         reconciliation_plan["line_decisions"] = line_decisions
+        if affected_lines:
+            reconciliation_plan["affected_lines"] = affected_lines
         allow_baseline = bool(payload.get("allow_baseline_on_no_change", False))
         only_no_change = bool(line_decisions) and all(
             decision.get("decision") == "NO_CHANGE" for decision in line_decisions
@@ -2561,6 +2972,7 @@ def post_scenario_generate(payload: dict[str, Any]) -> dict[str, Any]:
             reconciliation_plan=reconciliation_plan,
             scenario_template_id=scenario_template_id,
             candidate_strategy_id=payload.get("candidate_strategy_id") or f"strategy_{payload['reconciliation_plan_id']}",
+            strategy_batch_id=payload.get("strategy_batch_id"),
             output_path=repository.root / "outputs",
             template_registry=template_registry,
             include_waiting_scenarios=bool(payload.get("include_waiting_scenarios", False)),
@@ -2568,6 +2980,7 @@ def post_scenario_generate(payload: dict[str, Any]) -> dict[str, Any]:
             required_line_ids=scenario_resolution["required_lines"],
             simulation_scope=scenario_resolution["simulation_scope"],
             simulation_config_override=payload.get("simulation_config_updates") or payload.get("simulation_config_override"),
+            line_policy_overrides=payload.get("line_policy_overrides"),
         )
     except RepositoryError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -2907,7 +3320,12 @@ def post_simulation_run(payload: dict[str, Any]) -> dict[str, Any]:
         scenario_spec_id=command_info["scenario_spec_id"],
         trt_id=scenario_spec.get("trt_id"),
         trt_version=scenario_spec.get("trt_version"),
-        payload={"status": status, "error_code": error_code, "output_db_path": command_info["output_db_path"]},
+        payload={
+            "status": status,
+            "error_code": error_code,
+            "output_db_path": command_info["output_db_path"],
+            "host_timing": host_result.get("timing"),
+        },
     )
     return {
         "status": status,
@@ -3040,7 +3458,12 @@ def get_simulation_run_status(run_id: str) -> dict[str, Any]:
         scenario_spec_id=command_info["scenario_spec_id"],
         trt_id=scenario_spec.get("trt_id"),
         trt_version=scenario_spec.get("trt_version"),
-        payload={"status": status, "error_code": error_code, "output_db_path": command_info["output_db_path"]},
+        payload={
+            "status": status,
+            "error_code": error_code,
+            "output_db_path": command_info["output_db_path"],
+            "host_timing": host_result.get("timing"),
+        },
     )
     return {
         "status": status,
@@ -3132,6 +3555,402 @@ def post_evidence_summarize(payload: dict[str, Any]) -> dict[str, Any]:
             repository,
         )
     return evidence
+
+
+def _run_strategy_batch_worker(strategy_batch_id: str) -> None:
+    with STRATEGY_SIMULATION_LOCK:
+        batch = repository.load_strategy_batch(strategy_batch_id)
+        batch["status"] = "RUNNING"
+        batch["started_at_utc"] = strategy_now_utc()
+        batch["updated_at_utc"] = batch["started_at_utc"]
+        repository.save_strategy_batch(batch)
+        execution = batch["execution_request"]
+        candidate_runs: list[dict[str, Any]] = []
+        try:
+            for candidate in batch["candidates"]:
+                candidate_id = candidate["candidate_strategy_id"]
+                candidate_clock = time.perf_counter()
+                record: dict[str, Any] = {
+                    "candidate_strategy_id": candidate_id,
+                    "status": "GENERATING_SCENARIO",
+                    "started_at_utc": strategy_now_utc(),
+                }
+                candidate_runs.append(record)
+                batch["candidate_runs"] = candidate_runs
+                batch["updated_at_utc"] = strategy_now_utc()
+                repository.save_strategy_batch(batch)
+                try:
+                    scenario_clock = time.perf_counter()
+                    scenario_result = post_scenario_generate(
+                        {
+                            **execution,
+                            "candidate_strategy_id": candidate_id,
+                            "strategy_batch_id": strategy_batch_id,
+                            "line_policy_overrides": candidate.get("line_policy_overrides") or {},
+                            "simulation_config_updates": merge_candidate_simulation_config(batch, candidate),
+                        }
+                    )
+                    if not isinstance(scenario_result, dict) or scenario_result.get("status") != "GENERATED":
+                        rejection_detail = None
+                        if isinstance(scenario_result, dict):
+                            rejection_detail = (
+                                scenario_result.get("rejection_reason")
+                                or scenario_result.get("detail")
+                                or (scenario_result.get("payload") or {}).get("message")
+                                or "; ".join(str(item) for item in (scenario_result.get("errors") or []))
+                            )
+                        raise RuntimeError(
+                            f"Scenario generation did not complete: "
+                            f"{scenario_result.get('status') if isinstance(scenario_result, dict) else type(scenario_result).__name__}"
+                            f"{f': {rejection_detail}' if rejection_detail else ''}"
+                        )
+                    scenario_spec = scenario_result["scenario_spec"]
+                    specification_seconds = time.perf_counter() - scenario_clock
+                    record.update(
+                        {
+                            "status": "SIMULATING",
+                            "scenario_spec_id": scenario_result["scenario_spec_id"],
+                            "scenario_spec_path": scenario_result["scenario_spec_path"],
+                            "scenario_created_at_utc": strategy_now_utc(),
+                        }
+                    )
+                    repository.save_strategy_batch({**batch, "candidate_runs": candidate_runs, "updated_at_utc": strategy_now_utc()})
+                    simulation_clock = time.perf_counter()
+                    simulation = post_simulation_run(
+                        {
+                            "scenario_spec_id": scenario_result["scenario_spec_id"],
+                            "scenario_spec_path": scenario_result["scenario_spec_path"],
+                            "run_mode": "SYNC",
+                            "headless": execution.get("headless", False),
+                            "timeout_seconds": execution.get("timeout_seconds"),
+                        }
+                    )
+                    simulation_wall_seconds = time.perf_counter() - simulation_clock
+                    if not isinstance(simulation, dict):
+                        raise RuntimeError("Simulation endpoint returned a non-object response.")
+                    host_timing = ((simulation.get("host_runner") or {}).get("timing") or {})
+                    simulation_startup_seconds = host_timing.get("isaac_startup_seconds")
+                    strategy_verification_seconds = (
+                        max(0.0, simulation_wall_seconds - float(simulation_startup_seconds))
+                        if isinstance(simulation_startup_seconds, (int, float))
+                        else None
+                    )
+                    timing_scope_status = (
+                        "ISAAC_STARTUP_EXCLUDED_USING_" + str(host_timing.get("startup_reference_source"))
+                        if strategy_verification_seconds is not None
+                        else "DATA_INCOMPLETE_STARTUP_BOUNDARY_NOT_MEASURED"
+                    )
+                    record.update(
+                        {
+                            "run_id": simulation.get("run_id"),
+                            "simulation_status": simulation.get("status"),
+                            "simulation_error_code": simulation.get("error_code"),
+                            "simulation_errors": simulation.get("errors") or [],
+                            "artifact_created_at_utc": strategy_now_utc(),
+                            "timing": {
+                                "llm_generation_seconds": elapsed_seconds(
+                                    (batch.get("generation_provenance") or {}).get("started_at_utc"),
+                                    (batch.get("generation_provenance") or {}).get("completed_at_utc"),
+                                ),
+                                "specification_parsing_seconds": specification_seconds,
+                                "environment_wait_seconds": elapsed_seconds(
+                                    batch.get("queued_at_utc"),
+                                    record.get("started_at_utc"),
+                                ),
+                                "simulation_startup_seconds": simulation_startup_seconds,
+                                "simulation_startup_and_execution_seconds": simulation_wall_seconds,
+                                "verification_excluding_startup_seconds": strategy_verification_seconds,
+                                "isaac_command_started_at_utc": host_timing.get("isaac_command_started_at_utc"),
+                                "isaac_startup_reference_at_utc": host_timing.get("startup_reference_at_utc"),
+                                "isaac_startup_reference_pattern": host_timing.get("startup_reference_pattern"),
+                                "isaac_startup_reference_source": host_timing.get("startup_reference_source"),
+                                "reset_seconds": None,
+                                "strategy_simulation_seconds": None,
+                                "kpi_calculation_seconds": None,
+                                "automated_verification_seconds": None,
+                                "manual_review_seconds": None,
+                                "end_to_end_seconds": None,
+                                "timing_scope_status": timing_scope_status,
+                            },
+                        }
+                    )
+                    run_artifact = simulation.get("run_artifact")
+                    if simulation.get("status") != "COMPLETED" or not isinstance(run_artifact, dict):
+                        record.update(
+                            {
+                                "status": "FAILED",
+                                "measurements": {
+                                    "eligible": False,
+                                    "blocking_reasons": ["SIMULATION_NOT_COMPLETED"],
+                                    "data_quality_status": "DATA_INCOMPLETE",
+                                },
+                            }
+                        )
+                        continue
+                    evidence_clock = time.perf_counter()
+                    evidence = build_evidence_summary(
+                        repository=repository,
+                        run_id=str(simulation["run_id"]),
+                        scenario_spec_id=scenario_result["scenario_spec_id"],
+                        trt_id=batch["trt_id"],
+                        trt_version=batch["trt_version"],
+                        scenario_spec_path=scenario_result["scenario_spec_path"],
+                        output_db_path=simulation.get("output_db_path"),
+                        host_runner=simulation.get("host_runner"),
+                    )
+                    kpi_and_evidence_seconds = time.perf_counter() - evidence_clock
+                    evidence_summary = evidence.get("evidence_summary") or {}
+                    verification_clock = time.perf_counter()
+                    measurements = candidate_measurements(
+                        run_artifact=run_artifact,
+                        scenario_spec=scenario_spec,
+                        evidence_summary=evidence_summary,
+                    )
+                    verification_seconds = time.perf_counter() - verification_clock
+                    record.update(
+                        {
+                            "status": "EVALUATED",
+                            "evidence_created_at_utc": strategy_now_utc(),
+                            "evidence_summary": evidence_summary,
+                            "measurements": measurements,
+                            "timing": {
+                                "llm_generation_seconds": elapsed_seconds(
+                                    (batch.get("generation_provenance") or {}).get("started_at_utc"),
+                                    (batch.get("generation_provenance") or {}).get("completed_at_utc"),
+                                ),
+                                "specification_parsing_seconds": specification_seconds,
+                                "environment_wait_seconds": elapsed_seconds(
+                                    batch.get("queued_at_utc"),
+                                    record.get("started_at_utc"),
+                                ),
+                                "simulation_startup_seconds": simulation_startup_seconds,
+                                "simulation_startup_and_execution_seconds": simulation_wall_seconds,
+                                "verification_excluding_startup_seconds": strategy_verification_seconds,
+                                "isaac_command_started_at_utc": host_timing.get("isaac_command_started_at_utc"),
+                                "isaac_startup_reference_at_utc": host_timing.get("startup_reference_at_utc"),
+                                "isaac_startup_reference_pattern": host_timing.get("startup_reference_pattern"),
+                                "isaac_startup_reference_source": host_timing.get("startup_reference_source"),
+                                "reset_seconds": None,
+                                "strategy_simulation_seconds": measurements.get("strategy_simulation_seconds"),
+                                "kpi_calculation_seconds": kpi_and_evidence_seconds,
+                                "automated_verification_seconds": verification_seconds,
+                                "manual_review_seconds": None,
+                                "end_to_end_seconds": None,
+                                "timing_scope_status": timing_scope_status,
+                            },
+                        }
+                    )
+                except Exception as exc:
+                    logger.exception(
+                        "strategy_batch.candidate_failed batch_id=%s candidate_id=%s",
+                        strategy_batch_id,
+                        candidate_id,
+                    )
+                    record.update(
+                        {
+                            "status": "SYSTEM_ERROR",
+                            "error": str(exc),
+                            "measurements": {
+                                "eligible": False,
+                                "blocking_reasons": ["SYSTEM_ERROR"],
+                                "data_quality_status": "DATA_INCOMPLETE",
+                            },
+                        }
+                    )
+                finally:
+                    record["completed_at_utc"] = strategy_now_utc()
+                    record["candidate_worker_wall_seconds"] = time.perf_counter() - candidate_clock
+                    batch["candidate_runs"] = candidate_runs
+                    batch["updated_at_utc"] = record["completed_at_utc"]
+                    repository.save_strategy_batch(batch)
+            batch["selection"] = rank_candidate_runs(candidate_runs)
+            batch["status"] = batch["selection"]["status"]
+        except Exception as exc:
+            logger.exception("strategy_batch.failed batch_id=%s", strategy_batch_id)
+            batch["status"] = "SYSTEM_ERROR"
+            batch["error"] = str(exc)
+        finally:
+            batch["completed_at_utc"] = strategy_now_utc()
+            batch["updated_at_utc"] = batch["completed_at_utc"]
+            repository.save_strategy_batch(batch)
+
+
+@app.post("/strategy/candidates/generate")
+def post_strategy_candidates_generate(payload: dict[str, Any]) -> dict[str, Any]:
+    required = ["release_id", "trt_id", "trt_version", "reconciliation_plan_id"]
+    missing = [field for field in required if not payload.get(field)]
+    if missing:
+        raise HTTPException(status_code=422, detail=f"Missing strategy generation fields: {', '.join(missing)}")
+    try:
+        released_trt = repository.load_trt(str(payload["trt_id"]), str(payload["trt_version"]))
+        released_trt["release_id"] = payload["release_id"]
+        release_record = repository.load_release_record(str(payload["release_id"]))
+        if release_record.get("status") != "RELEASED":
+            raise ValueError(
+                f"Candidate generation requires a RELEASED record; "
+                f"{payload['release_id']} is {release_record.get('status')}."
+            )
+        if (
+            release_record.get("trt_id") != payload["trt_id"]
+            or release_record.get("trt_version") != payload["trt_version"]
+        ):
+            raise ValueError(
+                "Release TRT identity/version does not match the candidate-generation request."
+            )
+        plan = repository.load_reconciliation_plan(str(payload["reconciliation_plan_id"]))
+        _validate_scenario_reconciliation_contract(payload, plan)
+        requested_candidate_count = int(payload.get("candidate_count") or 3)
+        simulation_updates = payload.get("simulation_config_updates") or {}
+        explicit_scope = payload.get("simulation_scope") or {}
+        simulation_line_ids = [
+            line_id
+            for line_id in (explicit_scope.get("lines") or [])
+            if line_id in (released_trt.get("lines") or {})
+        ]
+        if not simulation_line_ids and simulation_updates.get("num_envs") is not None:
+            available_line_ids = sorted((released_trt.get("lines") or {}).keys())
+            affected_line_ids = [
+                line_id
+                for line_id in (payload.get("affected_lines") or plan.get("affected_lines") or [])
+                if line_id in available_line_ids
+            ]
+            count = max(
+                1,
+                min(int(simulation_updates["num_envs"]), len(available_line_ids) or 1),
+            )
+            simulation_line_ids = (
+                affected_line_ids[:count]
+                if len(affected_line_ids) >= count
+                else available_line_ids[:count]
+            )
+        try:
+            batch = generate_candidate_batch(
+                repository=repository,
+                released_trt=released_trt,
+                reconciliation_plan=plan,
+                state_records=load_current_state(repository),
+                candidate_count=requested_candidate_count,
+                locked_simulation_config=payload.get("simulation_config_updates") or {},
+                locked_line_policy_fields=locked_line_policy_fields_from_release(
+                    release_record,
+                    released_trt,
+                ),
+                simulation_line_ids=simulation_line_ids or None,
+            )
+        except ValueError as exc:
+            timestamp = strategy_now_utc()
+            batch = {
+                "strategy_batch_id": f"strategy_batch_{uuid4()}",
+                "status": "GENERATION_FAILED",
+                "trt_id": payload["trt_id"],
+                "trt_version": payload["trt_version"],
+                "reconciliation_plan_id": payload["reconciliation_plan_id"],
+                "candidate_count": requested_candidate_count,
+                "candidates": [],
+                "candidate_runs": [],
+                "selection": {
+                    "status": "GENERATION_FAILED",
+                    "selected_candidate_strategy_id": None,
+                    "selected_scenario_spec_id": None,
+                    "selected_run_id": None,
+                    "ranked_candidates": [],
+                    "operator_refinement_required": False,
+                    "operator_intent_fault_detected": False,
+                    "automatic_retry_exhausted": True,
+                    "failure_classification": "SYSTEM_GENERATION_ERROR",
+                    "refinement_suggestions": [],
+                    "recovery_actions": [
+                        "Retry candidate generation using the unchanged operator intent.",
+                        "Inspect the model output and deterministic validation errors if retrying fails.",
+                    ],
+                },
+                "failure_stage": "CANDIDATE_GENERATION",
+                "failure_source": "LLM_CANDIDATE_OUTPUT_VALIDATION",
+                "generation_error": str(exc),
+                "created_at_utc": timestamp,
+                "updated_at_utc": timestamp,
+                "completed_at_utc": timestamp,
+            }
+        batch["execution_request"] = {
+            "release_id": payload["release_id"],
+            "trt_id": payload["trt_id"],
+            "trt_version": payload["trt_version"],
+            "reconciliation_plan_id": payload["reconciliation_plan_id"],
+            "scenario_template_id": payload.get("scenario_template_id"),
+            "affected_lines": payload.get("affected_lines") or plan.get("affected_lines") or [],
+            "line_decisions": payload.get("line_decisions") or plan.get("line_decisions") or [],
+            "simulation_scope": payload.get("simulation_scope"),
+            "include_waiting_scenarios": bool(payload.get("include_waiting_scenarios", False)),
+            "headless": bool(payload.get("headless", False)),
+            "timeout_seconds": payload.get("timeout_seconds"),
+        }
+        repository.save_strategy_batch(batch)
+        return batch
+    except RepositoryError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ValueError, ScenarioGenerationError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/strategy/batches/{strategy_batch_id}/run")
+def post_strategy_batch_run(strategy_batch_id: str) -> dict[str, Any]:
+    try:
+        batch = repository.load_strategy_batch(strategy_batch_id)
+    except RepositoryError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    worker = STRATEGY_BATCH_WORKERS.get(strategy_batch_id)
+    if worker and worker.is_alive():
+        return {
+            "status": "RUNNING",
+            "strategy_batch_id": strategy_batch_id,
+            "message": "Candidate simulations are already running sequentially.",
+        }
+    if batch.get("status") in {"SELECTED", "NO_ELIGIBLE_STRATEGY", "GENERATION_FAILED"}:
+        return batch
+    worker = threading.Thread(
+        target=_run_strategy_batch_worker,
+        args=(strategy_batch_id,),
+        name=f"strategy-batch-{strategy_batch_id}",
+        daemon=True,
+    )
+    batch["status"] = "QUEUED"
+    batch["queued_at_utc"] = strategy_now_utc()
+    batch["updated_at_utc"] = batch["queued_at_utc"]
+    repository.save_strategy_batch(batch)
+    STRATEGY_BATCH_WORKERS[strategy_batch_id] = worker
+    worker.start()
+    return {
+        "status": "QUEUED",
+        "strategy_batch_id": strategy_batch_id,
+        "candidate_count": batch["candidate_count"],
+        "execution_policy": "STRICTLY_SEQUENTIAL_SINGLE_ISAAC_RUN",
+        "poll_url": f"/strategy/batches/{strategy_batch_id}",
+    }
+
+
+@app.get("/strategy/batches/{strategy_batch_id}")
+def get_strategy_batch(strategy_batch_id: str) -> dict[str, Any]:
+    try:
+        batch = repository.load_strategy_batch(strategy_batch_id)
+    except RepositoryError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if batch.get("status") in {"QUEUED", "RUNNING"}:
+        worker = STRATEGY_BATCH_WORKERS.get(strategy_batch_id)
+        if worker is None or not worker.is_alive():
+            batch["status"] = "SYSTEM_ERROR"
+            batch["error"] = (
+                "Candidate simulation worker is no longer active. "
+                "The API process may have restarted; submit the batch run again to rerun all candidates."
+            )
+            batch["updated_at_utc"] = strategy_now_utc()
+            batch["completed_at_utc"] = batch["updated_at_utc"]
+            repository.save_strategy_batch(batch)
+    return batch
+
+
+@app.get("/strategy/batches")
+def get_strategy_batches() -> dict[str, Any]:
+    return {"strategy_batches": repository.list_strategy_batches()}
 
 
 @app.post("/deployment/simulated-deploy")

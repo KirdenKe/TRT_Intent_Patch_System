@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import json
 import sqlite3
 from pathlib import Path
@@ -219,9 +220,9 @@ def test_command_builder_generates_host_runner_request(monkeypatch, tmp_path):
         "layout_source": "auto",
         "episode_success_requires_reset_cycles": 1,
         "chosen_intervention_mode": "continue-until-arrival",
-        "travel_time": 5.0,
-        "fix_duration": 8.0,
-        "resume_delay": 0.5,
+        "travel_time": 1.0,
+        "fix_duration": 3.0,
+        "resume_delay": 1.0,
         "add_reference_number": 27,
         "reuse_verified_seed": True,
     }
@@ -393,24 +394,30 @@ def test_host_runner_command_targets_pick_up_entry(monkeypatch, tmp_path):
         "--allowed_overlap_ratio",
         "0.99",
         "--chosen_intervention_mode",
-        "continue-until-arrival",
+        "immediate-stop",
         "--travel_time",
-        "5.0",
+        "1.0",
         "--fix_duration",
-        "8.0",
+        "3.0",
         "--resume_delay",
-        "0.5",
+        "1.0",
         "--add_reference_number",
-        "27",
+        "5",
+        "--scenario_spec_path",
+        str(tmp_path / "scenario.json"),
+        "--global_seed",
+        "65",
+        "--max_seed_trials",
+        "1",
         "--run_id",
         "sim_host_test",
         "--output_db_path",
         str(tmp_path / "run.sqlite"),
-        "--reuse_verified_seed",
+        "--reuse_precomputed_layouts",
     ]
 
 
-def test_pick_up_example_arg_mapping_omits_false_store_true_and_empty_seed_path(tmp_path):
+def test_pick_up_example_arg_mapping_applies_host_reproducibility_defaults(tmp_path):
     host_request = {
         "command_args": {
             "num_envs": 4,
@@ -429,14 +436,14 @@ def test_pick_up_example_arg_mapping_omits_false_store_true_and_empty_seed_path(
     args = build_pick_up_example_args(host_request)
     assert ["--num_envs", "4"] == args[0:2]
     assert "--headless" in args
-    assert "--global_seed" not in args
-    assert "--max_seed_trials" not in args
+    assert args[args.index("--global_seed") + 1] == "65"
+    assert args[args.index("--max_seed_trials") + 1] == "1"
     assert "--chosen_intervention_mode" in args
     assert "--travel_time" in args
     assert "--fix_duration" in args
     assert "--resume_delay" in args
-    assert "--reuse_verified_seed" in args
-    assert "--reuse_precomputed_layouts" not in args
+    assert "--reuse_verified_seed" not in args
+    assert "--reuse_precomputed_layouts" in args
     assert "--seed_db_path" not in args
 
 
@@ -492,15 +499,18 @@ def test_host_runner_completed_process_without_output_db_reports_artifact_failur
     seed_db = tmp_path / "seed_sweep.sqlite3"
     seed_db.write_text("", encoding="utf-8")
 
-    class Completed:
+    class FakeProcess:
+        pid = 1001
         returncode = 0
-        stdout = "isaac finished"
-        stderr = ""
 
-    def fake_run(*args, **kwargs):
-        return Completed()
+        def __init__(self, *args, **kwargs):
+            self.stdout = io.StringIO("isaac finished\n")
+            self.stderr = io.StringIO("")
 
-    monkeypatch.setattr("host_isaac_runner_service.subprocess.run", fake_run)
+        def poll(self):
+            return self.returncode
+
+    monkeypatch.setattr("host_isaac_runner_service.subprocess.Popen", FakeProcess)
     request = IsaacRunRequest(
         scenario_spec_id="scn_test",
         scenario_spec_path=str(scenario_path),
@@ -530,16 +540,19 @@ def test_host_runner_finalizes_running_output_db_after_clean_exit(monkeypatch, t
     scenario_path.write_text("{}", encoding="utf-8")
     output_db = tmp_path / "running_result.sqlite"
 
-    class Completed:
+    class FakeProcess:
+        pid = 1002
         returncode = 0
-        stdout = "isaac finished"
-        stderr = ""
 
-    def fake_run(*args, **kwargs):
-        create_running_result_db(output_db, "sim_running_host")
-        return Completed()
+        def __init__(self, *args, **kwargs):
+            create_running_result_db(output_db, "sim_running_host")
+            self.stdout = io.StringIO("isaac finished\n")
+            self.stderr = io.StringIO("")
 
-    monkeypatch.setattr("host_isaac_runner_service.subprocess.run", fake_run)
+        def poll(self):
+            return self.returncode
+
+    monkeypatch.setattr("host_isaac_runner_service.subprocess.Popen", FakeProcess)
     request = IsaacRunRequest(
         scenario_spec_id="scn_test",
         scenario_spec_path=str(scenario_path),
@@ -989,7 +1002,7 @@ def test_simulation_run_endpoint_uses_host_runner(monkeypatch, tmp_path):
     assert body["run_artifact"]["summary"]["total_wanted_completed"] == 1
     assert body["host_runner"]["stdout_tail"] == "fake host completed"
     assert body["execution_mode"] == "host_runner"
-    assert body["host_request"]["scenario_spec_path"].startswith(r"C:\Project")
+    assert body["host_request"]["scenario_spec_path"] == str(spec_path)
     assert body["host_request"]["command_args"]["layout_source"] == "auto"
 
 
@@ -1085,7 +1098,7 @@ def test_simulation_run_completed_without_result_db_returns_specific_error(monke
     assert body["status"] == "FAILED"
     assert body["error_code"] == "SIMULATION_COMPLETED_BUT_RESULT_DB_MISSING"
     assert body["return_code"] == 0
-    assert body["host_output_db_path"].startswith(r"C:\Project")
+    assert Path(body["host_output_db_path"]).is_absolute()
     assert body["seed_db_path"]
     assert body["run_artifact"] is None
     assert body["result_transport"] is None

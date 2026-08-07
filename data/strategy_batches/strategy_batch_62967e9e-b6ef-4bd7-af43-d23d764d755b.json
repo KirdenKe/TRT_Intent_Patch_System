@@ -1,0 +1,419 @@
+{
+  "aligned_state_records": [
+    {
+      "active_set_id": "ENT_SURGICAL_TOOLING_SET",
+      "active_trt_id": "trt-demo",
+      "active_trt_version": "v81",
+      "checkpoint": "NONE",
+      "completed_tool_ids": [],
+      "current_instruments": [],
+      "current_task": null,
+      "deployment_source": "DIGITAL_TWIN_EVIDENCE_APPROVED_BY_OPERATOR",
+      "deployment_status": "DEPLOYED",
+      "entanglement": {
+        "detected": false,
+        "requires_operator": false,
+        "severity": null,
+        "tool_ids": []
+      },
+      "last_deployed_run_id": "sim_93f8833a-a53e-4116-ab6d-aba99e6daf33",
+      "last_deployed_scenario_spec_id": "scn_95731763-9598-4762-80a5-a31b23fe0ef9",
+      "last_deployment_id": "deploy_a5c38c42-6961-4d9a-863c-ab6287a3657a",
+      "last_exception": null,
+      "line_id": "line_1",
+      "locked_resources": [],
+      "mode": "RUNNING",
+      "pending_tool_ids": [],
+      "robot_id": "ur5_line_1",
+      "selected_tool_ids": [],
+      "wip_count": 0,
+      "workspace_id": "workspace_line_1"
+    },
+    {
+      "active_set_id": "ENT_SURGICAL_TOOLING_SET",
+      "active_trt_id": "trt-demo",
+      "active_trt_version": "v81",
+      "checkpoint": "NONE",
+      "completed_tool_ids": [],
+      "current_instruments": [],
+      "current_task": null,
+      "deployment_source": "DIGITAL_TWIN_EVIDENCE_APPROVED_BY_OPERATOR",
+      "deployment_status": "DEPLOYED",
+      "entanglement": {
+        "detected": false,
+        "requires_operator": false,
+        "severity": null,
+        "tool_ids": []
+      },
+      "last_deployed_run_id": "sim_93f8833a-a53e-4116-ab6d-aba99e6daf33",
+      "last_deployed_scenario_spec_id": "scn_95731763-9598-4762-80a5-a31b23fe0ef9",
+      "last_deployment_id": "deploy_a5c38c42-6961-4d9a-863c-ab6287a3657a",
+      "last_exception": null,
+      "line_id": "line_2",
+      "locked_resources": [],
+      "mode": "RUNNING",
+      "pending_tool_ids": [],
+      "robot_id": "ur5_line_2",
+      "selected_tool_ids": [],
+      "wip_count": 0,
+      "workspace_id": "workspace_line_2"
+    },
+    {
+      "active_set_id": "ENT_SURGICAL_TOOLING_SET",
+      "active_trt_id": "trt-demo",
+      "active_trt_version": "v81",
+      "checkpoint": "NONE",
+      "completed_tool_ids": [],
+      "current_instruments": [],
+      "current_task": null,
+      "deployment_source": "DIGITAL_TWIN_EVIDENCE_APPROVED_BY_OPERATOR",
+      "deployment_status": "DEPLOYED",
+      "entanglement": {
+        "detected": false,
+        "requires_operator": false,
+        "severity": null,
+        "tool_ids": []
+      },
+      "last_deployed_run_id": "sim_93f8833a-a53e-4116-ab6d-aba99e6daf33",
+      "last_deployed_scenario_spec_id": "scn_95731763-9598-4762-80a5-a31b23fe0ef9",
+      "last_deployment_id": "deploy_a5c38c42-6961-4d9a-863c-ab6287a3657a",
+      "last_exception": null,
+      "line_id": "line_3",
+      "locked_resources": [],
+      "mode": "RUNNING",
+      "pending_tool_ids": [],
+      "robot_id": "ur5_line_3",
+      "selected_tool_ids": [],
+      "wip_count": 0,
+      "workspace_id": "workspace_line_3"
+    },
+    {
+      "active_set_id": "ENT_SURGICAL_TOOLING_SET",
+      "active_trt_id": "trt-demo",
+      "active_trt_version": "v81",
+      "checkpoint": "NONE",
+      "completed_tool_ids": [],
+      "current_instruments": [],
+      "current_task": null,
+      "deployment_source": "DIGITAL_TWIN_EVIDENCE_APPROVED_BY_OPERATOR",
+      "deployment_status": "DEPLOYED",
+      "entanglement": {
+        "detected": false,
+        "requires_operator": false,
+        "severity": null,
+        "tool_ids": []
+      },
+      "last_deployed_run_id": "sim_93f8833a-a53e-4116-ab6d-aba99e6daf33",
+      "last_deployed_scenario_spec_id": "scn_95731763-9598-4762-80a5-a31b23fe0ef9",
+      "last_deployment_id": "deploy_a5c38c42-6961-4d9a-863c-ab6287a3657a",
+      "last_exception": null,
+      "line_id": "line_4",
+      "locked_resources": [],
+      "mode": "RUNNING",
+      "pending_tool_ids": [],
+      "robot_id": "ur5_line_4",
+      "selected_tool_ids": [],
+      "wip_count": 0,
+      "workspace_id": "workspace_line_4"
+    }
+  ],
+  "base_simulation_config": {
+    "add_reference_number": 5,
+    "allowed_overlap_ratio": 0.99,
+    "chosen_intervention_mode": "immediate-stop",
+    "episode_success_requires_reset_cycles": 1,
+    "fix_duration": 3.0,
+    "headless": false,
+    "layout_source": "auto",
+    "num_envs": 2,
+    "resume_delay": 1.0,
+    "reuse_verified_seed": true,
+    "travel_time": 1.0
+  },
+  "candidate_count": 3,
+  "candidate_runs": [],
+  "candidates": [
+    {
+      "candidate_strategy_id": "STRAT_CONSERVATIVE_STOP_ALL",
+      "line_policy_overrides": {
+        "line_1": {
+          "abnormal_strategy": "STOP_LINE",
+          "manipulator_priority": {
+            "enabled": true,
+            "ordered_normalized_types": [],
+            "ordered_tool_ids": [],
+            "policy": "FCFS",
+            "tie_breaker": "FCFS"
+          }
+        },
+        "line_2": {
+          "abnormal_strategy": "STOP_LINE",
+          "manipulator_priority": {
+            "enabled": true,
+            "ordered_normalized_types": [],
+            "ordered_tool_ids": [],
+            "policy": "FCFS",
+            "tie_breaker": "FCFS"
+          }
+        },
+        "line_3": {
+          "abnormal_strategy": "STOP_LINE",
+          "manipulator_priority": {
+            "enabled": true,
+            "ordered_normalized_types": [],
+            "ordered_tool_ids": [],
+            "policy": "FCFS",
+            "tie_breaker": "FCFS"
+          }
+        },
+        "line_4": {
+          "abnormal_strategy": "STOP_LINE",
+          "manipulator_priority": {
+            "enabled": true,
+            "ordered_normalized_types": [],
+            "ordered_tool_ids": [],
+            "policy": "FCFS",
+            "tie_breaker": "FCFS"
+          }
+        }
+      },
+      "name": "Conservative Total Shutdown",
+      "rationale": "Prioritizes maximum safety by stopping all lines immediately with default priority handling.",
+      "simulation_config_overrides": {
+        "chosen_intervention_mode": "immediate-stop"
+      }
+    },
+    {
+      "candidate_strategy_id": "STRAT_PRIORITIZED_SHUTDOWN_L1",
+      "line_policy_overrides": {
+        "line_1": {
+          "abnormal_strategy": "STOP_LINE",
+          "manipulator_priority": {
+            "enabled": true,
+            "ordered_normalized_types": [],
+            "ordered_tool_ids": [],
+            "policy": "REQUIRED_FIRST",
+            "tie_breaker": "FCFS"
+          }
+        },
+        "line_2": {
+          "abnormal_strategy": "STOP_LINE",
+          "manipulator_priority": {
+            "enabled": true,
+            "ordered_normalized_types": [],
+            "ordered_tool_ids": [],
+            "policy": "FCFS",
+            "tie_breaker": "FCFS"
+          }
+        },
+        "line_3": {
+          "abnormal_strategy": "STOP_LINE",
+          "manipulator_priority": {
+            "enabled": true,
+            "ordered_normalized_types": [],
+            "ordered_tool_ids": [],
+            "policy": "FCFS",
+            "tie_breaker": "FCFS"
+          }
+        },
+        "line_4": {
+          "abnormal_strategy": "STOP_LINE",
+          "manipulator_priority": {
+            "enabled": true,
+            "ordered_normalized_types": [],
+            "ordered_tool_ids": [],
+            "policy": "FCFS",
+            "tie_breaker": "FCFS"
+          }
+        }
+      },
+      "name": "Prioritized Shutdown Line 1",
+      "rationale": "Implements immediate stop while assigning first-response priority to line 1 manipulators.",
+      "simulation_config_overrides": {
+        "chosen_intervention_mode": "immediate-stop"
+      }
+    },
+    {
+      "candidate_strategy_id": "STRAT_EXPLICIT_ORDER_SHUTDOWN",
+      "line_policy_overrides": {
+        "line_1": {
+          "abnormal_strategy": "STOP_LINE",
+          "manipulator_priority": {
+            "enabled": true,
+            "ordered_normalized_types": [],
+            "ordered_tool_ids": [],
+            "policy": "EXPLICIT_TYPE_ORDER",
+            "tie_breaker": "FCFS"
+          }
+        },
+        "line_2": {
+          "abnormal_strategy": "STOP_LINE",
+          "manipulator_priority": {
+            "enabled": true,
+            "ordered_normalized_types": [],
+            "ordered_tool_ids": [],
+            "policy": "FCFS",
+            "tie_breaker": "FCFS"
+          }
+        },
+        "line_3": {
+          "abnormal_strategy": "STOP_LINE",
+          "manipulator_priority": {
+            "enabled": true,
+            "ordered_normalized_types": [],
+            "ordered_tool_ids": [],
+            "policy": "FCFS",
+            "tie_breaker": "FCFS"
+          }
+        },
+        "line_4": {
+          "abnormal_strategy": "STOP_LINE",
+          "manipulator_priority": {
+            "enabled": true,
+            "ordered_normalized_types": [],
+            "ordered_tool_ids": [],
+            "policy": "FCFS",
+            "tie_breaker": "FCFS"
+          }
+        }
+      },
+      "name": "Explicit Ordered Shutdown",
+      "rationale": "Uses explicit type ordering for manipulator priority during the immediate stop sequence.",
+      "simulation_config_overrides": {
+        "chosen_intervention_mode": "immediate-stop"
+      }
+    }
+  ],
+  "created_at_utc": "2026-08-06T14:04:51.053730Z",
+  "execution_request": {
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "headless": false,
+    "include_waiting_scenarios": false,
+    "line_decisions": [
+      {
+        "decision": "NO_CHANGE",
+        "degraded_strategy": null,
+        "line_id": "line_1",
+        "next_action": "No supervisor action required.",
+        "reason": "Target TRT does not change this line.",
+        "required_checkpoint": null,
+        "risk_flags": []
+      },
+      {
+        "decision": "NO_CHANGE",
+        "degraded_strategy": null,
+        "line_id": "line_2",
+        "next_action": "No supervisor action required.",
+        "reason": "Target TRT does not change this line.",
+        "required_checkpoint": null,
+        "risk_flags": []
+      },
+      {
+        "decision": "NO_CHANGE",
+        "degraded_strategy": null,
+        "line_id": "line_3",
+        "next_action": "No supervisor action required.",
+        "reason": "Target TRT does not change this line.",
+        "required_checkpoint": null,
+        "risk_flags": []
+      },
+      {
+        "decision": "NO_CHANGE",
+        "degraded_strategy": null,
+        "line_id": "line_4",
+        "next_action": "No supervisor action required.",
+        "reason": "Target TRT does not change this line.",
+        "required_checkpoint": null,
+        "risk_flags": []
+      }
+    ],
+    "reconciliation_plan_id": "rec_5f616e05-eb45-468f-a2d0-1b5abe8de3ef",
+    "release_id": "rel_fe9cbc1a-5be0-49bd-85b2-c8aed2ebbe50",
+    "scenario_template_id": null,
+    "simulation_scope": null,
+    "timeout_seconds": null,
+    "trt_id": "trt-demo",
+    "trt_version": "v173"
+  },
+  "generation_provenance": {
+    "attempt_count": 1,
+    "attempts": [
+      {
+        "attempt": 1,
+        "completed_at_utc": "2026-08-06T14:05:05.611261Z",
+        "reasoning_feature_used": false,
+        "started_at_utc": "2026-08-06T14:04:51.053746Z",
+        "status": "VALID"
+      }
+    ],
+    "completed_at_utc": "2026-08-06T14:05:05.611275Z",
+    "endpoint": "http://192.168.50.168:29987/v1/chat/completions",
+    "generated_by": "trt_core.strategy_selection.generate_candidate_batch",
+    "model": "cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit",
+    "prompt_version": "candidate-strategy-v1.3",
+    "sampling_parameters_sent": [],
+    "server_sampling_configuration": "SERVER_PRESET_NOT_OVERRIDDEN",
+    "started_at_utc": "2026-08-06T14:04:51.053730Z",
+    "usage": {
+      "completion_tokens": 1327,
+      "prompt_tokens": 3107,
+      "prompt_tokens_details": null,
+      "total_tokens": 4434
+    }
+  },
+  "locked_line_policy_fields": {},
+  "locked_simulation_config": {
+    "add_reference_number": 5,
+    "chosen_intervention_mode": "immediate-stop",
+    "episode_success_requires_reset_cycles": null,
+    "fix_duration": 3,
+    "num_envs": 2,
+    "resume_delay": 1,
+    "travel_time": 1
+  },
+  "reconciliation_plan_id": "rec_5f616e05-eb45-468f-a2d0-1b5abe8de3ef",
+  "selection": null,
+  "selection_objective": {
+    "description": "Reject candidates that fail mandatory physical, ordering, reset, or evidence constraints; rank the remaining candidates only by measured throughput attainment.",
+    "hard_constraints": [
+      "RUN_ARTIFACT_COMPLETED",
+      "EVIDENCE_ALLOWS_DEPLOYMENT",
+      "PLACEMENT_VERIFICATION_PASSED",
+      "RESET_CYCLES_COMPLETED",
+      "PRIORITY_COMPLIANCE_PASSED",
+      "BATCH_GATING_COMPLIANCE_PASSED",
+      "THROUGHPUT_EVIDENCE_PRESENT",
+      "EACH_LINE_THROUGHPUT_TARGET_MET"
+    ],
+    "objective_id": "constraint_gated_throughput_v2",
+    "tie_breakers": [
+      "LOWER_STRATEGY_SIMULATION_SECONDS",
+      "LEXICOGRAPHIC_CANDIDATE_STRATEGY_ID"
+    ],
+    "weights": {
+      "throughput_attainment": 1.0
+    }
+  },
+  "status": "GENERATED",
+  "strategy_batch_id": "strategy_batch_62967e9e-b6ef-4bd7-af43-d23d764d755b",
+  "time_arrival_state": {
+    "fix_duration": 3.0,
+    "resume_delay": 1.0,
+    "run_id": "sim_93f8833a-a53e-4116-ab6d-aba99e6daf33",
+    "scenario_spec_id": "scn_95731763-9598-4762-80a5-a31b23fe0ef9",
+    "source": "DEPLOYED_SIMULATION_DEFAULTS",
+    "source_reference": "data/digital_twin/default_simulation_config.json",
+    "state_record_type": "TIME_ARRIVAL_MODEL",
+    "state_version": 1,
+    "travel_time": 1.0,
+    "updated_at_utc": "2026-06-29T23:55:30.301246Z"
+  },
+  "trt_id": "trt-demo",
+  "trt_version": "v173",
+  "updated_at_utc": "2026-08-06T14:05:05.611275Z"
+}

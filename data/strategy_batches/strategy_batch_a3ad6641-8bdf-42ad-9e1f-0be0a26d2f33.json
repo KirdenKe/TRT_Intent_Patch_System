@@ -1,0 +1,87 @@
+{
+  "candidate_count": 3,
+  "candidate_runs": [],
+  "candidates": [],
+  "completed_at_utc": "2026-08-06T14:03:23.879502Z",
+  "created_at_utc": "2026-08-06T14:03:23.879502Z",
+  "execution_request": {
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "headless": false,
+    "include_waiting_scenarios": false,
+    "line_decisions": [
+      {
+        "decision": "NO_CHANGE",
+        "degraded_strategy": null,
+        "line_id": "line_1",
+        "next_action": "No supervisor action required.",
+        "reason": "Target TRT does not change this line.",
+        "required_checkpoint": null,
+        "risk_flags": []
+      },
+      {
+        "decision": "NO_CHANGE",
+        "degraded_strategy": null,
+        "line_id": "line_2",
+        "next_action": "No supervisor action required.",
+        "reason": "Target TRT does not change this line.",
+        "required_checkpoint": null,
+        "risk_flags": []
+      },
+      {
+        "decision": "NO_CHANGE",
+        "degraded_strategy": null,
+        "line_id": "line_3",
+        "next_action": "No supervisor action required.",
+        "reason": "Target TRT does not change this line.",
+        "required_checkpoint": null,
+        "risk_flags": []
+      },
+      {
+        "decision": "NO_CHANGE",
+        "degraded_strategy": null,
+        "line_id": "line_4",
+        "next_action": "No supervisor action required.",
+        "reason": "Target TRT does not change this line.",
+        "required_checkpoint": null,
+        "risk_flags": []
+      }
+    ],
+    "reconciliation_plan_id": "rec_5f616e05-eb45-468f-a2d0-1b5abe8de3ef",
+    "release_id": "rel_fe9cbc1a-5be0-49bd-85b2-c8aed2ebbe50",
+    "scenario_template_id": null,
+    "simulation_scope": null,
+    "timeout_seconds": null,
+    "trt_id": "trt-demo",
+    "trt_version": "v173"
+  },
+  "failure_source": "LLM_CANDIDATE_OUTPUT_VALIDATION",
+  "failure_stage": "CANDIDATE_GENERATION",
+  "generation_error": "Candidate generation failed deterministic validation after 3 attempts: attempt 1: Candidate STRAT_PRODUCTION_CONTINUE changes locked field chosen_intervention_mode.; attempt 2: Candidate STRAT_PRODUCTION_CONTINUE uses immediate-stop but does not use STOP_LINE on lines ['line_1', 'line_2', 'line_3', 'line_4'].; attempt 3: Candidate STRAT_MAX_THROUGHPUT_ARRIVAL changes locked field chosen_intervention_mode.",
+  "reconciliation_plan_id": "rec_5f616e05-eb45-468f-a2d0-1b5abe8de3ef",
+  "selection": {
+    "automatic_retry_exhausted": true,
+    "failure_classification": "SYSTEM_GENERATION_ERROR",
+    "operator_intent_fault_detected": false,
+    "operator_refinement_required": false,
+    "ranked_candidates": [],
+    "recovery_actions": [
+      "Retry candidate generation using the unchanged operator intent.",
+      "Inspect the model output and deterministic validation errors if retrying fails."
+    ],
+    "refinement_suggestions": [],
+    "selected_candidate_strategy_id": null,
+    "selected_run_id": null,
+    "selected_scenario_spec_id": null,
+    "status": "GENERATION_FAILED"
+  },
+  "status": "GENERATION_FAILED",
+  "strategy_batch_id": "strategy_batch_a3ad6641-8bdf-42ad-9e1f-0be0a26d2f33",
+  "trt_id": "trt-demo",
+  "trt_version": "v173",
+  "updated_at_utc": "2026-08-06T14:03:23.879502Z"
+}

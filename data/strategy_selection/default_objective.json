@@ -1,0 +1,20 @@
+{
+  "objective_id": "constraint_gated_throughput_v3",
+  "description": "Reject candidates that fail mandatory physical placement, ordering, throughput, or evidence constraints; report reset completion as a non-blocking diagnostic and rank eligible candidates only by measured throughput attainment.",
+  "hard_constraints": [
+    "RUN_ARTIFACT_COMPLETED",
+    "EVIDENCE_ALLOWS_DEPLOYMENT",
+    "PLACEMENT_VERIFICATION_PASSED",
+    "PRIORITY_COMPLIANCE_PASSED",
+    "BATCH_GATING_COMPLIANCE_PASSED",
+    "THROUGHPUT_EVIDENCE_PRESENT",
+    "EACH_LINE_THROUGHPUT_TARGET_MET"
+  ],
+  "weights": {
+    "throughput_attainment": 1.0
+  },
+  "tie_breakers": [
+    "LOWER_STRATEGY_SIMULATION_SECONDS",
+    "LEXICOGRAPHIC_CANDIDATE_STRATEGY_ID"
+  ]
+}

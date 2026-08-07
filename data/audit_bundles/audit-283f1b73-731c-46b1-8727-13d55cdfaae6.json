@@ -1,0 +1,25 @@
+{
+  "audit_id": "audit-283f1b73-731c-46b1-8727-13d55cdfaae6",
+  "intent_text": "with two production lines remaining, stop robotic arms immediately upon anomaly detection and set simulated tooling count per production line to 5",
+  "operations": [],
+  "operator_id": "op_001",
+  "patch_id": "patch-1786022032418",
+  "reason": "testing",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-08-06T13:14:03.687027Z",
+  "trt_after_hash": "1f40bcf003383efc322bdb4db89bd51c2f51635401d989544ce34d4dfc77b5cc",
+  "trt_after_version": "v173",
+  "trt_before_hash": "a9e71135d18585bf884df410e141231a13201344b486311b5815c973c0d80491",
+  "trt_before_version": "v172",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

@@ -614,6 +614,29 @@ def normalize_domain_candidate(
     current_trt: dict[str, Any],
     *,
     expand_compact: bool = True,
+    time_arrival_baseline: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    derivation_errors = relative_time_arrival_validation_errors(
+        candidate,
+        time_arrival_baseline,
+    )
+    if derivation_errors:
+        raise ValueError(
+            "Time-Arrival derivation failed semantic validation: "
+            + "; ".join(derivation_errors)
+        )
+    return _normalize_domain_candidate_impl(
+        candidate,
+        current_trt,
+        expand_compact=expand_compact,
+    )
+
+
+def _normalize_domain_candidate_impl(
+    candidate: dict[str, Any],
+    current_trt: dict[str, Any],
+    *,
+    expand_compact: bool = True,
 ) -> dict[str, Any]:
     if expand_compact:
         candidate = _expand_compact_candidate(candidate)
@@ -920,8 +943,111 @@ def _expand_compact_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
     return expanded
 
 
+def _tool_set_normalized_types(set_id: str, current_trt: dict[str, Any]) -> list[str]:
+    tool_set = (current_trt.get("tool_sets") or {}).get(set_id) or {}
+    catalog = current_trt.get("tool_catalog") or {}
+    tool_ids = _dedupe_values(
+        [
+            *(tool_set.get("required_tool_ids") or []),
+            *(tool_set.get("tool_ids") or []),
+        ]
+    )
+    return _dedupe_values(
+        catalog.get(tool_id, {}).get("normalized_type")
+        for tool_id in tool_ids
+        if catalog.get(tool_id, {}).get("normalized_type")
+    )
+
+
+def _repair_explicit_composite_semantics(
+    candidate: dict[str, Any],
+    current_trt: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Recover explicit known aliases when model sub-requests are incomplete."""
+
+    intent_text = str(candidate.get("intent_text") or "")
+    clauses = [clause.strip() for clause in re.split(r"\s*;\s*", intent_text) if clause.strip()]
+    tool_aliases = build_tool_vocabulary(current_trt)["aliases"]
+    set_aliases = build_target_set_aliases(current_trt)
+    repaired: list[dict[str, Any]] = []
+    for raw_sub_request in candidate.get("sub_requests") or []:
+        sub_request = deepcopy(raw_sub_request)
+        request_type = str(sub_request.get("request_type") or "")
+        if request_type == "TOOLING_POLICY_UPDATE":
+            clause = next(
+                (item for item in clauses if "tooling picking target" in item.lower()),
+                "",
+            )
+            matched_types = _dedupe_values(
+                normalized_type
+                for alias, normalized_type in sorted(
+                    tool_aliases.items(), key=lambda item: len(item[0]), reverse=True
+                )
+                if re.search(rf"\b{re.escape(alias)}\b", clause.lower())
+            )
+            if matched_types:
+                sub_request["operator_text"] = clause
+                sub_request["selected_normalized_types"] = matched_types
+                sub_request["tooling_policy"] = {"required_scope": "SELECTED_TOOLING"}
+                sub_request.pop("manipulator_priority", None)
+                sub_request["clarification_questions"] = [
+                    question
+                    for question in (sub_request.get("clarification_questions") or [])
+                    if "which specific" not in str(question).lower()
+                    and "which tool" not in str(question).lower()
+                ]
+        elif request_type == "MANIPULATOR_PRIORITY_UPDATE":
+            clause = next(
+                (item for item in clauses if "tooling picking order" in item.lower()),
+                "",
+            )
+            if "other than" in clause.lower():
+                reference_types: list[str] = []
+                for alias, set_id in sorted(
+                    set_aliases.items(), key=lambda item: len(item[0]), reverse=True
+                ):
+                    if re.search(rf"\b{re.escape(alias)}\b", clause.lower()):
+                        reference_types = _tool_set_normalized_types(set_id, current_trt)
+                        sub_request["operator_text"] = clause
+                        sub_request["manipulator_priority"] = {
+                            "enabled": True,
+                            "policy": "UNWANTED_FIRST",
+                            "ordered_normalized_types": [],
+                            "ordered_tool_ids": [],
+                            "tie_breaker": "FCFS",
+                        }
+                        break
+                if not reference_types:
+                    reference_types = _dedupe_values(
+                        normalized_type
+                        for alias, normalized_type in sorted(
+                            tool_aliases.items(), key=lambda item: len(item[0]), reverse=True
+                        )
+                        if re.search(rf"\b{re.escape(alias)}\b", clause.lower())
+                    )
+                if reference_types and not sub_request.get("manipulator_priority", {}).get("policy"):
+                    sub_request["operator_text"] = clause
+                    sub_request["manipulator_priority"] = {
+                        "enabled": True,
+                        "policy": "EXPLICIT_TYPE_ORDER",
+                        "prioritize": NON_MATCHING_TYPES_FIRST,
+                        "reference_normalized_types": reference_types,
+                        "ordered_normalized_types": [],
+                        "ordered_tool_ids": [],
+                        "tie_breaker": "FCFS",
+                    }
+                if reference_types:
+                    sub_request["clarification_questions"] = [
+                        question
+                        for question in (sub_request.get("clarification_questions") or [])
+                        if not _is_priority_clarification_question(str(question))
+                    ]
+        repaired.append(sub_request)
+    return repaired
+
+
 def _normalize_composite_domain_candidate(candidate: dict[str, Any], current_trt: dict[str, Any]) -> dict[str, Any]:
-    sub_requests = candidate.get("sub_requests")
+    sub_requests = _repair_explicit_composite_semantics(candidate, current_trt)
     if not isinstance(sub_requests, list) or not sub_requests:
         raise ValueError("Composite intent requires at least one sub_request.")
 
@@ -1229,7 +1355,7 @@ def _coerce_manipulator_priority_intent(candidate: dict[str, Any], current_trt: 
     ):
         if "first" in intent_text or "before unwanted" in intent_text:
             priority["policy"] = "REQUIRED_FIRST"
-        elif _mentions_target_set_focus(intent_text, current_trt):
+        elif _mentions_target_set_focus(intent_text, current_trt) and "other than" not in intent_text:
             priority["policy"] = "REQUIRED_FIRST"
     if "unwanted" in intent_text and "first" in intent_text:
         priority["policy"] = "UNWANTED_FIRST"
@@ -1502,12 +1628,158 @@ def _number_from_match(value: str | None) -> float | None:
         return None
 
 
-def _coerce_time_arrival_updates_from_text(updates: dict[str, Any], text: str) -> dict[str, Any]:
-    """Repair Time-Arrival numeric fields from model-extracted simulation intent text."""
+def _relative_time_arrival_expectations(
+    text: str,
+    baseline: dict[str, Any],
+) -> tuple[dict[str, float], list[str]]:
+    """Interpret relative timing language for validation without rewriting model output."""
+
     normalized = text.lower()
-    if not normalized:
-        return updates
+    expected: dict[str, float] = {}
+    errors: list[str] = []
+
+    patterns = {
+        "travel_time": (
+            "subtract",
+            [
+                r"\breduc(?:ed|e)\b.*?\b(?:the\s+)?(?:current\s+)?(?:arrival|travel)\s+time\b.*?\b(?:by\s+)?(?:about\s+)?(?P<seconds>\d+(?:\.\d+)?)\s*seconds?\b",
+                r"\b(?:arrival|travel)\s+time\b(?:\s+(?:can|could|should|must|is|be|to\s+be))*\s+reduced\b.*?\b(?:by\s+)?(?:about\s+)?(?P<seconds>\d+(?:\.\d+)?)\s*seconds?\b",
+            ],
+        ),
+        "fix_duration": (
+            "subtract",
+            [
+                r"\breduc(?:ed|e)\b.*?\b(?:the\s+)?(?:current\s+)?(?:time\s+to\s+resolve\s+entanglements|entanglement\s+fix\s+(?:time|duration)|fix\s+duration)\b.*?\b(?:by\s+)?(?:about\s+)?(?P<seconds>\d+(?:\.\d+)?)\s*seconds?\b",
+                r"\b(?:time\s+to\s+resolve\s+entanglements|entanglement\s+fix\s+(?:time|duration)|fix\s+duration)\b(?:\s+(?:can|could|should|must|is|be|to\s+be))*\s+reduced\b.*?\b(?:by\s+)?(?:about\s+)?(?P<seconds>\d+(?:\.\d+)?)\s*seconds?\b",
+            ],
+        ),
+        "resume_delay": (
+            "add",
+            [
+                r"\b(?:recovery\s+time|resume\s+delay|recovery\s+delay)\b.*?\b(?P<seconds>\d+(?:\.\d+)?)\s*seconds?\s+slower\b",
+            ],
+        ),
+    }
+    for field, (operation, field_patterns) in patterns.items():
+        match = next(
+            (candidate for pattern in field_patterns if (candidate := re.search(pattern, normalized))),
+            None,
+        )
+        if match is None:
+            continue
+        baseline_value = baseline.get(field)
+        seconds = _number_from_match(match.group("seconds"))
+        if isinstance(baseline_value, bool) or not isinstance(baseline_value, (int, float)) or seconds is None:
+            errors.append(f"{field} could not be validated against the recorded baseline")
+            continue
+        value = float(baseline_value) + seconds if operation == "add" else float(baseline_value) - seconds
+        if value < 0:
+            errors.append(f"the requested relative change would make {field} negative")
+            continue
+        expected[field] = round(value, 3)
+    return expected, errors
+
+
+def explicit_simulation_config_expectations(text: str) -> dict[str, Any]:
+    """Extract explicit operator values for semantic validation, not correction."""
+
+    normalized = text.lower()
+    expected: dict[str, Any] = {}
+    numeric_patterns = {
+        "travel_time": [
+            r"\b(?:my\s+|the\s+)?(?:arrival|travel)\s+time\s+(?:is|=|to\s+be)\s*(?P<value>\d+(?:\.\d+)?)\s*seconds?\b",
+        ],
+        "fix_duration": [
+            r"\b(?:the\s+)?time\s+(?:required\s+)?to\s+(?:resolve|fix)\b[^.;]*?\b(?:is|=|to\s+be)\s*(?P<value>\d+(?:\.\d+)?)\s*seconds?\b",
+            r"\b(?:entanglement|tangling)\s+fix\s+(?:time|duration)\s+(?:is|=|to\s+be)\s*(?P<value>\d+(?:\.\d+)?)\s*seconds?\b",
+        ],
+        "resume_delay": [
+            r"\b(?:recovery\s+time|recovery\s+delay|resume\s+delay)\s+(?:is|=|to\s+be)\s*(?P<value>\d+(?:\.\d+)?)\s*seconds?\b(?!\s+slower)",
+        ],
+        "allowed_overlap_ratio": [
+            r"\b(?:allow|allowed)\s+overlap\s+ratio\s+(?:is|=|to\s+be|to)\s*(?P<value>\d+(?:\.\d+)?)\b",
+        ],
+    }
+    for field, patterns in numeric_patterns.items():
+        match = next(
+            (candidate for pattern in patterns if (candidate := re.search(pattern, normalized))),
+            None,
+        )
+        if match is not None:
+            value = _number_from_match(match.group("value"))
+            if value is not None:
+                expected[field] = value
+
+    if (
+        re.search(r"\bcontinue\b.*?\buntil\b.*?\b(?:i|operator)\b.*?\b(?:arrive|arrival)\b", normalized)
+        or "continue until arrival" in normalized
+        or "continue-until-arrival" in normalized
+    ):
+        expected["chosen_intervention_mode"] = "continue-until-arrival"
+    elif (
+        re.search(r"\bstop\b.*?\b(?:robotic\s+arms?|robots?|arms?)\b.*?\bimmediately\b", normalized)
+        or "immediate-stop" in normalized
+        or "immediate stop" in normalized
+    ):
+        expected["chosen_intervention_mode"] = "immediate-stop"
+    return expected
+
+
+def relative_time_arrival_validation_errors(
+    candidate: dict[str, Any],
+    baseline: dict[str, Any] | None,
+) -> list[str]:
+    """Check Gemma's requested simulation values without correcting model output."""
+
+    intent_text = str(candidate.get("intent_text") or "")
+    expected: dict[str, Any] = explicit_simulation_config_expectations(intent_text)
+    errors: list[str] = []
+    if baseline:
+        relative_expected, relative_errors = _relative_time_arrival_expectations(
+            intent_text,
+            baseline,
+        )
+        expected.update(relative_expected)
+        errors.extend(relative_errors)
+    updates: dict[str, Any] = {}
+    for sub_request in candidate.get("sub_requests") or []:
+        if isinstance(sub_request, dict):
+            updates.update(sub_request.get("simulation_config_updates") or {})
+    updates.update(candidate.get("simulation_config_updates") or {})
+    # Compact direct-normalizer callers may intentionally provide text only and
+    # rely on deterministic mapping. LLM output with a simulation object must,
+    # however, be semantically complete and consistent before normalization.
+    if not updates:
+        return errors
+    for field, expected_value in expected.items():
+        actual = updates.get(field)
+        if isinstance(expected_value, str):
+            if field == "chosen_intervention_mode" and isinstance(actual, str):
+                actual = actual.strip().lower().replace("_", "-").replace(" ", "-")
+            if actual is None:
+                errors.append(f"Gemma omitted the requested {field} value")
+            elif actual != expected_value:
+                errors.append(f"Gemma generated an inconsistent {field} value")
+        elif isinstance(actual, bool) or not isinstance(actual, (int, float)):
+            errors.append(f"Gemma omitted the derived {field} value")
+        elif abs(float(actual) - float(expected_value)) > 1e-9:
+            errors.append(f"Gemma derived an inconsistent {field} value")
+    return errors
+
+
+def _coerce_time_arrival_updates_from_text(updates: dict[str, Any], text: str) -> dict[str, Any]:
+    """Normalize non-arithmetic simulation fields without rewriting model arithmetic."""
+    normalized = text.lower()
     repaired = dict(updates)
+
+    mode = repaired.get("chosen_intervention_mode")
+    if isinstance(mode, str):
+        normalized_mode = mode.strip().lower().replace("_", "-").replace(" ", "-")
+        if normalized_mode in {"immediate-stop", "continue-until-arrival"}:
+            repaired["chosen_intervention_mode"] = normalized_mode
+
+    if not normalized:
+        return repaired
 
     line_match = re.search(
         r"\b(?P<count>\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+production lines?\s+remaining\b",
@@ -1517,42 +1789,6 @@ def _coerce_time_arrival_updates_from_text(updates: dict[str, Any], text: str) -
         count = _number_from_match(line_match.group("count"))
         if count is not None:
             repaired["num_envs"] = int(count)
-
-    travel_match = re.search(
-        r"\b(?:arrival|travel)\s+time\b.*?\breduc(?:ed|e)\b.*?\b(?:by\s+)?(?:about\s+)?(?P<seconds>\d+(?:\.\d+)?)\s*seconds?\b",
-        normalized,
-    )
-    if travel_match:
-        seconds = _number_from_match(travel_match.group("seconds"))
-        if seconds is not None:
-            repaired["travel_time"] = max(0.0, round(5.0 - seconds, 3))
-
-    fix_match = re.search(
-        r"\b(?:time\s+to\s+resolve\s+entanglements|entanglement\s+fix\s+(?:time|duration)|fix\s+duration)\b.*?\breduc(?:ed|e)\b.*?\b(?:by\s+)?(?:about\s+)?(?P<seconds>\d+(?:\.\d+)?)\s*seconds?\b",
-        normalized,
-    )
-    if fix_match:
-        seconds = _number_from_match(fix_match.group("seconds"))
-        if seconds is not None:
-            repaired["fix_duration"] = max(0.0, round(8.0 - seconds, 3))
-
-    slower_match = re.search(
-        r"\b(?:recovery\s+time|resume\s+delay|recovery\s+delay)\b.*?\b(?P<seconds>\d+(?:\.\d+)?)\s*seconds?\s+slower\b",
-        normalized,
-    )
-    if slower_match:
-        seconds = _number_from_match(slower_match.group("seconds"))
-        if seconds is not None:
-            repaired["resume_delay"] = round(0.5 + seconds, 3)
-
-    faster_match = re.search(
-        r"\b(?:recovery\s+time|resume\s+delay|recovery\s+delay)\b.*?\b(?P<seconds>\d+(?:\.\d+)?)\s*seconds?\s+faster\b",
-        normalized,
-    )
-    if faster_match:
-        seconds = _number_from_match(faster_match.group("seconds"))
-        if seconds is not None:
-            repaired["resume_delay"] = max(0.0, round(0.5 - seconds, 3))
 
     if (
         re.search(r"\bstop\b.*?\b(?:robotic\s+arms?|robots?|arms?)\b.*?\bimmediately\b", normalized)

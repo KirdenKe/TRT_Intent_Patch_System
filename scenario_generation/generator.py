@@ -53,6 +53,7 @@ def generate_scenario_spec(
     reconciliation_plan: dict[str, Any] | None = None,
     scenario_template_id: str | None = None,
     candidate_strategy_id: str | None = None,
+    strategy_batch_id: str | None = None,
     output_path: str | Path | None = None,
     template_registry: dict[str, Any] | None = None,
     operator_model_override: dict[str, Any] | None = None,
@@ -62,6 +63,7 @@ def generate_scenario_spec(
     required_line_ids: list[str] | None = None,
     simulation_scope: str | None = None,
     simulation_config_override: dict[str, Any] | None = None,
+    line_policy_overrides: dict[str, dict[str, Any]] | None = None,
 ) -> ScenarioSpec | WaitingForCheckpointResult:
     request = _coerce_request(
         request=request,
@@ -70,12 +72,14 @@ def generate_scenario_spec(
         reconciliation_plan=reconciliation_plan,
         scenario_template_id=scenario_template_id,
         candidate_strategy_id=candidate_strategy_id,
+        strategy_batch_id=strategy_batch_id,
         template_registry=template_registry,
         include_waiting_scenarios=include_waiting_scenarios,
         line_bindings=line_bindings,
         required_line_ids=required_line_ids,
         simulation_scope=simulation_scope,
         simulation_config_override=simulation_config_override,
+        line_policy_overrides=line_policy_overrides,
     )
     trt = request.released_trt
     state_records = request.state_records
@@ -133,7 +137,10 @@ def generate_scenario_spec(
         "scene_template": template["scene_template"],
         "simulation_config": simulation_config,
         "line_bindings": line_bindings,
-        "line_policies": _build_line_policies(trt, plan, required_line_ids),
+        "line_policies": _apply_line_policy_overrides(
+            _build_line_policies(trt, plan, required_line_ids),
+            request.line_policy_overrides,
+        ),
         "operator_model": deepcopy(operator_model_override or template["operator_model"]),
         "abnormal_event_policy": _build_abnormal_event_policy(template),
         "assertions": _build_assertions(template, assertions_override),
@@ -150,6 +157,8 @@ def generate_scenario_spec(
                 "expected_command_args": deepcopy(expected_command_args),
             },
             "dry_run_only": bool((request.simulation_config_override or {}).get("dry_run_only")),
+            "candidate_line_policy_overrides": deepcopy(request.line_policy_overrides or {}),
+            "strategy_batch_id": request.strategy_batch_id,
         },
     }
     validate_scenario_spec(spec)
@@ -166,12 +175,14 @@ def _coerce_request(
     reconciliation_plan: dict[str, Any] | None,
     scenario_template_id: str | None,
     candidate_strategy_id: str | None,
+    strategy_batch_id: str | None,
     template_registry: dict[str, Any] | None,
     include_waiting_scenarios: bool,
     line_bindings: list[dict[str, Any]] | None,
     required_line_ids: list[str] | None,
     simulation_scope: str | None,
     simulation_config_override: dict[str, Any] | None,
+    line_policy_overrides: dict[str, dict[str, Any]] | None,
 ) -> ScenarioGenerationRequest:
     if request is not None:
         return request
@@ -194,11 +205,13 @@ def _coerce_request(
         template_registry=template_registry,
         template_id=scenario_template_id,
         candidate_strategy_id=candidate_strategy_id,
+        strategy_batch_id=strategy_batch_id,
         include_waiting_scenarios=include_waiting_scenarios,
         line_bindings=line_bindings,
         required_line_ids=required_line_ids,
         simulation_scope=simulation_scope,
         simulation_config_override=simulation_config_override,
+        line_policy_overrides=line_policy_overrides,
     )
 
 
@@ -483,6 +496,44 @@ def _build_line_policies(trt: dict[str, Any], plan: dict[str, Any], required_lin
             "risk_flags": list(decision.get("risk_flags", [])),
         }
         policies.append(policy)
+    return policies
+
+
+def _apply_line_policy_overrides(
+    policies: list[dict[str, Any]],
+    overrides: dict[str, dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    if not overrides:
+        return policies
+    by_line = {policy["line_id"]: policy for policy in policies}
+    unknown_lines = sorted(set(overrides) - set(by_line))
+    if unknown_lines:
+        raise ScenarioGenerationError(
+            f"Candidate strategy references lines outside the simulation scope: {unknown_lines}."
+        )
+    allowed_fields = {"manipulator_priority", "abnormal_strategy"}
+    for line_id, line_override in overrides.items():
+        if not isinstance(line_override, dict):
+            raise ScenarioGenerationError(f"Candidate line override for {line_id} must be an object.")
+        unknown_fields = sorted(set(line_override) - allowed_fields)
+        if unknown_fields:
+            raise ScenarioGenerationError(
+                f"Candidate line override for {line_id} contains unsupported fields: {unknown_fields}."
+            )
+        if "abnormal_strategy" in line_override:
+            strategy = line_override["abnormal_strategy"]
+            if strategy not in ISAAC_SUPPORTED_STRATEGIES:
+                raise ScenarioGenerationError(
+                    f"Candidate abnormal strategy {strategy!r} is not executable by the Isaac adapter."
+                )
+            by_line[line_id]["abnormal_strategy"] = strategy
+        if "manipulator_priority" in line_override:
+            priority = line_override["manipulator_priority"]
+            if not isinstance(priority, dict):
+                raise ScenarioGenerationError(
+                    f"Candidate manipulator_priority for {line_id} must be an object."
+                )
+            by_line[line_id]["manipulator_priority"] = deepcopy(priority)
     return policies
 
 

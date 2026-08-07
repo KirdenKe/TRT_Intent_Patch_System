@@ -1,0 +1,23 @@
+{
+  "conversation": [],
+  "latest_dialogue_decision": null,
+  "normalized_request": {
+    "intent_text": "with two production lines remaining, reduce the current arrival time by 0.5 seconds, reduce the current entanglement fix time by 1 second, make the current recovery delay 1 second slower, and simulate 4 tooling per line",
+    "operator_id": null,
+    "reason": null
+  },
+  "pending_intent": {
+    "intent_text": "with two production lines remaining, reduce the current arrival time by 0.5 seconds, reduce the current entanglement fix time by 1 second, make the current recovery delay 1 second slower, and simulate 4 tooling per line",
+    "missing_fields": [
+      "operator_id",
+      "reason"
+    ],
+    "operator_id": null,
+    "original_intent_text": "with two production lines remaining, reduce the current arrival time by 0.5 seconds, reduce the current entanglement fix time by 1 second, make the current recovery delay 1 second slower, and simulate 4 tooling per line",
+    "pending_status": "WAITING_FOR_REQUIRED_FIELDS",
+    "reason": null
+  },
+  "session_id": "cdf10bb5bda44017a4679ce6c083f553",
+  "state": "WAITING_FOR_REQUIRED_FIELDS",
+  "updated_at": "2026-08-06T16:15:17.248645Z"
+}

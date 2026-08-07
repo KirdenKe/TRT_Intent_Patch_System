@@ -146,9 +146,6 @@ def build_rows(run_dir: Path, db_path: Path) -> list[dict[str, Any]]:
         run_id = result.get("run_id", "")
         scenario_spec_id = result.get("scenario_spec_id", "")
         metric = metrics.get(run_id, {})
-        spec_path = PROJECT_ROOT / "outputs" / "scenario_specs" / f"{scenario_spec_id}.json"
-        artifact_path = PROJECT_ROOT / "outputs" / "run_artifacts" / f"{run_id}.sqlite"
-        file_verification = file_elapsed_seconds(spec_path, artifact_path) if run_id and scenario_spec_id else None
         db_verification = fnum(metric.get("T_verification_seconds"))
         row = {
             "test_id": test_id,
@@ -163,8 +160,8 @@ def build_rows(run_dir: Path, db_path: Path) -> list[dict[str, Any]]:
             "N_tool_storage_passed": metric.get("N_tool_storage_passed"),
             "N_failed_tool_storage": metric.get("N_failed_tool_storage"),
             "T_wait_seconds": timing["T_wait_seconds"],
-            "T_verification_seconds": file_verification if file_verification is not None else db_verification,
-            "T_verification_source": "scenario_spec_and_run_artifact_file_timestamps" if file_verification is not None else ("m12_run_metrics.sqlite3" if db_verification is not None else "DATA_INCOMPLETE"),
+            "T_verification_seconds": db_verification,
+            "T_verification_source": "m12_run_metrics.sqlite3_startup_excluded" if db_verification is not None else "DATA_INCOMPLETE",
             "T_loop_seconds": timing["T_loop_seconds"],
             "data_source": "LIVE_N8N_CHAT",
             "metric_data_quality_status": metric.get("data_quality_status", "DATA_INCOMPLETE" if run_id else "NO_RUN"),

@@ -139,6 +139,22 @@ def seconds_between(start: Any, end: Any) -> float | None:
     return max(0.0, (end_ts - start_ts).total_seconds())
 
 
+def verification_seconds_excluding_startup(
+    scenario_created_at: Any,
+    artifact_created_at: Any,
+    isaac_startup_seconds: Any,
+) -> tuple[float | None, float | None, float | None]:
+    wall_seconds = seconds_between(scenario_created_at, artifact_created_at)
+    startup_seconds = (
+        float(isaac_startup_seconds)
+        if isinstance(isaac_startup_seconds, (int, float)) and isaac_startup_seconds >= 0
+        else None
+    )
+    if wall_seconds is None or startup_seconds is None or startup_seconds > wall_seconds:
+        return None, wall_seconds, startup_seconds
+    return wall_seconds - startup_seconds, wall_seconds, startup_seconds
+
+
 def rel(root: Path, path: Path) -> str:
     try:
         return str(path.relative_to(root)).replace("\\", "/")
@@ -208,6 +224,12 @@ def initialize_db(connection: sqlite3.Connection) -> None:
             deployment_review_end_at TEXT,
             T_wait_seconds REAL,
             T_verification_seconds REAL,
+            T_verification_wall_seconds REAL,
+            T_isaac_startup_seconds REAL,
+            verification_timing_source TEXT,
+            isaac_command_started_at TEXT,
+            isaac_startup_reference_at TEXT,
+            isaac_startup_reference_pattern TEXT,
             T_loop_seconds REAL,
             loop_review_definition TEXT,
             N_tool_storage_total INTEGER,
@@ -295,6 +317,18 @@ def initialize_db(connection: sqlite3.Connection) -> None:
         "m12_test_cases",
     ):
         _ensure_provenance_columns(connection, table)
+    _ensure_extra_columns(
+        connection,
+        "m12_run_metrics",
+        {
+            "T_verification_wall_seconds": "REAL",
+            "T_isaac_startup_seconds": "REAL",
+            "verification_timing_source": "TEXT",
+            "isaac_command_started_at": "TEXT",
+            "isaac_startup_reference_at": "TEXT",
+            "isaac_startup_reference_pattern": "TEXT",
+        },
+    )
     _ensure_extra_columns(
         connection,
         "m12_figure_manifest",
@@ -513,6 +547,45 @@ def _event_meta(connection: sqlite3.Connection, run_id: str) -> dict[str, Any]:
     return dict(row) if row else {}
 
 
+def _event_payload(connection: sqlite3.Connection, run_id: str, event_name: str) -> dict[str, Any]:
+    row = connection.execute(
+        """
+        SELECT payload_json
+          FROM m12_event_log
+         WHERE run_id = ? AND event_name = ?
+      ORDER BY event_ts_utc DESC, id DESC
+         LIMIT 1
+        """,
+        (run_id, event_name),
+    ).fetchone()
+    if not row or not row["payload_json"]:
+        return {}
+    try:
+        value = json.loads(row["payload_json"])
+    except (TypeError, json.JSONDecodeError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _host_timing_for_run(
+    connection: sqlite3.Connection,
+    run_id: str,
+    artifact_path: Path,
+) -> dict[str, Any]:
+    event_payload = _event_payload(connection, run_id, "RUN_ARTIFACT_CREATED")
+    timing = event_payload.get("host_timing")
+    if isinstance(timing, dict):
+        return timing
+    sidecar_path = artifact_path.with_name(f"{run_id}.timing.json")
+    if not sidecar_path.exists():
+        return {}
+    try:
+        value = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
 def collect_run_metrics(
     repository: TRTRepository,
     run_id: str,
@@ -615,6 +688,12 @@ def collect_run_metrics(
     if scenario_created is None and spec_path and spec_path.exists():
         scenario_created = datetime.fromtimestamp(spec_path.stat().st_mtime, timezone.utc).isoformat().replace("+00:00", "Z")
     meta = _event_meta(connection, run_id)
+    host_timing = _host_timing_for_run(connection, run_id, artifact_path)
+    verification_seconds, verification_wall_seconds, startup_seconds = verification_seconds_excluding_startup(
+        scenario_created,
+        artifact_created,
+        host_timing.get("isaac_startup_seconds"),
+    )
     intent_created = _event_time(connection, run_id, "INTENT_CREATED")
     summary_created = _event_time(connection, run_id, "CANDIDATE_SUMMARY_CREATED")
     candidate_review = _event_time(connection, run_id, "CANDIDATE_REVIEW_ENDED")
@@ -637,6 +716,12 @@ def collect_run_metrics(
         warnings.append("Intent or candidate summary timestamp was not recorded.")
     if scenario_created is None or artifact_created is None:
         warnings.append("Scenario or artifact timestamp was not recorded.")
+    elif startup_seconds is None:
+        warnings.append(
+            "Isaac startup boundary was not measured; T_verification excludes startup by definition and remains null."
+        )
+    elif verification_seconds is None:
+        warnings.append("Measured Isaac startup time exceeded the ScenarioSpec-to-RunArtifact wall interval.")
     if intent_created is None or review_end is None:
         warnings.append("Closed-loop review timestamp was not recorded.")
     status = "OK" if not warnings else "DATA_INCOMPLETE"
@@ -656,7 +741,13 @@ def collect_run_metrics(
         "artifact_created_at": artifact_created,
         "deployment_review_end_at": deployment_review,
         "T_wait_seconds": seconds_between(intent_created, summary_created),
-        "T_verification_seconds": seconds_between(scenario_created, artifact_created),
+        "T_verification_seconds": verification_seconds,
+        "T_verification_wall_seconds": verification_wall_seconds,
+        "T_isaac_startup_seconds": startup_seconds,
+        "verification_timing_source": host_timing.get("startup_reference_source"),
+        "isaac_command_started_at": host_timing.get("isaac_command_started_at_utc"),
+        "isaac_startup_reference_at": host_timing.get("startup_reference_at_utc"),
+        "isaac_startup_reference_pattern": host_timing.get("startup_reference_pattern"),
         "T_loop_seconds": seconds_between(intent_created, review_end),
         "loop_review_definition": loop_definition,
         "N_tool_storage_total": total,
@@ -986,6 +1077,8 @@ TC2,Tool Orchestration and Evidence Pipeline,MAKA,GAMHE_5_0,75,tool_orchestratio
 TC3,KPI Optimisation and Graph Report Validation,GAMHE_5_0,MAKA,24,scenario_setup_gold.jsonl,"R_storage;R_reset;T_wait_seconds;T_verification_seconds;T_loop_seconds;figure_generation_success"
 TC4,Production-Line Error Interception,FactoryFlow,MAKA,25,error_injection_gold.csv,"error_interception_rate;deployment_block_rate;false_positive_rate;false_negative_rate;interception_latency_seconds"
 TC5,Human Review and Closed-Loop Timing,LLMAPM,GAMHE_5_0,24,operator_intent_gold.jsonl,"T_wait_seconds;T_verification_seconds;T_loop_seconds;operator_review_completed"
+TC6,Single-Model Repeated Generation Stability,MAKA,LLMAPM,5,operator_intent_gold.jsonl,"json_format_accuracy;required_field_completeness_rate;intent_classification_consistency;field_content_consistency;semantic_accuracy;output_variants;generation_time"
+TC7,Cross-Model Structured Generation Comparison,MAKA,GAMHE_5_0,3,operator_intent_gold.jsonl,"json_format_accuracy;required_field_completeness_rate;semantic_accuracy;generation_consistency;average_generation_seconds;maximum_generation_seconds;input_tokens;output_tokens"
 """
 
 
@@ -1176,7 +1269,9 @@ def expected_metric_formulas() -> dict[str, Any]:
             "R_storage": "(N_tool_storage_total - N_failed_tool_storage) / N_tool_storage_total",
             "R_reset": "C_reset_completed / C_reset_requested",
             "T_wait_seconds": "summary_created_at - intent_created_at",
-            "T_verification_seconds": "artifact_created_at - scenario_created_at",
+            "T_verification_wall_seconds": "artifact_created_at - scenario_created_at",
+            "T_isaac_startup_seconds": "isaac_startup_reference_at - isaac_command_started_at",
+            "T_verification_seconds": "T_verification_wall_seconds - T_isaac_startup_seconds",
             "T_loop_seconds": "review_end_at - intent_created_at",
         },
         "error_interception": {
@@ -1442,7 +1537,7 @@ def generate_figures(
         specs = [
             ("fig_01_closed_loop_timeline", "Closed-Loop Timeline", "Run index", "Seconds", "m12_run_metrics", "T_loop_seconds"),
             ("fig_02_operator_wait_time_distribution", "Operator Wait Time Distribution", "Run index", "Seconds", "m12_run_metrics", "T_wait_seconds"),
-            ("fig_03_verification_time_distribution", "Verification Time Distribution", "Run index", "Seconds", "m12_run_metrics", "T_verification_seconds"),
+            ("fig_03_verification_time_distribution", "Verification Time Distribution (Isaac Startup Excluded)", "Run index", "Seconds", "m12_run_metrics", "T_verification_seconds"),
             ("fig_04_loop_time_distribution", "Closed-Loop Cycle Time Distribution", "Run index", "Seconds", "m12_run_metrics", "T_loop_seconds"),
             ("fig_05_storage_pass_rate_by_run", "Storage Pass Rate By Run", "Run index", "Pass rate", "m12_run_metrics", "R_storage"),
             ("fig_06_reset_completion_rate_by_run", "Reset Completion Rate By Run", "Run index", "Completion rate", "m12_run_metrics", "R_reset"),

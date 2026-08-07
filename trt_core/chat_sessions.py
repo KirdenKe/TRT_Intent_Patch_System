@@ -441,7 +441,6 @@ def resolve_priority_clarification_with_vllm(
             },
             {"role": "user", "content": json.dumps(resolver_input, sort_keys=True)},
         ],
-        "temperature": 0,
         "max_tokens": 2000,
         "structured_outputs": {"json": schema},
     }

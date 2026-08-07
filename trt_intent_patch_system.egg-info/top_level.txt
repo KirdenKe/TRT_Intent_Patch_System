@@ -1,1 +1,3 @@
+scenario_generation
+tools
 trt_core

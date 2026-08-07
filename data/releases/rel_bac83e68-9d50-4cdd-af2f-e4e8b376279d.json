@@ -1,0 +1,110 @@
+{
+  "audit_id": "audit-3369da2e-e3a1-4f08-8177-348ce3e8cb07",
+  "base_version": "v171",
+  "candidate_patch": {
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "base_version": "v171",
+    "dry_run_only": false,
+    "intent_text": "with two production lines remaining, reduce the current arrival time by 0.5 seconds, reduce the current entanglement fix time by 1 second, make the current recovery delay 1 second slower, and simulate 4 tooling per line",
+    "message": "The candidate patch passed validation. It will apply the requested composite changes across 2 sub-requests. Please approve, reject, or request revision.",
+    "operations": [],
+    "operator_id": "op_001",
+    "patch_id": "patch-1786018176039",
+    "reason": "testing",
+    "request_types": [
+      "SIMULATION_CONFIG_UPDATE"
+    ],
+    "simulation_config_updates": {
+      "add_reference_number": 4,
+      "episode_success_requires_reset_cycles": null,
+      "fix_duration": 2,
+      "num_envs": 2,
+      "resume_delay": 2,
+      "travel_time": 0
+    },
+    "status": "REVIEWED",
+    "sub_requests": [
+      {
+        "affected_lines": [
+          "line_1",
+          "line_2",
+          "line_3",
+          "line_4"
+        ],
+        "clarification_questions": [],
+        "operation_paths": [],
+        "request_type": "SIMULATION_CONFIG_UPDATE",
+        "request_types": [
+          "SIMULATION_CONFIG_UPDATE"
+        ],
+        "simulation_config_updates": {
+          "episode_success_requires_reset_cycles": null,
+          "fix_duration": 2,
+          "num_envs": 2,
+          "resume_delay": 2,
+          "travel_time": 0
+        },
+        "target_lines": [],
+        "target_scope": "ALL_LINES"
+      },
+      {
+        "affected_lines": [
+          "line_1",
+          "line_2",
+          "line_3",
+          "line_4"
+        ],
+        "clarification_questions": [],
+        "operation_paths": [],
+        "request_type": "SIMULATION_CONFIG_UPDATE",
+        "request_types": [
+          "SIMULATION_CONFIG_UPDATE"
+        ],
+        "simulation_config_updates": {
+          "add_reference_number": 4,
+          "num_envs": 2,
+          "resume_delay": 2,
+          "travel_time": 0
+        },
+        "target_lines": [],
+        "target_scope": "ALL_LINES"
+      }
+    ],
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [],
+    "affected_lines": [],
+    "intent_text": "with two production lines remaining, reduce the current arrival time by 0.5 seconds, reduce the current entanglement fix time by 1 second, make the current recovery delay 1 second slower, and simulate 4 tooling per line",
+    "reason": "testing"
+  },
+  "created_at_utc": "2026-08-06T12:09:51.004308Z",
+  "current_trt_path": "/app/data/trt/current_trt.json",
+  "operator_decision": {
+    "comment": "Testing",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-08-06T12:09:51.318130Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1786018176039",
+  "previous_trt_version": "v171",
+  "release_id": "rel_bac83e68-9d50-4cdd-af2f-e4e8b376279d",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "trt_version": "v172",
+  "updated_at_utc": "2026-08-06T12:09:51.318130Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  },
+  "version_path": "/app/data/trt_versions/trt-demo_v172.json"
+}

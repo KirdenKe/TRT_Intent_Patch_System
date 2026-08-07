@@ -43,12 +43,14 @@ class TRTRepository:
         self.release_dir = self.root / "data" / "releases"
         self.state_dir = self.root / "data" / "state_records"
         self.reconciliation_dir = self.root / "data" / "reconciliation_plans"
+        self.strategy_batch_dir = self.root / "data" / "strategy_batches"
         self.trt_dir.mkdir(parents=True, exist_ok=True)
         self.trt_pointer_dir.mkdir(parents=True, exist_ok=True)
         self.audit_dir.mkdir(parents=True, exist_ok=True)
         self.release_dir.mkdir(parents=True, exist_ok=True)
         self.state_dir.mkdir(parents=True, exist_ok=True)
         self.reconciliation_dir.mkdir(parents=True, exist_ok=True)
+        self.strategy_batch_dir.mkdir(parents=True, exist_ok=True)
 
     def _trt_path(self, trt_id: str, version: str) -> Path:
         return self.trt_dir / f"{trt_id}_{version}.json"
@@ -61,6 +63,9 @@ class TRTRepository:
 
     def _reconciliation_path(self, plan_id: str) -> Path:
         return self.reconciliation_dir / f"{plan_id}.json"
+
+    def _strategy_batch_path(self, strategy_batch_id: str) -> Path:
+        return self.strategy_batch_dir / f"{strategy_batch_id}.json"
 
     @staticmethod
     def _version_number(version: str) -> int:
@@ -260,3 +265,26 @@ class TRTRepository:
         if not path.exists():
             raise RepositoryError(f"Reconciliation plan not found: {plan_id}")
         return json.loads(path.read_text(encoding="utf-8"))
+
+    def save_strategy_batch(self, batch: dict[str, Any]) -> Path:
+        strategy_batch_id = str(batch.get("strategy_batch_id") or "")
+        if not strategy_batch_id:
+            raise RepositoryError("strategy_batch_id is required")
+        return self._atomic_write_json(
+            self._strategy_batch_path(strategy_batch_id),
+            batch,
+            overwrite=True,
+        )
+
+    def load_strategy_batch(self, strategy_batch_id: str) -> dict[str, Any]:
+        path = self._strategy_batch_path(strategy_batch_id)
+        if not path.exists():
+            raise RepositoryError(f"Strategy batch not found: {strategy_batch_id}")
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def list_strategy_batches(self) -> list[dict[str, Any]]:
+        records = [
+            json.loads(path.read_text(encoding="utf-8"))
+            for path in sorted(self.strategy_batch_dir.glob("*.json"))
+        ]
+        return sorted(records, key=lambda item: item.get("created_at_utc", ""))

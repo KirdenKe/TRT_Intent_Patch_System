@@ -280,6 +280,55 @@ def test_composite_request_sub_requests_compile_independently():
         assert "SPONGE_FORCEPS" not in value["ordered_normalized_types"]
 
 
+def test_incomplete_model_subrequests_recover_explicit_tooling_and_priority_semantics():
+    trt = current_trt()
+    text = (
+        "today there are two production lines. my arrival time is 4 seconds, the time required "
+        "to resolve the tangling issue is 5 seconds, and the recovery time is 0.5 seconds. "
+        "continue until i arrive at the production line. the allow overlap ratio is 0.9. "
+        "adjust the throughput/hr for all production lines to at least 85; set the tooling "
+        "picking target for production lines 2 to knife handle; and adjust the tooling picking "
+        "order for production lines 1 to prioritize picking tooling other than ent tooling set."
+    )
+    composite = candidate(text)
+    composite["simulation_config_updates"] = {
+        "num_envs": 2,
+        "travel_time": 4.0,
+        "fix_duration": 5.0,
+        "resume_delay": 0.5,
+        "chosen_intervention_mode": "continue-until-arrival",
+        "allowed_overlap_ratio": 0.9,
+    }
+    composite["sub_requests"] = [
+        {
+            "request_type": "TOOLING_POLICY_UPDATE",
+            "target_scope": "SINGLE_LINE",
+            "target_lines": ["line_2"],
+            "tooling_policy": {"required_scope": "SELECTED_TOOLING"},
+            "manipulator_priority": {"enabled": True},
+            "clarification_questions": [
+                "Which specific knife handle tool should be targeted for line 2?"
+            ],
+        },
+        {
+            "request_type": "MANIPULATOR_PRIORITY_UPDATE",
+            "target_scope": "SINGLE_LINE",
+            "target_lines": ["line_1"],
+            "manipulator_priority": {"enabled": True},
+            "clarification_questions": [
+                "Do you mean production-line priority, or should the robots pick non-ENT tooling first?"
+            ],
+        },
+    ]
+
+    patch = normalize_domain_candidate(composite, trt)
+    paths = {operation["path"]: operation["value"] for operation in patch["operations"]}
+
+    assert paths["/lines/line_2/selected_normalized_types"] == ["KNIFE_HANDLE"]
+    priority = paths["/lines/line_1/manipulator_priority"]
+    assert priority["policy"] == "UNWANTED_FIRST"
+
+
 def test_composite_kpi_sub_request_requires_concrete_kpi_updates():
     composite = candidate("adjust the throughput/hr for all production lines to at least 100")
     composite["sub_requests"] = [
