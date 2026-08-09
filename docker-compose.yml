@@ -6,6 +6,7 @@ services:
     container_name: trt-api
     environment:
       APP_ENV: dev
+      M12_AUTOMATED_COMPARISON_TEST: ${M12_AUTOMATED_COMPARISON_TEST:-false}
       ISAAC_EXECUTION_MODE: host_runner
       ISAAC_HOST_RUNNER_URL: ${ISAAC_HOST_RUNNER_URL}
       ISAAC_HOST_HTTP_TIMEOUT_SECONDS: ${ISAAC_HOST_HTTP_TIMEOUT_SECONDS:-10}

@@ -1,0 +1,2237 @@
+{
+  "aligned_state_records": [
+    {
+      "active_set_id": "ENT_SURGICAL_TOOLING_SET",
+      "active_trt_id": "trt-demo",
+      "active_trt_version": "v81",
+      "checkpoint": "NONE",
+      "completed_tool_ids": [],
+      "current_instruments": [],
+      "current_task": null,
+      "deployment_source": "DIGITAL_TWIN_EVIDENCE_APPROVED_BY_OPERATOR",
+      "deployment_status": "DEPLOYED",
+      "entanglement": {
+        "detected": false,
+        "requires_operator": false,
+        "severity": null,
+        "tool_ids": []
+      },
+      "last_deployed_run_id": "sim_93f8833a-a53e-4116-ab6d-aba99e6daf33",
+      "last_deployed_scenario_spec_id": "scn_95731763-9598-4762-80a5-a31b23fe0ef9",
+      "last_deployment_id": "deploy_a5c38c42-6961-4d9a-863c-ab6287a3657a",
+      "last_exception": null,
+      "line_id": "line_1",
+      "locked_resources": [],
+      "mode": "RUNNING",
+      "pending_tool_ids": [],
+      "robot_id": "ur5_line_1",
+      "selected_tool_ids": [],
+      "wip_count": 0,
+      "workspace_id": "workspace_line_1"
+    },
+    {
+      "active_set_id": "ENT_SURGICAL_TOOLING_SET",
+      "active_trt_id": "trt-demo",
+      "active_trt_version": "v81",
+      "checkpoint": "NONE",
+      "completed_tool_ids": [],
+      "current_instruments": [],
+      "current_task": null,
+      "deployment_source": "DIGITAL_TWIN_EVIDENCE_APPROVED_BY_OPERATOR",
+      "deployment_status": "DEPLOYED",
+      "entanglement": {
+        "detected": false,
+        "requires_operator": false,
+        "severity": null,
+        "tool_ids": []
+      },
+      "last_deployed_run_id": "sim_93f8833a-a53e-4116-ab6d-aba99e6daf33",
+      "last_deployed_scenario_spec_id": "scn_95731763-9598-4762-80a5-a31b23fe0ef9",
+      "last_deployment_id": "deploy_a5c38c42-6961-4d9a-863c-ab6287a3657a",
+      "last_exception": null,
+      "line_id": "line_2",
+      "locked_resources": [],
+      "mode": "RUNNING",
+      "pending_tool_ids": [],
+      "robot_id": "ur5_line_2",
+      "selected_tool_ids": [],
+      "wip_count": 0,
+      "workspace_id": "workspace_line_2"
+    },
+    {
+      "active_set_id": "ENT_SURGICAL_TOOLING_SET",
+      "active_trt_id": "trt-demo",
+      "active_trt_version": "v81",
+      "checkpoint": "NONE",
+      "completed_tool_ids": [],
+      "current_instruments": [],
+      "current_task": null,
+      "deployment_source": "DIGITAL_TWIN_EVIDENCE_APPROVED_BY_OPERATOR",
+      "deployment_status": "DEPLOYED",
+      "entanglement": {
+        "detected": false,
+        "requires_operator": false,
+        "severity": null,
+        "tool_ids": []
+      },
+      "last_deployed_run_id": "sim_93f8833a-a53e-4116-ab6d-aba99e6daf33",
+      "last_deployed_scenario_spec_id": "scn_95731763-9598-4762-80a5-a31b23fe0ef9",
+      "last_deployment_id": "deploy_a5c38c42-6961-4d9a-863c-ab6287a3657a",
+      "last_exception": null,
+      "line_id": "line_3",
+      "locked_resources": [],
+      "mode": "RUNNING",
+      "pending_tool_ids": [],
+      "robot_id": "ur5_line_3",
+      "selected_tool_ids": [],
+      "wip_count": 0,
+      "workspace_id": "workspace_line_3"
+    },
+    {
+      "active_set_id": "ENT_SURGICAL_TOOLING_SET",
+      "active_trt_id": "trt-demo",
+      "active_trt_version": "v81",
+      "checkpoint": "NONE",
+      "completed_tool_ids": [],
+      "current_instruments": [],
+      "current_task": null,
+      "deployment_source": "DIGITAL_TWIN_EVIDENCE_APPROVED_BY_OPERATOR",
+      "deployment_status": "DEPLOYED",
+      "entanglement": {
+        "detected": false,
+        "requires_operator": false,
+        "severity": null,
+        "tool_ids": []
+      },
+      "last_deployed_run_id": "sim_93f8833a-a53e-4116-ab6d-aba99e6daf33",
+      "last_deployed_scenario_spec_id": "scn_95731763-9598-4762-80a5-a31b23fe0ef9",
+      "last_deployment_id": "deploy_a5c38c42-6961-4d9a-863c-ab6287a3657a",
+      "last_exception": null,
+      "line_id": "line_4",
+      "locked_resources": [],
+      "mode": "RUNNING",
+      "pending_tool_ids": [],
+      "robot_id": "ur5_line_4",
+      "selected_tool_ids": [],
+      "wip_count": 0,
+      "workspace_id": "workspace_line_4"
+    }
+  ],
+  "base_simulation_config": {
+    "add_reference_number": 5,
+    "allowed_overlap_ratio": 0.99,
+    "chosen_intervention_mode": "immediate-stop",
+    "episode_success_requires_reset_cycles": 1,
+    "fix_duration": 3.0,
+    "headless": false,
+    "layout_source": "auto",
+    "num_envs": 2,
+    "resume_delay": 1.0,
+    "reuse_verified_seed": true,
+    "travel_time": 1.0
+  },
+  "candidate_count": 1,
+  "candidate_runs": [
+    {
+      "artifact_created_at_utc": "2026-08-08T15:47:06.329173Z",
+      "candidate_strategy_id": "operator_faithful_baseline",
+      "candidate_worker_wall_seconds": 177.05005923999124,
+      "completed_at_utc": "2026-08-08T15:47:06.345885Z",
+      "evidence_created_at_utc": "2026-08-08T15:47:06.345873Z",
+      "evidence_summary": {
+        "acknowledged_risks": [],
+        "data_quality_warnings": [],
+        "deployment_allowed": false,
+        "deployment_recommended": false,
+        "dry_run_only": false,
+        "failed_checks": [
+          {
+            "actual": "101.252 tools/hr",
+            "actual_value": 101.25158431911889,
+            "check_id": "throughput.min_per_hour",
+            "deployment_blocking": true,
+            "evidence_row_id": null,
+            "evidence_source": "line_kpis.throughput_per_hour",
+            "expected": "at least 120 tools/hr",
+            "expected_value": 120.0,
+            "line_id": "line_1",
+            "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+            "operator_impact": "Deployment may reduce line productivity.",
+            "operator_label": "Throughput target was missed",
+            "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+            "severity": "FAIL",
+            "technical_check_id": "throughput.min_per_hour",
+            "technical_explanation": "line_1 failed throughput because the simulated rate was 101.252 tools/hr, below the target of 120 tools/hr."
+          },
+          {
+            "actual": "91.5914 tools/hr",
+            "actual_value": 91.59140263239466,
+            "check_id": "throughput.min_per_hour",
+            "deployment_blocking": true,
+            "evidence_row_id": null,
+            "evidence_source": "line_kpis.throughput_per_hour",
+            "expected": "at least 120 tools/hr",
+            "expected_value": 120.0,
+            "line_id": "line_2",
+            "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+            "operator_impact": "Deployment may reduce line productivity.",
+            "operator_label": "Throughput target was missed",
+            "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+            "severity": "FAIL",
+            "technical_check_id": "throughput.min_per_hour",
+            "technical_explanation": "line_2 failed throughput because the simulated rate was 91.5914 tools/hr, below the target of 120 tools/hr."
+          },
+          {
+            "actual": "91.5914 tools/hr",
+            "actual_value": 91.59140263239466,
+            "check_id": "throughput.min_per_hour",
+            "deployment_blocking": true,
+            "evidence_row_id": null,
+            "evidence_source": "line_kpis.throughput_per_hour",
+            "expected": "at least 120 tools/hr",
+            "expected_value": 120.0,
+            "line_id": "line_3",
+            "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+            "operator_impact": "Deployment may reduce line productivity.",
+            "operator_label": "Throughput target was missed",
+            "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+            "severity": "FAIL",
+            "technical_check_id": "throughput.min_per_hour",
+            "technical_explanation": "line_3 failed throughput because the simulated rate was 91.5914 tools/hr, below the target of 120 tools/hr."
+          },
+          {
+            "actual": "113.368 tools/hr",
+            "actual_value": 113.36797608144458,
+            "check_id": "throughput.min_per_hour",
+            "deployment_blocking": true,
+            "evidence_row_id": null,
+            "evidence_source": "line_kpis.throughput_per_hour",
+            "expected": "at least 120 tools/hr",
+            "expected_value": 120.0,
+            "line_id": "line_4",
+            "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+            "operator_impact": "Deployment may reduce line productivity.",
+            "operator_label": "Throughput target was missed",
+            "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+            "severity": "FAIL",
+            "technical_check_id": "throughput.min_per_hour",
+            "technical_explanation": "line_4 failed throughput because the simulated rate was 113.368 tools/hr, below the target of 120 tools/hr."
+          }
+        ],
+        "failed_lines": [
+          "line_1",
+          "line_2",
+          "line_3",
+          "line_4"
+        ],
+        "failure_summary": null,
+        "inconclusive_lines": [],
+        "kpi_evaluation_scope": "FULL_ENVIRONMENT_SCOPE",
+        "kpi_table": [
+          {
+            "actual_kpis": {
+              "completed_count": 2,
+              "cycle_time_seconds": 71.10999841056764,
+              "downtime_seconds": 0.0,
+              "entanglement_count": 0,
+              "misplaced_count": 0,
+              "recorded_cycle_time_seconds": 71.10999841056764,
+              "recorded_throughput_per_hour": 101.25158431911889,
+              "throughput_per_hour": 101.25158431911889,
+              "throughput_reliable": true,
+              "unwanted_completed_count": 0,
+              "wanted_completed_count": 2
+            },
+            "batch_gating": {
+              "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+              "status": "PASS"
+            },
+            "completion_durations": {
+              "all_sorting_completion_seconds": 71.10999841056764,
+              "required_tray_completion_seconds": 71.10999841056764,
+              "unwanted_box_completion_seconds": null
+            },
+            "deployment_blocking": true,
+            "downtime_pass": true,
+            "downtime_seconds": 0.0,
+            "failed_check_ids": [
+              "throughput.min_per_hour"
+            ],
+            "failed_checks": [
+              {
+                "actual": "101.252 tools/hr",
+                "actual_value": 101.25158431911889,
+                "check_id": "throughput.min_per_hour",
+                "deployment_blocking": true,
+                "evidence_row_id": null,
+                "evidence_source": "line_kpis.throughput_per_hour",
+                "expected": "at least 120 tools/hr",
+                "expected_value": 120.0,
+                "line_id": "line_1",
+                "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+                "operator_impact": "Deployment may reduce line productivity.",
+                "operator_label": "Throughput target was missed",
+                "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+                "severity": "FAIL",
+                "technical_check_id": "throughput.min_per_hour",
+                "technical_explanation": "line_1 failed throughput because the simulated rate was 101.252 tools/hr, below the target of 120 tools/hr."
+              }
+            ],
+            "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+            "line_id": "line_1",
+            "max_downtime_seconds": null,
+            "operator_reason": "line_1 sorted all 2 tools shown in the simulation. The completed set contained 2 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+            "placement": {
+              "reason": "No misplaced tools or placement validation warnings were recorded.",
+              "status": "PASS"
+            },
+            "priority_deviation_count": 0,
+            "priority_pass": true,
+            "priority_policy": "FCFS",
+            "priority_required_first": {
+              "reason": "FCFS does not require ENT-required tools to be picked first.",
+              "status": "NOT_APPLICABLE"
+            },
+            "simulated_tools_completed": 2,
+            "status": "FAIL",
+            "target_kpis": {
+              "deadline_minutes": null,
+              "max_downtime_seconds": null,
+              "min_throughput_per_hour": 120.0
+            },
+            "target_min_throughput_per_hour": 120.0,
+            "throughput_pass": false,
+            "throughput_per_hour": 101.25158431911889,
+            "unwanted_completed_count": 0,
+            "unwanted_completion_time_seconds": null,
+            "wanted_completed_count": 2,
+            "wanted_completion_time_seconds": 71.10999841056764,
+            "warning_check_ids": [],
+            "warnings": []
+          },
+          {
+            "actual_kpis": {
+              "completed_count": 2,
+              "cycle_time_seconds": 78.60999824292958,
+              "downtime_seconds": 0.0,
+              "entanglement_count": 0,
+              "misplaced_count": 0,
+              "recorded_cycle_time_seconds": 78.60999824292958,
+              "recorded_throughput_per_hour": 91.59140263239466,
+              "throughput_per_hour": 91.59140263239466,
+              "throughput_reliable": true,
+              "unwanted_completed_count": 0,
+              "wanted_completed_count": 2
+            },
+            "batch_gating": {
+              "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+              "status": "PASS"
+            },
+            "completion_durations": {
+              "all_sorting_completion_seconds": 78.60999824292958,
+              "required_tray_completion_seconds": 78.60999824292958,
+              "unwanted_box_completion_seconds": null
+            },
+            "deployment_blocking": true,
+            "downtime_pass": true,
+            "downtime_seconds": 0.0,
+            "failed_check_ids": [
+              "throughput.min_per_hour"
+            ],
+            "failed_checks": [
+              {
+                "actual": "91.5914 tools/hr",
+                "actual_value": 91.59140263239466,
+                "check_id": "throughput.min_per_hour",
+                "deployment_blocking": true,
+                "evidence_row_id": null,
+                "evidence_source": "line_kpis.throughput_per_hour",
+                "expected": "at least 120 tools/hr",
+                "expected_value": 120.0,
+                "line_id": "line_2",
+                "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+                "operator_impact": "Deployment may reduce line productivity.",
+                "operator_label": "Throughput target was missed",
+                "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+                "severity": "FAIL",
+                "technical_check_id": "throughput.min_per_hour",
+                "technical_explanation": "line_2 failed throughput because the simulated rate was 91.5914 tools/hr, below the target of 120 tools/hr."
+              }
+            ],
+            "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+            "line_id": "line_2",
+            "max_downtime_seconds": null,
+            "operator_reason": "line_2 sorted all 2 tools shown in the simulation. The completed set contained 2 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+            "placement": {
+              "reason": "No misplaced tools or placement validation warnings were recorded.",
+              "status": "PASS"
+            },
+            "priority_deviation_count": 0,
+            "priority_pass": true,
+            "priority_policy": "FCFS",
+            "priority_required_first": {
+              "reason": "FCFS does not require ENT-required tools to be picked first.",
+              "status": "NOT_APPLICABLE"
+            },
+            "simulated_tools_completed": 2,
+            "status": "FAIL",
+            "target_kpis": {
+              "deadline_minutes": null,
+              "max_downtime_seconds": null,
+              "min_throughput_per_hour": 120.0
+            },
+            "target_min_throughput_per_hour": 120.0,
+            "throughput_pass": false,
+            "throughput_per_hour": 91.59140263239466,
+            "unwanted_completed_count": 0,
+            "unwanted_completion_time_seconds": null,
+            "wanted_completed_count": 2,
+            "wanted_completion_time_seconds": 78.60999824292958,
+            "warning_check_ids": [],
+            "warnings": []
+          },
+          {
+            "actual_kpis": {
+              "completed_count": 2,
+              "cycle_time_seconds": 78.60999824292958,
+              "downtime_seconds": 0.0,
+              "entanglement_count": 0,
+              "misplaced_count": 0,
+              "recorded_cycle_time_seconds": 78.60999824292958,
+              "recorded_throughput_per_hour": 91.59140263239466,
+              "throughput_per_hour": 91.59140263239466,
+              "throughput_reliable": true,
+              "unwanted_completed_count": 1,
+              "wanted_completed_count": 1
+            },
+            "batch_gating": {
+              "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+              "status": "PASS"
+            },
+            "completion_durations": {
+              "all_sorting_completion_seconds": 78.60999824292958,
+              "required_tray_completion_seconds": 39.30999912135303,
+              "unwanted_box_completion_seconds": 78.60999824292958
+            },
+            "deployment_blocking": true,
+            "downtime_pass": true,
+            "downtime_seconds": 0.0,
+            "failed_check_ids": [
+              "throughput.min_per_hour"
+            ],
+            "failed_checks": [
+              {
+                "actual": "91.5914 tools/hr",
+                "actual_value": 91.59140263239466,
+                "check_id": "throughput.min_per_hour",
+                "deployment_blocking": true,
+                "evidence_row_id": null,
+                "evidence_source": "line_kpis.throughput_per_hour",
+                "expected": "at least 120 tools/hr",
+                "expected_value": 120.0,
+                "line_id": "line_3",
+                "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+                "operator_impact": "Deployment may reduce line productivity.",
+                "operator_label": "Throughput target was missed",
+                "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+                "severity": "FAIL",
+                "technical_check_id": "throughput.min_per_hour",
+                "technical_explanation": "line_3 failed throughput because the simulated rate was 91.5914 tools/hr, below the target of 120 tools/hr."
+              }
+            ],
+            "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+            "line_id": "line_3",
+            "max_downtime_seconds": null,
+            "operator_reason": "line_3 sorted all 2 tools shown in the simulation. The completed set contained 1 required ENT tool and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+            "placement": {
+              "reason": "No misplaced tools or placement validation warnings were recorded.",
+              "status": "PASS"
+            },
+            "priority_deviation_count": 0,
+            "priority_pass": true,
+            "priority_policy": "FCFS",
+            "priority_required_first": {
+              "reason": "FCFS does not require ENT-required tools to be picked first.",
+              "status": "NOT_APPLICABLE"
+            },
+            "simulated_tools_completed": 2,
+            "status": "FAIL",
+            "target_kpis": {
+              "deadline_minutes": null,
+              "max_downtime_seconds": null,
+              "min_throughput_per_hour": 120.0
+            },
+            "target_min_throughput_per_hour": 120.0,
+            "throughput_pass": false,
+            "throughput_per_hour": 91.59140263239466,
+            "unwanted_completed_count": 1,
+            "unwanted_completion_time_seconds": 78.60999824292958,
+            "wanted_completed_count": 1,
+            "wanted_completion_time_seconds": 39.30999912135303,
+            "warning_check_ids": [],
+            "warnings": []
+          },
+          {
+            "actual_kpis": {
+              "completed_count": 2,
+              "cycle_time_seconds": 63.50999858044088,
+              "downtime_seconds": 0.0,
+              "entanglement_count": 0,
+              "misplaced_count": 0,
+              "recorded_cycle_time_seconds": 63.50999858044088,
+              "recorded_throughput_per_hour": 113.36797608144458,
+              "throughput_per_hour": 113.36797608144458,
+              "throughput_reliable": true,
+              "unwanted_completed_count": 1,
+              "wanted_completed_count": 1
+            },
+            "batch_gating": {
+              "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+              "status": "PASS"
+            },
+            "completion_durations": {
+              "all_sorting_completion_seconds": 63.50999858044088,
+              "required_tray_completion_seconds": 63.50999858044088,
+              "unwanted_box_completion_seconds": 31.809999288991094
+            },
+            "deployment_blocking": true,
+            "downtime_pass": true,
+            "downtime_seconds": 0.0,
+            "failed_check_ids": [
+              "throughput.min_per_hour"
+            ],
+            "failed_checks": [
+              {
+                "actual": "113.368 tools/hr",
+                "actual_value": 113.36797608144458,
+                "check_id": "throughput.min_per_hour",
+                "deployment_blocking": true,
+                "evidence_row_id": null,
+                "evidence_source": "line_kpis.throughput_per_hour",
+                "expected": "at least 120 tools/hr",
+                "expected_value": 120.0,
+                "line_id": "line_4",
+                "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+                "operator_impact": "Deployment may reduce line productivity.",
+                "operator_label": "Throughput target was missed",
+                "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+                "severity": "FAIL",
+                "technical_check_id": "throughput.min_per_hour",
+                "technical_explanation": "line_4 failed throughput because the simulated rate was 113.368 tools/hr, below the target of 120 tools/hr."
+              }
+            ],
+            "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+            "line_id": "line_4",
+            "max_downtime_seconds": null,
+            "operator_reason": "line_4 sorted all 2 tools shown in the simulation. The completed set contained 1 required ENT tool and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+            "placement": {
+              "reason": "No misplaced tools or placement validation warnings were recorded.",
+              "status": "PASS"
+            },
+            "priority_deviation_count": 0,
+            "priority_pass": true,
+            "priority_policy": "FCFS",
+            "priority_required_first": {
+              "reason": "FCFS does not require ENT-required tools to be picked first.",
+              "status": "NOT_APPLICABLE"
+            },
+            "simulated_tools_completed": 2,
+            "status": "FAIL",
+            "target_kpis": {
+              "deadline_minutes": null,
+              "max_downtime_seconds": null,
+              "min_throughput_per_hour": 120.0
+            },
+            "target_min_throughput_per_hour": 120.0,
+            "throughput_pass": false,
+            "throughput_per_hour": 113.36797608144458,
+            "unwanted_completed_count": 1,
+            "unwanted_completion_time_seconds": 31.809999288991094,
+            "wanted_completed_count": 1,
+            "wanted_completion_time_seconds": 63.50999858044088,
+            "warning_check_ids": [],
+            "warnings": []
+          }
+        ],
+        "likely_root_cause": null,
+        "line_findings": [
+          {
+            "deployment_blocking": true,
+            "line_id": "line_1",
+            "operator_text": "line_1 sorted all 2 tools shown in the simulation. The completed set contained 2 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+            "severity": "BLOCKING"
+          },
+          {
+            "deployment_blocking": true,
+            "line_id": "line_2",
+            "operator_text": "line_2 sorted all 2 tools shown in the simulation. The completed set contained 2 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+            "severity": "BLOCKING"
+          },
+          {
+            "deployment_blocking": true,
+            "line_id": "line_3",
+            "operator_text": "line_3 sorted all 2 tools shown in the simulation. The completed set contained 1 required ENT tool and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+            "severity": "BLOCKING"
+          },
+          {
+            "deployment_blocking": true,
+            "line_id": "line_4",
+            "operator_text": "line_4 sorted all 2 tools shown in the simulation. The completed set contained 1 required ENT tool and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+            "severity": "BLOCKING"
+          }
+        ],
+        "line_results": [
+          {
+            "actual_kpis": {
+              "completed_count": 2,
+              "cycle_time_seconds": 71.10999841056764,
+              "downtime_seconds": 0.0,
+              "entanglement_count": 0,
+              "misplaced_count": 0,
+              "recorded_cycle_time_seconds": 71.10999841056764,
+              "recorded_throughput_per_hour": 101.25158431911889,
+              "throughput_per_hour": 101.25158431911889,
+              "throughput_reliable": true,
+              "unwanted_completed_count": 0,
+              "wanted_completed_count": 2
+            },
+            "batch_gating": {
+              "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+              "status": "PASS"
+            },
+            "completion_durations": {
+              "all_sorting_completion_seconds": 71.10999841056764,
+              "required_tray_completion_seconds": 71.10999841056764,
+              "unwanted_box_completion_seconds": null
+            },
+            "deployment_blocking": true,
+            "downtime_pass": true,
+            "downtime_seconds": 0.0,
+            "failed_check_ids": [
+              "throughput.min_per_hour"
+            ],
+            "failed_checks": [
+              {
+                "actual": "101.252 tools/hr",
+                "actual_value": 101.25158431911889,
+                "check_id": "throughput.min_per_hour",
+                "deployment_blocking": true,
+                "evidence_row_id": null,
+                "evidence_source": "line_kpis.throughput_per_hour",
+                "expected": "at least 120 tools/hr",
+                "expected_value": 120.0,
+                "line_id": "line_1",
+                "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+                "operator_impact": "Deployment may reduce line productivity.",
+                "operator_label": "Throughput target was missed",
+                "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+                "severity": "FAIL",
+                "technical_check_id": "throughput.min_per_hour",
+                "technical_explanation": "line_1 failed throughput because the simulated rate was 101.252 tools/hr, below the target of 120 tools/hr."
+              }
+            ],
+            "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+            "line_id": "line_1",
+            "max_downtime_seconds": null,
+            "operator_reason": "line_1 sorted all 2 tools shown in the simulation. The completed set contained 2 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+            "placement": {
+              "reason": "No misplaced tools or placement validation warnings were recorded.",
+              "status": "PASS"
+            },
+            "priority_deviation_count": 0,
+            "priority_pass": true,
+            "priority_policy": "FCFS",
+            "priority_required_first": {
+              "reason": "FCFS does not require ENT-required tools to be picked first.",
+              "status": "NOT_APPLICABLE"
+            },
+            "simulated_tools_completed": 2,
+            "status": "FAIL",
+            "target_kpis": {
+              "deadline_minutes": null,
+              "max_downtime_seconds": null,
+              "min_throughput_per_hour": 120.0
+            },
+            "target_min_throughput_per_hour": 120.0,
+            "throughput_pass": false,
+            "throughput_per_hour": 101.25158431911889,
+            "unwanted_completed_count": 0,
+            "unwanted_completion_time_seconds": null,
+            "wanted_completed_count": 2,
+            "wanted_completion_time_seconds": 71.10999841056764,
+            "warning_check_ids": [],
+            "warnings": []
+          },
+          {
+            "actual_kpis": {
+              "completed_count": 2,
+              "cycle_time_seconds": 78.60999824292958,
+              "downtime_seconds": 0.0,
+              "entanglement_count": 0,
+              "misplaced_count": 0,
+              "recorded_cycle_time_seconds": 78.60999824292958,
+              "recorded_throughput_per_hour": 91.59140263239466,
+              "throughput_per_hour": 91.59140263239466,
+              "throughput_reliable": true,
+              "unwanted_completed_count": 0,
+              "wanted_completed_count": 2
+            },
+            "batch_gating": {
+              "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+              "status": "PASS"
+            },
+            "completion_durations": {
+              "all_sorting_completion_seconds": 78.60999824292958,
+              "required_tray_completion_seconds": 78.60999824292958,
+              "unwanted_box_completion_seconds": null
+            },
+            "deployment_blocking": true,
+            "downtime_pass": true,
+            "downtime_seconds": 0.0,
+            "failed_check_ids": [
+              "throughput.min_per_hour"
+            ],
+            "failed_checks": [
+              {
+                "actual": "91.5914 tools/hr",
+                "actual_value": 91.59140263239466,
+                "check_id": "throughput.min_per_hour",
+                "deployment_blocking": true,
+                "evidence_row_id": null,
+                "evidence_source": "line_kpis.throughput_per_hour",
+                "expected": "at least 120 tools/hr",
+                "expected_value": 120.0,
+                "line_id": "line_2",
+                "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+                "operator_impact": "Deployment may reduce line productivity.",
+                "operator_label": "Throughput target was missed",
+                "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+                "severity": "FAIL",
+                "technical_check_id": "throughput.min_per_hour",
+                "technical_explanation": "line_2 failed throughput because the simulated rate was 91.5914 tools/hr, below the target of 120 tools/hr."
+              }
+            ],
+            "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+            "line_id": "line_2",
+            "max_downtime_seconds": null,
+            "operator_reason": "line_2 sorted all 2 tools shown in the simulation. The completed set contained 2 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+            "placement": {
+              "reason": "No misplaced tools or placement validation warnings were recorded.",
+              "status": "PASS"
+            },
+            "priority_deviation_count": 0,
+            "priority_pass": true,
+            "priority_policy": "FCFS",
+            "priority_required_first": {
+              "reason": "FCFS does not require ENT-required tools to be picked first.",
+              "status": "NOT_APPLICABLE"
+            },
+            "simulated_tools_completed": 2,
+            "status": "FAIL",
+            "target_kpis": {
+              "deadline_minutes": null,
+              "max_downtime_seconds": null,
+              "min_throughput_per_hour": 120.0
+            },
+            "target_min_throughput_per_hour": 120.0,
+            "throughput_pass": false,
+            "throughput_per_hour": 91.59140263239466,
+            "unwanted_completed_count": 0,
+            "unwanted_completion_time_seconds": null,
+            "wanted_completed_count": 2,
+            "wanted_completion_time_seconds": 78.60999824292958,
+            "warning_check_ids": [],
+            "warnings": []
+          },
+          {
+            "actual_kpis": {
+              "completed_count": 2,
+              "cycle_time_seconds": 78.60999824292958,
+              "downtime_seconds": 0.0,
+              "entanglement_count": 0,
+              "misplaced_count": 0,
+              "recorded_cycle_time_seconds": 78.60999824292958,
+              "recorded_throughput_per_hour": 91.59140263239466,
+              "throughput_per_hour": 91.59140263239466,
+              "throughput_reliable": true,
+              "unwanted_completed_count": 1,
+              "wanted_completed_count": 1
+            },
+            "batch_gating": {
+              "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+              "status": "PASS"
+            },
+            "completion_durations": {
+              "all_sorting_completion_seconds": 78.60999824292958,
+              "required_tray_completion_seconds": 39.30999912135303,
+              "unwanted_box_completion_seconds": 78.60999824292958
+            },
+            "deployment_blocking": true,
+            "downtime_pass": true,
+            "downtime_seconds": 0.0,
+            "failed_check_ids": [
+              "throughput.min_per_hour"
+            ],
+            "failed_checks": [
+              {
+                "actual": "91.5914 tools/hr",
+                "actual_value": 91.59140263239466,
+                "check_id": "throughput.min_per_hour",
+                "deployment_blocking": true,
+                "evidence_row_id": null,
+                "evidence_source": "line_kpis.throughput_per_hour",
+                "expected": "at least 120 tools/hr",
+                "expected_value": 120.0,
+                "line_id": "line_3",
+                "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+                "operator_impact": "Deployment may reduce line productivity.",
+                "operator_label": "Throughput target was missed",
+                "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+                "severity": "FAIL",
+                "technical_check_id": "throughput.min_per_hour",
+                "technical_explanation": "line_3 failed throughput because the simulated rate was 91.5914 tools/hr, below the target of 120 tools/hr."
+              }
+            ],
+            "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+            "line_id": "line_3",
+            "max_downtime_seconds": null,
+            "operator_reason": "line_3 sorted all 2 tools shown in the simulation. The completed set contained 1 required ENT tool and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+            "placement": {
+              "reason": "No misplaced tools or placement validation warnings were recorded.",
+              "status": "PASS"
+            },
+            "priority_deviation_count": 0,
+            "priority_pass": true,
+            "priority_policy": "FCFS",
+            "priority_required_first": {
+              "reason": "FCFS does not require ENT-required tools to be picked first.",
+              "status": "NOT_APPLICABLE"
+            },
+            "simulated_tools_completed": 2,
+            "status": "FAIL",
+            "target_kpis": {
+              "deadline_minutes": null,
+              "max_downtime_seconds": null,
+              "min_throughput_per_hour": 120.0
+            },
+            "target_min_throughput_per_hour": 120.0,
+            "throughput_pass": false,
+            "throughput_per_hour": 91.59140263239466,
+            "unwanted_completed_count": 1,
+            "unwanted_completion_time_seconds": 78.60999824292958,
+            "wanted_completed_count": 1,
+            "wanted_completion_time_seconds": 39.30999912135303,
+            "warning_check_ids": [],
+            "warnings": []
+          },
+          {
+            "actual_kpis": {
+              "completed_count": 2,
+              "cycle_time_seconds": 63.50999858044088,
+              "downtime_seconds": 0.0,
+              "entanglement_count": 0,
+              "misplaced_count": 0,
+              "recorded_cycle_time_seconds": 63.50999858044088,
+              "recorded_throughput_per_hour": 113.36797608144458,
+              "throughput_per_hour": 113.36797608144458,
+              "throughput_reliable": true,
+              "unwanted_completed_count": 1,
+              "wanted_completed_count": 1
+            },
+            "batch_gating": {
+              "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+              "status": "PASS"
+            },
+            "completion_durations": {
+              "all_sorting_completion_seconds": 63.50999858044088,
+              "required_tray_completion_seconds": 63.50999858044088,
+              "unwanted_box_completion_seconds": 31.809999288991094
+            },
+            "deployment_blocking": true,
+            "downtime_pass": true,
+            "downtime_seconds": 0.0,
+            "failed_check_ids": [
+              "throughput.min_per_hour"
+            ],
+            "failed_checks": [
+              {
+                "actual": "113.368 tools/hr",
+                "actual_value": 113.36797608144458,
+                "check_id": "throughput.min_per_hour",
+                "deployment_blocking": true,
+                "evidence_row_id": null,
+                "evidence_source": "line_kpis.throughput_per_hour",
+                "expected": "at least 120 tools/hr",
+                "expected_value": 120.0,
+                "line_id": "line_4",
+                "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+                "operator_impact": "Deployment may reduce line productivity.",
+                "operator_label": "Throughput target was missed",
+                "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+                "severity": "FAIL",
+                "technical_check_id": "throughput.min_per_hour",
+                "technical_explanation": "line_4 failed throughput because the simulated rate was 113.368 tools/hr, below the target of 120 tools/hr."
+              }
+            ],
+            "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+            "line_id": "line_4",
+            "max_downtime_seconds": null,
+            "operator_reason": "line_4 sorted all 2 tools shown in the simulation. The completed set contained 1 required ENT tool and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+            "placement": {
+              "reason": "No misplaced tools or placement validation warnings were recorded.",
+              "status": "PASS"
+            },
+            "priority_deviation_count": 0,
+            "priority_pass": true,
+            "priority_policy": "FCFS",
+            "priority_required_first": {
+              "reason": "FCFS does not require ENT-required tools to be picked first.",
+              "status": "NOT_APPLICABLE"
+            },
+            "simulated_tools_completed": 2,
+            "status": "FAIL",
+            "target_kpis": {
+              "deadline_minutes": null,
+              "max_downtime_seconds": null,
+              "min_throughput_per_hour": 120.0
+            },
+            "target_min_throughput_per_hour": 120.0,
+            "throughput_pass": false,
+            "throughput_per_hour": 113.36797608144458,
+            "unwanted_completed_count": 1,
+            "unwanted_completion_time_seconds": 31.809999288991094,
+            "wanted_completed_count": 1,
+            "wanted_completion_time_seconds": 63.50999858044088,
+            "warning_check_ids": [],
+            "warnings": []
+          }
+        ],
+        "next_action": "REVISE_OR_RERUN",
+        "operator_detail_summary": "Simulation completed, but KPI evidence does not support deployment yet. Review the measured results below.\n\nSimulation scope:\n- Simulated lines: line_1, line_2, line_3, line_4\n- Simulated tooling count per line: 2\n- Intervention mode: immediate-stop\n- Arrival time: 1 seconds\n- Entanglement fix time: 3 seconds\n- Recovery delay: 1 seconds\n\nKPI comparison:\nline_1:\n- Target minimum throughput: 120 tools/hour\n- Actual throughput: 101.252 tools/hour\n- Completed: 2/2 simulated tools\n- Required tray: 2 tools, completed in 71.11 seconds\n- Unwanted box: 0 tools, completed in not applicable\n- All sorting completed in 71.11 seconds\n- Entanglements: 0\n- Downtime: 0 seconds\n- Result: FAIL\n\nline_2:\n- Target minimum throughput: 120 tools/hour\n- Actual throughput: 91.5914 tools/hour\n- Completed: 2/2 simulated tools\n- Required tray: 2 tools, completed in 78.61 seconds\n- Unwanted box: 0 tools, completed in not applicable\n- All sorting completed in 78.61 seconds\n- Entanglements: 0\n- Downtime: 0 seconds\n- Result: FAIL\n\nline_3:\n- Target minimum throughput: 120 tools/hour\n- Actual throughput: 91.5914 tools/hour\n- Completed: 2/2 simulated tools\n- Required tray: 1 tools, completed in 39.31 seconds\n- Unwanted box: 1 tools, completed in 78.61 seconds\n- All sorting completed in 78.61 seconds\n- Entanglements: 0\n- Downtime: 0 seconds\n- Result: FAIL\n\nline_4:\n- Target minimum throughput: 120 tools/hour\n- Actual throughput: 113.368 tools/hour\n- Completed: 2/2 simulated tools\n- Required tray: 1 tools, completed in 63.51 seconds\n- Unwanted box: 1 tools, completed in 31.81 seconds\n- All sorting completed in 63.51 seconds\n- Entanglements: 0\n- Downtime: 0 seconds\n- Result: FAIL\n\nData quality:\n- No data-quality warnings were recorded.",
+        "operator_next_action": "REQUEST_REVISION, RERUN_SIMULATION",
+        "operator_options": [
+          "REQUEST_REVISION",
+          "RERUN_SIMULATION"
+        ],
+        "operator_summary": "The simulation completed, but deployment is not recommended. All four lines failed KPI validation because: Throughput target was missed.",
+        "overall_result": "FAIL",
+        "passed_lines": [],
+        "requires_operator_acknowledgement": false,
+        "risk_summary": "Deployment is blocked by one or more operational findings.",
+        "risk_tier": "BLOCKING",
+        "simulation_config": {
+          "add_reference_number": 2,
+          "allowed_overlap_ratio": 0.99,
+          "chosen_intervention_mode": "immediate-stop",
+          "episode_success_requires_reset_cycles": 1,
+          "fix_duration": 3.0,
+          "full_environment_tooling_count": null,
+          "full_scene_required": false,
+          "headless": false,
+          "layout_source": "auto",
+          "line_binding_source": "line_registry",
+          "num_envs": 4,
+          "resume_delay": 1.0,
+          "reuse_verified_seed": true,
+          "simulated_tooling_count": 2,
+          "supported_line_type_values": [
+            "UR5_SORTING_CELL"
+          ],
+          "template_scope": "DATA_DRIVEN",
+          "travel_time": 1.0
+        },
+        "summary_message": "KPI validation failed for line_1, line_2, line_3, line_4. Operational reasons: The simulated line processed fewer tools per hour than the minimum target..",
+        "technical_findings": [
+          {
+            "code": "throughput.min_per_hour",
+            "line_id": "line_1",
+            "operator_text": "The simulated line processed fewer tools per hour than the minimum target.",
+            "severity": "BLOCKING"
+          },
+          {
+            "code": "throughput.min_per_hour",
+            "line_id": "line_2",
+            "operator_text": "The simulated line processed fewer tools per hour than the minimum target.",
+            "severity": "BLOCKING"
+          },
+          {
+            "code": "throughput.min_per_hour",
+            "line_id": "line_3",
+            "operator_text": "The simulated line processed fewer tools per hour than the minimum target.",
+            "severity": "BLOCKING"
+          },
+          {
+            "code": "throughput.min_per_hour",
+            "line_id": "line_4",
+            "operator_text": "The simulated line processed fewer tools per hour than the minimum target.",
+            "severity": "BLOCKING"
+          }
+        ],
+        "warning_checks": [],
+        "warnings": []
+      },
+      "measurements": {
+        "C_reset_completed": 0,
+        "C_reset_requested": 0,
+        "N_failed_tool_storage": 0,
+        "N_tool_storage_passed": 8,
+        "N_tool_storage_total": 8,
+        "R_reset": null,
+        "R_reset_is_mandatory_constraint": false,
+        "R_storage": 1.0,
+        "batch_gating_compliance_source": "EVIDENCE_SUMMARY",
+        "batch_gating_failed_lines": [],
+        "batch_gating_violation_count": 0,
+        "blocking_reasons": [
+          "EVIDENCE_DISALLOWS_DEPLOYMENT",
+          "LINE_THROUGHPUT_TARGET_NOT_MET"
+        ],
+        "data_quality_status": "DATA_INCOMPLETE",
+        "deployment_allowed": false,
+        "diagnostic_warnings": [
+          "RESET_EVIDENCE_MISSING"
+        ],
+        "each_line_throughput_target_met": false,
+        "eligible": false,
+        "missing_metrics": [
+          "R_reset"
+        ],
+        "priority_compliance_failed_lines": [],
+        "priority_compliance_source": "EVIDENCE_SUMMARY",
+        "priority_deviation_count": 0,
+        "strategy_simulation_seconds": null,
+        "throughput_actual_by_line": {
+          "line_1": 101.25158431911889,
+          "line_2": 91.59140263239466,
+          "line_3": 91.59140263239466,
+          "line_4": 113.36797608144458
+        },
+        "throughput_attainment": 0.8287549284694851,
+        "throughput_attainment_by_line": {
+          "line_1": 0.8437632026593241,
+          "line_2": 0.7632616886032888,
+          "line_3": 0.7632616886032888,
+          "line_4": 0.9447331340120382
+        },
+        "throughput_below_target_lines": [
+          "line_1",
+          "line_2",
+          "line_3",
+          "line_4"
+        ],
+        "throughput_missing_lines": [],
+        "throughput_target_by_line": {
+          "line_1": 120.0,
+          "line_2": 120.0,
+          "line_3": 120.0,
+          "line_4": 120.0
+        }
+      },
+      "run_id": "sim_63e0cb05-1fb6-4a53-9714-a91af535ce64",
+      "scenario_created_at_utc": "2026-08-08T15:44:09.375843Z",
+      "scenario_spec_id": "scn_3b081268-1c9b-4119-a3e8-63f6d2de1717",
+      "scenario_spec_path": "outputs/scenario_specs/scn_3b081268-1c9b-4119-a3e8-63f6d2de1717.json",
+      "simulation_error_code": null,
+      "simulation_errors": [],
+      "simulation_status": "COMPLETED",
+      "started_at_utc": "2026-08-08T15:44:09.301719Z",
+      "status": "EVALUATED",
+      "timing": {
+        "automated_verification_seconds": 4.0412996895611286e-05,
+        "end_to_end_seconds": null,
+        "environment_wait_seconds": 0.032652,
+        "isaac_command_started_at_utc": "2026-08-08T15:44:09.426082Z",
+        "isaac_startup_reference_at_utc": "2026-08-08T15:47:05.613425Z",
+        "isaac_startup_reference_pattern": "NON_ROOT_ARTICULATION_TRANSFORM",
+        "isaac_startup_reference_source": "SYSTEM_LOG_CAPTURE",
+        "kpi_calculation_seconds": 0.016629356003249995,
+        "llm_generation_seconds": 27.823546,
+        "manual_review_seconds": null,
+        "reset_seconds": null,
+        "simulation_startup_and_execution_seconds": 176.94506684900261,
+        "simulation_startup_seconds": 176.18700000000536,
+        "specification_parsing_seconds": 0.0594377999950666,
+        "strategy_simulation_seconds": null,
+        "timing_scope_status": "ISAAC_STARTUP_EXCLUDED_USING_SYSTEM_LOG_CAPTURE",
+        "verification_excluding_startup_seconds": 0.7580668489972595
+      }
+    }
+  ],
+  "candidates": [
+    {
+      "candidate_strategy_id": "operator_faithful_baseline",
+      "line_policy_overrides": {
+        "line_1": {
+          "abnormal_strategy": "STOP_LINE"
+        },
+        "line_2": {
+          "abnormal_strategy": "STOP_LINE"
+        },
+        "line_3": {
+          "abnormal_strategy": "STOP_LINE"
+        },
+        "line_4": {
+          "abnormal_strategy": "STOP_LINE"
+        }
+      },
+      "name": "Operator-faithful baseline",
+      "rationale": "Applies the released TRT and operator-locked simulation settings without speculative changes.",
+      "simulation_config_overrides": {}
+    }
+  ],
+  "completed_at_utc": "2026-08-08T15:47:06.368591Z",
+  "created_at_utc": "2026-08-08T15:43:41.403471Z",
+  "execution_request": {
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "headless": false,
+    "include_waiting_scenarios": false,
+    "line_decisions": [
+      {
+        "decision": "NO_CHANGE",
+        "degraded_strategy": null,
+        "line_id": "line_1",
+        "next_action": "No supervisor action required.",
+        "reason": "Target TRT does not change this line.",
+        "required_checkpoint": null,
+        "risk_flags": []
+      },
+      {
+        "decision": "NO_CHANGE",
+        "degraded_strategy": null,
+        "line_id": "line_2",
+        "next_action": "No supervisor action required.",
+        "reason": "Target TRT does not change this line.",
+        "required_checkpoint": null,
+        "risk_flags": []
+      },
+      {
+        "decision": "NO_CHANGE",
+        "degraded_strategy": null,
+        "line_id": "line_3",
+        "next_action": "No supervisor action required.",
+        "reason": "Target TRT does not change this line.",
+        "required_checkpoint": null,
+        "risk_flags": []
+      },
+      {
+        "decision": "NO_CHANGE",
+        "degraded_strategy": null,
+        "line_id": "line_4",
+        "next_action": "No supervisor action required.",
+        "reason": "Target TRT does not change this line.",
+        "required_checkpoint": null,
+        "risk_flags": []
+      }
+    ],
+    "reconciliation_plan_id": "rec_2e186b2f-58e3-4972-8334-57d801c96160",
+    "release_id": "rel_88310841-5dcc-4b86-a900-e08cb39cea22",
+    "scenario_template_id": null,
+    "simulation_scope": null,
+    "timeout_seconds": null,
+    "trt_id": "trt-demo",
+    "trt_version": "v191"
+  },
+  "generation_provenance": {
+    "attempt_count": 3,
+    "attempts": [
+      {
+        "attempt": 1,
+        "completed_at_utc": "2026-08-08T15:43:48.735047Z",
+        "started_at_utc": "2026-08-08T15:43:41.403494Z",
+        "status": "INVALID_OUTPUT",
+        "validation_error": "Accepted 0 of 2 exploratory candidates: Invalid candidate batch at candidates/1/line_policy_overrides/line_4/manipulator_priority: 'ordered_tool_ids' is a required property; Invalid candidate batch at candidates/1/line_policy_overrides/line_4/manipulator_priority: 'ordered_tool_ids' is a required property"
+      },
+      {
+        "attempt": 2,
+        "completed_at_utc": "2026-08-08T15:43:57.580937Z",
+        "started_at_utc": "2026-08-08T15:43:48.735070Z",
+        "status": "INVALID_OUTPUT",
+        "validation_error": "Accepted 0 of 2 exploratory candidates: Candidate throughput_boost_01 uses immediate-stop but does not use STOP_LINE on lines ['line_1', 'line_2', 'line_3', 'line_4'].; Candidate tool_flow_priority_02 uses immediate-stop but does not use STOP_LINE on lines ['line_1', 'line_2', 'line_3', 'line_4']."
+      },
+      {
+        "attempt": 3,
+        "completed_at_utc": "2026-08-08T15:44:09.227000Z",
+        "started_at_utc": "2026-08-08T15:43:57.580951Z",
+        "status": "INVALID_OUTPUT",
+        "validation_error": "Accepted 0 of 2 exploratory candidates: Candidate throughput_boost_01 changes operator-locked line_1.manipulator_priority.; Candidate tool_flow_priority_02 changes operator-locked line_1.manipulator_priority."
+      }
+    ],
+    "baseline_candidate_id": "operator_faithful_baseline",
+    "baseline_candidate_source": "DETERMINISTIC_OPERATOR_FAITHFUL",
+    "candidate_prompt_profiles": {
+      "exploratory_profiles": [
+        {
+          "profile_id": "THROUGHPUT_ORIENTED",
+          "prompt_instruction": "Explore an allowed manipulator-priority alternative that may improve measured throughput while preserving every locked field and mandatory constraint."
+        },
+        {
+          "profile_id": "REQUIRED_TOOL_FLOW",
+          "prompt_instruction": "Explore an allowed priority policy that favors timely completion of required tooling without changing operator-selected targets or intervention settings."
+        }
+      ],
+      "profile_version": "candidate-personas-v1.0",
+      "rigid_profile": {
+        "candidate_name": "Operator-faithful baseline",
+        "candidate_rationale": "Applies the released TRT and operator-locked simulation settings without speculative changes.",
+        "profile_id": "OPERATOR_FAITHFUL",
+        "prompt_instruction": "Reproduce the supplied operator_faithful_baseline exactly. Apply only the changes explicitly approved by the operator and introduce no optional policy changes."
+      }
+    },
+    "completed_at_utc": "2026-08-08T15:44:09.227017Z",
+    "endpoint": "http://192.168.50.168:29987/v1/chat/completions",
+    "exploratory_candidates_accepted": 0,
+    "exploratory_candidates_requested": 2,
+    "exploratory_generation_status": "PARTIAL",
+    "generated_by": "trt_core.strategy_selection.generate_candidate_batch",
+    "model": "cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit",
+    "model_confirmed_baseline": true,
+    "prompt_version": "candidate-strategy-v1.4",
+    "sampling_parameters_sent": [],
+    "server_sampling_configuration": "SERVER_PRESET_NOT_OVERRIDDEN",
+    "started_at_utc": "2026-08-08T15:43:41.403471Z",
+    "usage": {
+      "completion_tokens": 1083,
+      "prompt_tokens": 3772,
+      "prompt_tokens_details": null,
+      "total_tokens": 4855
+    }
+  },
+  "locked_line_policy_fields": {
+    "line_1": {
+      "manipulator_priority": {
+        "enabled": true,
+        "ordered_normalized_types": [],
+        "ordered_tool_ids": [],
+        "policy": "FCFS",
+        "tie_breaker": "FCFS"
+      }
+    }
+  },
+  "locked_simulation_config": {
+    "add_reference_number": 2,
+    "fix_duration": 3.0,
+    "num_envs": 4,
+    "resume_delay": 1.0,
+    "travel_time": 1.0
+  },
+  "queued_at_utc": "2026-08-08T15:44:09.269067Z",
+  "reconciliation_plan_id": "rec_2e186b2f-58e3-4972-8334-57d801c96160",
+  "requested_candidate_count": 3,
+  "selection": {
+    "all_candidates_conclusively_evaluated": true,
+    "failure_classification": "POST_SIMULATION_CONSTRAINT_FAILURE",
+    "objective": {
+      "description": "Reject candidates that fail mandatory physical placement, ordering, throughput, or evidence constraints; report reset completion as a non-blocking diagnostic and rank eligible candidates only by measured throughput attainment.",
+      "hard_constraints": [
+        "RUN_ARTIFACT_COMPLETED",
+        "EVIDENCE_ALLOWS_DEPLOYMENT",
+        "PLACEMENT_VERIFICATION_PASSED",
+        "PRIORITY_COMPLIANCE_PASSED",
+        "BATCH_GATING_COMPLIANCE_PASSED",
+        "THROUGHPUT_EVIDENCE_PRESENT",
+        "EACH_LINE_THROUGHPUT_TARGET_MET"
+      ],
+      "objective_id": "constraint_gated_throughput_v3",
+      "tie_breakers": [
+        "LOWER_STRATEGY_SIMULATION_SECONDS",
+        "LEXICOGRAPHIC_CANDIDATE_STRATEGY_ID"
+      ],
+      "weights": {
+        "throughput_attainment": 1.0
+      }
+    },
+    "objective_score": null,
+    "operator_refinement_required": true,
+    "post_simulation_regeneration_performed": false,
+    "ranked_candidates": [
+      {
+        "artifact_created_at_utc": "2026-08-08T15:47:06.329173Z",
+        "candidate_strategy_id": "operator_faithful_baseline",
+        "candidate_worker_wall_seconds": 177.05005923999124,
+        "completed_at_utc": "2026-08-08T15:47:06.345885Z",
+        "evidence_created_at_utc": "2026-08-08T15:47:06.345873Z",
+        "evidence_summary": {
+          "acknowledged_risks": [],
+          "data_quality_warnings": [],
+          "deployment_allowed": false,
+          "deployment_recommended": false,
+          "dry_run_only": false,
+          "failed_checks": [
+            {
+              "actual": "101.252 tools/hr",
+              "actual_value": 101.25158431911889,
+              "check_id": "throughput.min_per_hour",
+              "deployment_blocking": true,
+              "evidence_row_id": null,
+              "evidence_source": "line_kpis.throughput_per_hour",
+              "expected": "at least 120 tools/hr",
+              "expected_value": 120.0,
+              "line_id": "line_1",
+              "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+              "operator_impact": "Deployment may reduce line productivity.",
+              "operator_label": "Throughput target was missed",
+              "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+              "severity": "FAIL",
+              "technical_check_id": "throughput.min_per_hour",
+              "technical_explanation": "line_1 failed throughput because the simulated rate was 101.252 tools/hr, below the target of 120 tools/hr."
+            },
+            {
+              "actual": "91.5914 tools/hr",
+              "actual_value": 91.59140263239466,
+              "check_id": "throughput.min_per_hour",
+              "deployment_blocking": true,
+              "evidence_row_id": null,
+              "evidence_source": "line_kpis.throughput_per_hour",
+              "expected": "at least 120 tools/hr",
+              "expected_value": 120.0,
+              "line_id": "line_2",
+              "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+              "operator_impact": "Deployment may reduce line productivity.",
+              "operator_label": "Throughput target was missed",
+              "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+              "severity": "FAIL",
+              "technical_check_id": "throughput.min_per_hour",
+              "technical_explanation": "line_2 failed throughput because the simulated rate was 91.5914 tools/hr, below the target of 120 tools/hr."
+            },
+            {
+              "actual": "91.5914 tools/hr",
+              "actual_value": 91.59140263239466,
+              "check_id": "throughput.min_per_hour",
+              "deployment_blocking": true,
+              "evidence_row_id": null,
+              "evidence_source": "line_kpis.throughput_per_hour",
+              "expected": "at least 120 tools/hr",
+              "expected_value": 120.0,
+              "line_id": "line_3",
+              "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+              "operator_impact": "Deployment may reduce line productivity.",
+              "operator_label": "Throughput target was missed",
+              "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+              "severity": "FAIL",
+              "technical_check_id": "throughput.min_per_hour",
+              "technical_explanation": "line_3 failed throughput because the simulated rate was 91.5914 tools/hr, below the target of 120 tools/hr."
+            },
+            {
+              "actual": "113.368 tools/hr",
+              "actual_value": 113.36797608144458,
+              "check_id": "throughput.min_per_hour",
+              "deployment_blocking": true,
+              "evidence_row_id": null,
+              "evidence_source": "line_kpis.throughput_per_hour",
+              "expected": "at least 120 tools/hr",
+              "expected_value": 120.0,
+              "line_id": "line_4",
+              "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+              "operator_impact": "Deployment may reduce line productivity.",
+              "operator_label": "Throughput target was missed",
+              "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+              "severity": "FAIL",
+              "technical_check_id": "throughput.min_per_hour",
+              "technical_explanation": "line_4 failed throughput because the simulated rate was 113.368 tools/hr, below the target of 120 tools/hr."
+            }
+          ],
+          "failed_lines": [
+            "line_1",
+            "line_2",
+            "line_3",
+            "line_4"
+          ],
+          "failure_summary": null,
+          "inconclusive_lines": [],
+          "kpi_evaluation_scope": "FULL_ENVIRONMENT_SCOPE",
+          "kpi_table": [
+            {
+              "actual_kpis": {
+                "completed_count": 2,
+                "cycle_time_seconds": 71.10999841056764,
+                "downtime_seconds": 0.0,
+                "entanglement_count": 0,
+                "misplaced_count": 0,
+                "recorded_cycle_time_seconds": 71.10999841056764,
+                "recorded_throughput_per_hour": 101.25158431911889,
+                "throughput_per_hour": 101.25158431911889,
+                "throughput_reliable": true,
+                "unwanted_completed_count": 0,
+                "wanted_completed_count": 2
+              },
+              "batch_gating": {
+                "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+                "status": "PASS"
+              },
+              "completion_durations": {
+                "all_sorting_completion_seconds": 71.10999841056764,
+                "required_tray_completion_seconds": 71.10999841056764,
+                "unwanted_box_completion_seconds": null
+              },
+              "deployment_blocking": true,
+              "downtime_pass": true,
+              "downtime_seconds": 0.0,
+              "failed_check_ids": [
+                "throughput.min_per_hour"
+              ],
+              "failed_checks": [
+                {
+                  "actual": "101.252 tools/hr",
+                  "actual_value": 101.25158431911889,
+                  "check_id": "throughput.min_per_hour",
+                  "deployment_blocking": true,
+                  "evidence_row_id": null,
+                  "evidence_source": "line_kpis.throughput_per_hour",
+                  "expected": "at least 120 tools/hr",
+                  "expected_value": 120.0,
+                  "line_id": "line_1",
+                  "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+                  "operator_impact": "Deployment may reduce line productivity.",
+                  "operator_label": "Throughput target was missed",
+                  "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+                  "severity": "FAIL",
+                  "technical_check_id": "throughput.min_per_hour",
+                  "technical_explanation": "line_1 failed throughput because the simulated rate was 101.252 tools/hr, below the target of 120 tools/hr."
+                }
+              ],
+              "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+              "line_id": "line_1",
+              "max_downtime_seconds": null,
+              "operator_reason": "line_1 sorted all 2 tools shown in the simulation. The completed set contained 2 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+              "placement": {
+                "reason": "No misplaced tools or placement validation warnings were recorded.",
+                "status": "PASS"
+              },
+              "priority_deviation_count": 0,
+              "priority_pass": true,
+              "priority_policy": "FCFS",
+              "priority_required_first": {
+                "reason": "FCFS does not require ENT-required tools to be picked first.",
+                "status": "NOT_APPLICABLE"
+              },
+              "simulated_tools_completed": 2,
+              "status": "FAIL",
+              "target_kpis": {
+                "deadline_minutes": null,
+                "max_downtime_seconds": null,
+                "min_throughput_per_hour": 120.0
+              },
+              "target_min_throughput_per_hour": 120.0,
+              "throughput_pass": false,
+              "throughput_per_hour": 101.25158431911889,
+              "unwanted_completed_count": 0,
+              "unwanted_completion_time_seconds": null,
+              "wanted_completed_count": 2,
+              "wanted_completion_time_seconds": 71.10999841056764,
+              "warning_check_ids": [],
+              "warnings": []
+            },
+            {
+              "actual_kpis": {
+                "completed_count": 2,
+                "cycle_time_seconds": 78.60999824292958,
+                "downtime_seconds": 0.0,
+                "entanglement_count": 0,
+                "misplaced_count": 0,
+                "recorded_cycle_time_seconds": 78.60999824292958,
+                "recorded_throughput_per_hour": 91.59140263239466,
+                "throughput_per_hour": 91.59140263239466,
+                "throughput_reliable": true,
+                "unwanted_completed_count": 0,
+                "wanted_completed_count": 2
+              },
+              "batch_gating": {
+                "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+                "status": "PASS"
+              },
+              "completion_durations": {
+                "all_sorting_completion_seconds": 78.60999824292958,
+                "required_tray_completion_seconds": 78.60999824292958,
+                "unwanted_box_completion_seconds": null
+              },
+              "deployment_blocking": true,
+              "downtime_pass": true,
+              "downtime_seconds": 0.0,
+              "failed_check_ids": [
+                "throughput.min_per_hour"
+              ],
+              "failed_checks": [
+                {
+                  "actual": "91.5914 tools/hr",
+                  "actual_value": 91.59140263239466,
+                  "check_id": "throughput.min_per_hour",
+                  "deployment_blocking": true,
+                  "evidence_row_id": null,
+                  "evidence_source": "line_kpis.throughput_per_hour",
+                  "expected": "at least 120 tools/hr",
+                  "expected_value": 120.0,
+                  "line_id": "line_2",
+                  "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+                  "operator_impact": "Deployment may reduce line productivity.",
+                  "operator_label": "Throughput target was missed",
+                  "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+                  "severity": "FAIL",
+                  "technical_check_id": "throughput.min_per_hour",
+                  "technical_explanation": "line_2 failed throughput because the simulated rate was 91.5914 tools/hr, below the target of 120 tools/hr."
+                }
+              ],
+              "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+              "line_id": "line_2",
+              "max_downtime_seconds": null,
+              "operator_reason": "line_2 sorted all 2 tools shown in the simulation. The completed set contained 2 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+              "placement": {
+                "reason": "No misplaced tools or placement validation warnings were recorded.",
+                "status": "PASS"
+              },
+              "priority_deviation_count": 0,
+              "priority_pass": true,
+              "priority_policy": "FCFS",
+              "priority_required_first": {
+                "reason": "FCFS does not require ENT-required tools to be picked first.",
+                "status": "NOT_APPLICABLE"
+              },
+              "simulated_tools_completed": 2,
+              "status": "FAIL",
+              "target_kpis": {
+                "deadline_minutes": null,
+                "max_downtime_seconds": null,
+                "min_throughput_per_hour": 120.0
+              },
+              "target_min_throughput_per_hour": 120.0,
+              "throughput_pass": false,
+              "throughput_per_hour": 91.59140263239466,
+              "unwanted_completed_count": 0,
+              "unwanted_completion_time_seconds": null,
+              "wanted_completed_count": 2,
+              "wanted_completion_time_seconds": 78.60999824292958,
+              "warning_check_ids": [],
+              "warnings": []
+            },
+            {
+              "actual_kpis": {
+                "completed_count": 2,
+                "cycle_time_seconds": 78.60999824292958,
+                "downtime_seconds": 0.0,
+                "entanglement_count": 0,
+                "misplaced_count": 0,
+                "recorded_cycle_time_seconds": 78.60999824292958,
+                "recorded_throughput_per_hour": 91.59140263239466,
+                "throughput_per_hour": 91.59140263239466,
+                "throughput_reliable": true,
+                "unwanted_completed_count": 1,
+                "wanted_completed_count": 1
+              },
+              "batch_gating": {
+                "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+                "status": "PASS"
+              },
+              "completion_durations": {
+                "all_sorting_completion_seconds": 78.60999824292958,
+                "required_tray_completion_seconds": 39.30999912135303,
+                "unwanted_box_completion_seconds": 78.60999824292958
+              },
+              "deployment_blocking": true,
+              "downtime_pass": true,
+              "downtime_seconds": 0.0,
+              "failed_check_ids": [
+                "throughput.min_per_hour"
+              ],
+              "failed_checks": [
+                {
+                  "actual": "91.5914 tools/hr",
+                  "actual_value": 91.59140263239466,
+                  "check_id": "throughput.min_per_hour",
+                  "deployment_blocking": true,
+                  "evidence_row_id": null,
+                  "evidence_source": "line_kpis.throughput_per_hour",
+                  "expected": "at least 120 tools/hr",
+                  "expected_value": 120.0,
+                  "line_id": "line_3",
+                  "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+                  "operator_impact": "Deployment may reduce line productivity.",
+                  "operator_label": "Throughput target was missed",
+                  "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+                  "severity": "FAIL",
+                  "technical_check_id": "throughput.min_per_hour",
+                  "technical_explanation": "line_3 failed throughput because the simulated rate was 91.5914 tools/hr, below the target of 120 tools/hr."
+                }
+              ],
+              "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+              "line_id": "line_3",
+              "max_downtime_seconds": null,
+              "operator_reason": "line_3 sorted all 2 tools shown in the simulation. The completed set contained 1 required ENT tool and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+              "placement": {
+                "reason": "No misplaced tools or placement validation warnings were recorded.",
+                "status": "PASS"
+              },
+              "priority_deviation_count": 0,
+              "priority_pass": true,
+              "priority_policy": "FCFS",
+              "priority_required_first": {
+                "reason": "FCFS does not require ENT-required tools to be picked first.",
+                "status": "NOT_APPLICABLE"
+              },
+              "simulated_tools_completed": 2,
+              "status": "FAIL",
+              "target_kpis": {
+                "deadline_minutes": null,
+                "max_downtime_seconds": null,
+                "min_throughput_per_hour": 120.0
+              },
+              "target_min_throughput_per_hour": 120.0,
+              "throughput_pass": false,
+              "throughput_per_hour": 91.59140263239466,
+              "unwanted_completed_count": 1,
+              "unwanted_completion_time_seconds": 78.60999824292958,
+              "wanted_completed_count": 1,
+              "wanted_completion_time_seconds": 39.30999912135303,
+              "warning_check_ids": [],
+              "warnings": []
+            },
+            {
+              "actual_kpis": {
+                "completed_count": 2,
+                "cycle_time_seconds": 63.50999858044088,
+                "downtime_seconds": 0.0,
+                "entanglement_count": 0,
+                "misplaced_count": 0,
+                "recorded_cycle_time_seconds": 63.50999858044088,
+                "recorded_throughput_per_hour": 113.36797608144458,
+                "throughput_per_hour": 113.36797608144458,
+                "throughput_reliable": true,
+                "unwanted_completed_count": 1,
+                "wanted_completed_count": 1
+              },
+              "batch_gating": {
+                "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+                "status": "PASS"
+              },
+              "completion_durations": {
+                "all_sorting_completion_seconds": 63.50999858044088,
+                "required_tray_completion_seconds": 63.50999858044088,
+                "unwanted_box_completion_seconds": 31.809999288991094
+              },
+              "deployment_blocking": true,
+              "downtime_pass": true,
+              "downtime_seconds": 0.0,
+              "failed_check_ids": [
+                "throughput.min_per_hour"
+              ],
+              "failed_checks": [
+                {
+                  "actual": "113.368 tools/hr",
+                  "actual_value": 113.36797608144458,
+                  "check_id": "throughput.min_per_hour",
+                  "deployment_blocking": true,
+                  "evidence_row_id": null,
+                  "evidence_source": "line_kpis.throughput_per_hour",
+                  "expected": "at least 120 tools/hr",
+                  "expected_value": 120.0,
+                  "line_id": "line_4",
+                  "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+                  "operator_impact": "Deployment may reduce line productivity.",
+                  "operator_label": "Throughput target was missed",
+                  "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+                  "severity": "FAIL",
+                  "technical_check_id": "throughput.min_per_hour",
+                  "technical_explanation": "line_4 failed throughput because the simulated rate was 113.368 tools/hr, below the target of 120 tools/hr."
+                }
+              ],
+              "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+              "line_id": "line_4",
+              "max_downtime_seconds": null,
+              "operator_reason": "line_4 sorted all 2 tools shown in the simulation. The completed set contained 1 required ENT tool and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+              "placement": {
+                "reason": "No misplaced tools or placement validation warnings were recorded.",
+                "status": "PASS"
+              },
+              "priority_deviation_count": 0,
+              "priority_pass": true,
+              "priority_policy": "FCFS",
+              "priority_required_first": {
+                "reason": "FCFS does not require ENT-required tools to be picked first.",
+                "status": "NOT_APPLICABLE"
+              },
+              "simulated_tools_completed": 2,
+              "status": "FAIL",
+              "target_kpis": {
+                "deadline_minutes": null,
+                "max_downtime_seconds": null,
+                "min_throughput_per_hour": 120.0
+              },
+              "target_min_throughput_per_hour": 120.0,
+              "throughput_pass": false,
+              "throughput_per_hour": 113.36797608144458,
+              "unwanted_completed_count": 1,
+              "unwanted_completion_time_seconds": 31.809999288991094,
+              "wanted_completed_count": 1,
+              "wanted_completion_time_seconds": 63.50999858044088,
+              "warning_check_ids": [],
+              "warnings": []
+            }
+          ],
+          "likely_root_cause": null,
+          "line_findings": [
+            {
+              "deployment_blocking": true,
+              "line_id": "line_1",
+              "operator_text": "line_1 sorted all 2 tools shown in the simulation. The completed set contained 2 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+              "severity": "BLOCKING"
+            },
+            {
+              "deployment_blocking": true,
+              "line_id": "line_2",
+              "operator_text": "line_2 sorted all 2 tools shown in the simulation. The completed set contained 2 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+              "severity": "BLOCKING"
+            },
+            {
+              "deployment_blocking": true,
+              "line_id": "line_3",
+              "operator_text": "line_3 sorted all 2 tools shown in the simulation. The completed set contained 1 required ENT tool and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+              "severity": "BLOCKING"
+            },
+            {
+              "deployment_blocking": true,
+              "line_id": "line_4",
+              "operator_text": "line_4 sorted all 2 tools shown in the simulation. The completed set contained 1 required ENT tool and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+              "severity": "BLOCKING"
+            }
+          ],
+          "line_results": [
+            {
+              "actual_kpis": {
+                "completed_count": 2,
+                "cycle_time_seconds": 71.10999841056764,
+                "downtime_seconds": 0.0,
+                "entanglement_count": 0,
+                "misplaced_count": 0,
+                "recorded_cycle_time_seconds": 71.10999841056764,
+                "recorded_throughput_per_hour": 101.25158431911889,
+                "throughput_per_hour": 101.25158431911889,
+                "throughput_reliable": true,
+                "unwanted_completed_count": 0,
+                "wanted_completed_count": 2
+              },
+              "batch_gating": {
+                "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+                "status": "PASS"
+              },
+              "completion_durations": {
+                "all_sorting_completion_seconds": 71.10999841056764,
+                "required_tray_completion_seconds": 71.10999841056764,
+                "unwanted_box_completion_seconds": null
+              },
+              "deployment_blocking": true,
+              "downtime_pass": true,
+              "downtime_seconds": 0.0,
+              "failed_check_ids": [
+                "throughput.min_per_hour"
+              ],
+              "failed_checks": [
+                {
+                  "actual": "101.252 tools/hr",
+                  "actual_value": 101.25158431911889,
+                  "check_id": "throughput.min_per_hour",
+                  "deployment_blocking": true,
+                  "evidence_row_id": null,
+                  "evidence_source": "line_kpis.throughput_per_hour",
+                  "expected": "at least 120 tools/hr",
+                  "expected_value": 120.0,
+                  "line_id": "line_1",
+                  "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+                  "operator_impact": "Deployment may reduce line productivity.",
+                  "operator_label": "Throughput target was missed",
+                  "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+                  "severity": "FAIL",
+                  "technical_check_id": "throughput.min_per_hour",
+                  "technical_explanation": "line_1 failed throughput because the simulated rate was 101.252 tools/hr, below the target of 120 tools/hr."
+                }
+              ],
+              "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+              "line_id": "line_1",
+              "max_downtime_seconds": null,
+              "operator_reason": "line_1 sorted all 2 tools shown in the simulation. The completed set contained 2 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+              "placement": {
+                "reason": "No misplaced tools or placement validation warnings were recorded.",
+                "status": "PASS"
+              },
+              "priority_deviation_count": 0,
+              "priority_pass": true,
+              "priority_policy": "FCFS",
+              "priority_required_first": {
+                "reason": "FCFS does not require ENT-required tools to be picked first.",
+                "status": "NOT_APPLICABLE"
+              },
+              "simulated_tools_completed": 2,
+              "status": "FAIL",
+              "target_kpis": {
+                "deadline_minutes": null,
+                "max_downtime_seconds": null,
+                "min_throughput_per_hour": 120.0
+              },
+              "target_min_throughput_per_hour": 120.0,
+              "throughput_pass": false,
+              "throughput_per_hour": 101.25158431911889,
+              "unwanted_completed_count": 0,
+              "unwanted_completion_time_seconds": null,
+              "wanted_completed_count": 2,
+              "wanted_completion_time_seconds": 71.10999841056764,
+              "warning_check_ids": [],
+              "warnings": []
+            },
+            {
+              "actual_kpis": {
+                "completed_count": 2,
+                "cycle_time_seconds": 78.60999824292958,
+                "downtime_seconds": 0.0,
+                "entanglement_count": 0,
+                "misplaced_count": 0,
+                "recorded_cycle_time_seconds": 78.60999824292958,
+                "recorded_throughput_per_hour": 91.59140263239466,
+                "throughput_per_hour": 91.59140263239466,
+                "throughput_reliable": true,
+                "unwanted_completed_count": 0,
+                "wanted_completed_count": 2
+              },
+              "batch_gating": {
+                "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+                "status": "PASS"
+              },
+              "completion_durations": {
+                "all_sorting_completion_seconds": 78.60999824292958,
+                "required_tray_completion_seconds": 78.60999824292958,
+                "unwanted_box_completion_seconds": null
+              },
+              "deployment_blocking": true,
+              "downtime_pass": true,
+              "downtime_seconds": 0.0,
+              "failed_check_ids": [
+                "throughput.min_per_hour"
+              ],
+              "failed_checks": [
+                {
+                  "actual": "91.5914 tools/hr",
+                  "actual_value": 91.59140263239466,
+                  "check_id": "throughput.min_per_hour",
+                  "deployment_blocking": true,
+                  "evidence_row_id": null,
+                  "evidence_source": "line_kpis.throughput_per_hour",
+                  "expected": "at least 120 tools/hr",
+                  "expected_value": 120.0,
+                  "line_id": "line_2",
+                  "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+                  "operator_impact": "Deployment may reduce line productivity.",
+                  "operator_label": "Throughput target was missed",
+                  "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+                  "severity": "FAIL",
+                  "technical_check_id": "throughput.min_per_hour",
+                  "technical_explanation": "line_2 failed throughput because the simulated rate was 91.5914 tools/hr, below the target of 120 tools/hr."
+                }
+              ],
+              "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+              "line_id": "line_2",
+              "max_downtime_seconds": null,
+              "operator_reason": "line_2 sorted all 2 tools shown in the simulation. The completed set contained 2 required ENT tools and 0 unwanted tools. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+              "placement": {
+                "reason": "No misplaced tools or placement validation warnings were recorded.",
+                "status": "PASS"
+              },
+              "priority_deviation_count": 0,
+              "priority_pass": true,
+              "priority_policy": "FCFS",
+              "priority_required_first": {
+                "reason": "FCFS does not require ENT-required tools to be picked first.",
+                "status": "NOT_APPLICABLE"
+              },
+              "simulated_tools_completed": 2,
+              "status": "FAIL",
+              "target_kpis": {
+                "deadline_minutes": null,
+                "max_downtime_seconds": null,
+                "min_throughput_per_hour": 120.0
+              },
+              "target_min_throughput_per_hour": 120.0,
+              "throughput_pass": false,
+              "throughput_per_hour": 91.59140263239466,
+              "unwanted_completed_count": 0,
+              "unwanted_completion_time_seconds": null,
+              "wanted_completed_count": 2,
+              "wanted_completion_time_seconds": 78.60999824292958,
+              "warning_check_ids": [],
+              "warnings": []
+            },
+            {
+              "actual_kpis": {
+                "completed_count": 2,
+                "cycle_time_seconds": 78.60999824292958,
+                "downtime_seconds": 0.0,
+                "entanglement_count": 0,
+                "misplaced_count": 0,
+                "recorded_cycle_time_seconds": 78.60999824292958,
+                "recorded_throughput_per_hour": 91.59140263239466,
+                "throughput_per_hour": 91.59140263239466,
+                "throughput_reliable": true,
+                "unwanted_completed_count": 1,
+                "wanted_completed_count": 1
+              },
+              "batch_gating": {
+                "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+                "status": "PASS"
+              },
+              "completion_durations": {
+                "all_sorting_completion_seconds": 78.60999824292958,
+                "required_tray_completion_seconds": 39.30999912135303,
+                "unwanted_box_completion_seconds": 78.60999824292958
+              },
+              "deployment_blocking": true,
+              "downtime_pass": true,
+              "downtime_seconds": 0.0,
+              "failed_check_ids": [
+                "throughput.min_per_hour"
+              ],
+              "failed_checks": [
+                {
+                  "actual": "91.5914 tools/hr",
+                  "actual_value": 91.59140263239466,
+                  "check_id": "throughput.min_per_hour",
+                  "deployment_blocking": true,
+                  "evidence_row_id": null,
+                  "evidence_source": "line_kpis.throughput_per_hour",
+                  "expected": "at least 120 tools/hr",
+                  "expected_value": 120.0,
+                  "line_id": "line_3",
+                  "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+                  "operator_impact": "Deployment may reduce line productivity.",
+                  "operator_label": "Throughput target was missed",
+                  "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+                  "severity": "FAIL",
+                  "technical_check_id": "throughput.min_per_hour",
+                  "technical_explanation": "line_3 failed throughput because the simulated rate was 91.5914 tools/hr, below the target of 120 tools/hr."
+                }
+              ],
+              "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+              "line_id": "line_3",
+              "max_downtime_seconds": null,
+              "operator_reason": "line_3 sorted all 2 tools shown in the simulation. The completed set contained 1 required ENT tool and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+              "placement": {
+                "reason": "No misplaced tools or placement validation warnings were recorded.",
+                "status": "PASS"
+              },
+              "priority_deviation_count": 0,
+              "priority_pass": true,
+              "priority_policy": "FCFS",
+              "priority_required_first": {
+                "reason": "FCFS does not require ENT-required tools to be picked first.",
+                "status": "NOT_APPLICABLE"
+              },
+              "simulated_tools_completed": 2,
+              "status": "FAIL",
+              "target_kpis": {
+                "deadline_minutes": null,
+                "max_downtime_seconds": null,
+                "min_throughput_per_hour": 120.0
+              },
+              "target_min_throughput_per_hour": 120.0,
+              "throughput_pass": false,
+              "throughput_per_hour": 91.59140263239466,
+              "unwanted_completed_count": 1,
+              "unwanted_completion_time_seconds": 78.60999824292958,
+              "wanted_completed_count": 1,
+              "wanted_completion_time_seconds": 39.30999912135303,
+              "warning_check_ids": [],
+              "warnings": []
+            },
+            {
+              "actual_kpis": {
+                "completed_count": 2,
+                "cycle_time_seconds": 63.50999858044088,
+                "downtime_seconds": 0.0,
+                "entanglement_count": 0,
+                "misplaced_count": 0,
+                "recorded_cycle_time_seconds": 63.50999858044088,
+                "recorded_throughput_per_hour": 113.36797608144458,
+                "throughput_per_hour": 113.36797608144458,
+                "throughput_reliable": true,
+                "unwanted_completed_count": 1,
+                "wanted_completed_count": 1
+              },
+              "batch_gating": {
+                "reason": "No next-batch request was recorded while current table tools remained unpicked.",
+                "status": "PASS"
+              },
+              "completion_durations": {
+                "all_sorting_completion_seconds": 63.50999858044088,
+                "required_tray_completion_seconds": 63.50999858044088,
+                "unwanted_box_completion_seconds": 31.809999288991094
+              },
+              "deployment_blocking": true,
+              "downtime_pass": true,
+              "downtime_seconds": 0.0,
+              "failed_check_ids": [
+                "throughput.min_per_hour"
+              ],
+              "failed_checks": [
+                {
+                  "actual": "113.368 tools/hr",
+                  "actual_value": 113.36797608144458,
+                  "check_id": "throughput.min_per_hour",
+                  "deployment_blocking": true,
+                  "evidence_row_id": null,
+                  "evidence_source": "line_kpis.throughput_per_hour",
+                  "expected": "at least 120 tools/hr",
+                  "expected_value": 120.0,
+                  "line_id": "line_4",
+                  "operator_explanation": "The simulated line processed fewer tools per hour than the minimum target.",
+                  "operator_impact": "Deployment may reduce line productivity.",
+                  "operator_label": "Throughput target was missed",
+                  "recommended_action": "Revise the strategy or rerun with adjusted settings.",
+                  "severity": "FAIL",
+                  "technical_check_id": "throughput.min_per_hour",
+                  "technical_explanation": "line_4 failed throughput because the simulated rate was 113.368 tools/hr, below the target of 120 tools/hr."
+                }
+              ],
+              "failure_reason": "The simulated line processed fewer tools per hour than the minimum target.",
+              "line_id": "line_4",
+              "max_downtime_seconds": null,
+              "operator_reason": "line_4 sorted all 2 tools shown in the simulation. The completed set contained 1 required ENT tool and 1 unwanted tool. The table batch completed without a real next-batch gating violation. No misplaced tools or entanglements were recorded. The simulated line processed fewer tools per hour than the minimum target.",
+              "placement": {
+                "reason": "No misplaced tools or placement validation warnings were recorded.",
+                "status": "PASS"
+              },
+              "priority_deviation_count": 0,
+              "priority_pass": true,
+              "priority_policy": "FCFS",
+              "priority_required_first": {
+                "reason": "FCFS does not require ENT-required tools to be picked first.",
+                "status": "NOT_APPLICABLE"
+              },
+              "simulated_tools_completed": 2,
+              "status": "FAIL",
+              "target_kpis": {
+                "deadline_minutes": null,
+                "max_downtime_seconds": null,
+                "min_throughput_per_hour": 120.0
+              },
+              "target_min_throughput_per_hour": 120.0,
+              "throughput_pass": false,
+              "throughput_per_hour": 113.36797608144458,
+              "unwanted_completed_count": 1,
+              "unwanted_completion_time_seconds": 31.809999288991094,
+              "wanted_completed_count": 1,
+              "wanted_completion_time_seconds": 63.50999858044088,
+              "warning_check_ids": [],
+              "warnings": []
+            }
+          ],
+          "next_action": "REVISE_OR_RERUN",
+          "operator_detail_summary": "Simulation completed, but KPI evidence does not support deployment yet. Review the measured results below.\n\nSimulation scope:\n- Simulated lines: line_1, line_2, line_3, line_4\n- Simulated tooling count per line: 2\n- Intervention mode: immediate-stop\n- Arrival time: 1 seconds\n- Entanglement fix time: 3 seconds\n- Recovery delay: 1 seconds\n\nKPI comparison:\nline_1:\n- Target minimum throughput: 120 tools/hour\n- Actual throughput: 101.252 tools/hour\n- Completed: 2/2 simulated tools\n- Required tray: 2 tools, completed in 71.11 seconds\n- Unwanted box: 0 tools, completed in not applicable\n- All sorting completed in 71.11 seconds\n- Entanglements: 0\n- Downtime: 0 seconds\n- Result: FAIL\n\nline_2:\n- Target minimum throughput: 120 tools/hour\n- Actual throughput: 91.5914 tools/hour\n- Completed: 2/2 simulated tools\n- Required tray: 2 tools, completed in 78.61 seconds\n- Unwanted box: 0 tools, completed in not applicable\n- All sorting completed in 78.61 seconds\n- Entanglements: 0\n- Downtime: 0 seconds\n- Result: FAIL\n\nline_3:\n- Target minimum throughput: 120 tools/hour\n- Actual throughput: 91.5914 tools/hour\n- Completed: 2/2 simulated tools\n- Required tray: 1 tools, completed in 39.31 seconds\n- Unwanted box: 1 tools, completed in 78.61 seconds\n- All sorting completed in 78.61 seconds\n- Entanglements: 0\n- Downtime: 0 seconds\n- Result: FAIL\n\nline_4:\n- Target minimum throughput: 120 tools/hour\n- Actual throughput: 113.368 tools/hour\n- Completed: 2/2 simulated tools\n- Required tray: 1 tools, completed in 63.51 seconds\n- Unwanted box: 1 tools, completed in 31.81 seconds\n- All sorting completed in 63.51 seconds\n- Entanglements: 0\n- Downtime: 0 seconds\n- Result: FAIL\n\nData quality:\n- No data-quality warnings were recorded.",
+          "operator_next_action": "REQUEST_REVISION, RERUN_SIMULATION",
+          "operator_options": [
+            "REQUEST_REVISION",
+            "RERUN_SIMULATION"
+          ],
+          "operator_summary": "The simulation completed, but deployment is not recommended. All four lines failed KPI validation because: Throughput target was missed.",
+          "overall_result": "FAIL",
+          "passed_lines": [],
+          "requires_operator_acknowledgement": false,
+          "risk_summary": "Deployment is blocked by one or more operational findings.",
+          "risk_tier": "BLOCKING",
+          "simulation_config": {
+            "add_reference_number": 2,
+            "allowed_overlap_ratio": 0.99,
+            "chosen_intervention_mode": "immediate-stop",
+            "episode_success_requires_reset_cycles": 1,
+            "fix_duration": 3.0,
+            "full_environment_tooling_count": null,
+            "full_scene_required": false,
+            "headless": false,
+            "layout_source": "auto",
+            "line_binding_source": "line_registry",
+            "num_envs": 4,
+            "resume_delay": 1.0,
+            "reuse_verified_seed": true,
+            "simulated_tooling_count": 2,
+            "supported_line_type_values": [
+              "UR5_SORTING_CELL"
+            ],
+            "template_scope": "DATA_DRIVEN",
+            "travel_time": 1.0
+          },
+          "summary_message": "KPI validation failed for line_1, line_2, line_3, line_4. Operational reasons: The simulated line processed fewer tools per hour than the minimum target..",
+          "technical_findings": [
+            {
+              "code": "throughput.min_per_hour",
+              "line_id": "line_1",
+              "operator_text": "The simulated line processed fewer tools per hour than the minimum target.",
+              "severity": "BLOCKING"
+            },
+            {
+              "code": "throughput.min_per_hour",
+              "line_id": "line_2",
+              "operator_text": "The simulated line processed fewer tools per hour than the minimum target.",
+              "severity": "BLOCKING"
+            },
+            {
+              "code": "throughput.min_per_hour",
+              "line_id": "line_3",
+              "operator_text": "The simulated line processed fewer tools per hour than the minimum target.",
+              "severity": "BLOCKING"
+            },
+            {
+              "code": "throughput.min_per_hour",
+              "line_id": "line_4",
+              "operator_text": "The simulated line processed fewer tools per hour than the minimum target.",
+              "severity": "BLOCKING"
+            }
+          ],
+          "warning_checks": [],
+          "warnings": []
+        },
+        "measurements": {
+          "C_reset_completed": 0,
+          "C_reset_requested": 0,
+          "N_failed_tool_storage": 0,
+          "N_tool_storage_passed": 8,
+          "N_tool_storage_total": 8,
+          "R_reset": null,
+          "R_reset_is_mandatory_constraint": false,
+          "R_storage": 1.0,
+          "batch_gating_compliance_source": "EVIDENCE_SUMMARY",
+          "batch_gating_failed_lines": [],
+          "batch_gating_violation_count": 0,
+          "blocking_reasons": [
+            "EVIDENCE_DISALLOWS_DEPLOYMENT",
+            "LINE_THROUGHPUT_TARGET_NOT_MET"
+          ],
+          "data_quality_status": "DATA_INCOMPLETE",
+          "deployment_allowed": false,
+          "diagnostic_warnings": [
+            "RESET_EVIDENCE_MISSING"
+          ],
+          "each_line_throughput_target_met": false,
+          "eligible": false,
+          "missing_metrics": [
+            "R_reset"
+          ],
+          "priority_compliance_failed_lines": [],
+          "priority_compliance_source": "EVIDENCE_SUMMARY",
+          "priority_deviation_count": 0,
+          "strategy_simulation_seconds": null,
+          "throughput_actual_by_line": {
+            "line_1": 101.25158431911889,
+            "line_2": 91.59140263239466,
+            "line_3": 91.59140263239466,
+            "line_4": 113.36797608144458
+          },
+          "throughput_attainment": 0.8287549284694851,
+          "throughput_attainment_by_line": {
+            "line_1": 0.8437632026593241,
+            "line_2": 0.7632616886032888,
+            "line_3": 0.7632616886032888,
+            "line_4": 0.9447331340120382
+          },
+          "throughput_below_target_lines": [
+            "line_1",
+            "line_2",
+            "line_3",
+            "line_4"
+          ],
+          "throughput_missing_lines": [],
+          "throughput_target_by_line": {
+            "line_1": 120.0,
+            "line_2": 120.0,
+            "line_3": 120.0,
+            "line_4": 120.0
+          }
+        },
+        "objective_score": null,
+        "rank": null,
+        "run_id": "sim_63e0cb05-1fb6-4a53-9714-a91af535ce64",
+        "scenario_created_at_utc": "2026-08-08T15:44:09.375843Z",
+        "scenario_spec_id": "scn_3b081268-1c9b-4119-a3e8-63f6d2de1717",
+        "scenario_spec_path": "outputs/scenario_specs/scn_3b081268-1c9b-4119-a3e8-63f6d2de1717.json",
+        "selection_components": {
+          "throughput_attainment": 0.8287549284694851
+        },
+        "simulation_error_code": null,
+        "simulation_errors": [],
+        "simulation_status": "COMPLETED",
+        "started_at_utc": "2026-08-08T15:44:09.301719Z",
+        "status": "EVALUATED",
+        "timing": {
+          "automated_verification_seconds": 4.0412996895611286e-05,
+          "end_to_end_seconds": null,
+          "environment_wait_seconds": 0.032652,
+          "isaac_command_started_at_utc": "2026-08-08T15:44:09.426082Z",
+          "isaac_startup_reference_at_utc": "2026-08-08T15:47:05.613425Z",
+          "isaac_startup_reference_pattern": "NON_ROOT_ARTICULATION_TRANSFORM",
+          "isaac_startup_reference_source": "SYSTEM_LOG_CAPTURE",
+          "kpi_calculation_seconds": 0.016629356003249995,
+          "llm_generation_seconds": 27.823546,
+          "manual_review_seconds": null,
+          "reset_seconds": null,
+          "simulation_startup_and_execution_seconds": 176.94506684900261,
+          "simulation_startup_seconds": 176.18700000000536,
+          "specification_parsing_seconds": 0.0594377999950666,
+          "strategy_simulation_seconds": null,
+          "timing_scope_status": "ISAAC_STARTUP_EXCLUDED_USING_SYSTEM_LOG_CAPTURE",
+          "verification_excluding_startup_seconds": 0.7580668489972595
+        }
+      }
+    ],
+    "recovery_actions": [],
+    "refinement_suggestions": [
+      "Review the evidence blocking reasons and revise the KPI target or policy assumptions."
+    ],
+    "selected_at_utc": "2026-08-08T15:47:06.368576Z",
+    "selected_candidate_strategy_id": null,
+    "selected_run_id": null,
+    "selected_scenario_spec_id": null,
+    "selection_is_deterministic": true,
+    "status": "NO_ELIGIBLE_STRATEGY"
+  },
+  "selection_objective": {
+    "description": "Reject candidates that fail mandatory physical placement, ordering, throughput, or evidence constraints; report reset completion as a non-blocking diagnostic and rank eligible candidates only by measured throughput attainment.",
+    "hard_constraints": [
+      "RUN_ARTIFACT_COMPLETED",
+      "EVIDENCE_ALLOWS_DEPLOYMENT",
+      "PLACEMENT_VERIFICATION_PASSED",
+      "PRIORITY_COMPLIANCE_PASSED",
+      "BATCH_GATING_COMPLIANCE_PASSED",
+      "THROUGHPUT_EVIDENCE_PRESENT",
+      "EACH_LINE_THROUGHPUT_TARGET_MET"
+    ],
+    "objective_id": "constraint_gated_throughput_v3",
+    "tie_breakers": [
+      "LOWER_STRATEGY_SIMULATION_SECONDS",
+      "LEXICOGRAPHIC_CANDIDATE_STRATEGY_ID"
+    ],
+    "weights": {
+      "throughput_attainment": 1.0
+    }
+  },
+  "simulation_line_ids": [
+    "line_1",
+    "line_2",
+    "line_3",
+    "line_4"
+  ],
+  "started_at_utc": "2026-08-08T15:44:09.286205Z",
+  "status": "NO_ELIGIBLE_STRATEGY",
+  "strategy_batch_id": "strategy_batch_6d9cd12a-6fba-49af-a47b-54bd14d21e56",
+  "time_arrival_state": {
+    "fix_duration": 3.0,
+    "resume_delay": 1.0,
+    "run_id": "sim_93f8833a-a53e-4116-ab6d-aba99e6daf33",
+    "scenario_spec_id": "scn_95731763-9598-4762-80a5-a31b23fe0ef9",
+    "source": "DEPLOYED_SIMULATION_DEFAULTS",
+    "source_reference": "data/digital_twin/default_simulation_config.json",
+    "state_record_type": "TIME_ARRIVAL_MODEL",
+    "state_version": 1,
+    "travel_time": 1.0,
+    "updated_at_utc": "2026-06-29T23:55:30.301246Z"
+  },
+  "trt_id": "trt-demo",
+  "trt_version": "v191",
+  "updated_at_utc": "2026-08-08T15:47:06.368591Z"
+}

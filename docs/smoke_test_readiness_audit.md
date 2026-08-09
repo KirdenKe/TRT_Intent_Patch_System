@@ -191,6 +191,8 @@ a live core run. SMOKE_029 (TC6) repeats one Gemma request three times.
 SMOKE_030 (TC7) sends the same fixture three times to Gemma, Qwen, and Llama.
 These extension rows do not alter the 27-case TC1-TC4 literature denominator.
 
+TC7 is a direct cross-model structured-generation benchmark. The benchmark changes only the model identifier and matching endpoint while preserving the natural-language fixture, prompt, state context, JSON Schema, and repetition count. It does not evaluate n8n model switching, does not run Isaac Sim, and does not make an end-to-end model-interchangeability claim.
+
 The queue removes duplicate queries, nonexistent seed run IDs, stale Time-Arrival
 expectations, `line_99` as an inherently invalid request, and `999999` throughput
 as an inherently invalid request. Deterministic invalid-range tests use a negative

@@ -42,13 +42,14 @@ def load_env() -> dict[str, str]:
         "N8N_API_KEY": os.environ.get("N8N_API_KEY", ""),
         "N8N_URL": os.environ.get("N8N_URL") or os.environ.get("N8N_BASE_URL") or "http://localhost:5678",
         "N8N_CHAT_URL": os.environ.get("N8N_CHAT_URL") or os.environ.get("N8N_WEBHOOK_URL") or "",
+        "N8N_WORKFLOW_ID": os.environ.get("N8N_WORKFLOW_ID") or "ChatOperatorTaskAllocationDemo",
         "TRT_API_URL": os.environ.get("TRT_API_URL") or "http://localhost:8000",
     }
     missing = [key for key, value in env.items() if key != "N8N_URL" and not value]
     if missing and os.name == "nt":
         # Query user-level env without printing secrets.
         ps = (
-            "$names=@('N8N_API_KEY','N8N_URL','N8N_BASE_URL','N8N_CHAT_URL');"
+            "$names=@('N8N_API_KEY','N8N_URL','N8N_BASE_URL','N8N_CHAT_URL','N8N_WORKFLOW_ID');"
             "foreach($n in $names){$v=[Environment]::GetEnvironmentVariable($n,'User');"
             "if($v){Write-Output \"$n=$v\"}}"
         )
@@ -65,6 +66,35 @@ def load_env() -> dict[str, str]:
         except Exception:
             pass
     return env
+
+
+def resolve_active_chat_url(env: dict[str, str]) -> dict[str, str]:
+    """Use the published Chat Trigger instead of a potentially stale webhook URL."""
+    if not env.get("N8N_API_KEY") or not env.get("N8N_WORKFLOW_ID"):
+        return env
+    workflow_url = (
+        env["N8N_URL"].rstrip("/")
+        + "/api/v1/workflows/"
+        + urllib.parse.quote(env["N8N_WORKFLOW_ID"], safe="")
+    )
+    workflow = http_json(workflow_url, api_key=env["N8N_API_KEY"])["body"]
+    triggers = [
+        node
+        for node in workflow.get("nodes") or []
+        if node.get("type") == "@n8n/n8n-nodes-langchain.chatTrigger"
+        and node.get("parameters", {}).get("public") is True
+    ]
+    if len(triggers) != 1 or not triggers[0].get("webhookId"):
+        raise RuntimeError(
+            "ACTIVE_CHAT_TRIGGER_NOT_RESOLVED: expected exactly one published public Chat Trigger"
+        )
+    webhook_id = str(triggers[0]["webhookId"])
+    resolved = dict(env)
+    resolved["N8N_CHAT_URL"] = (
+        env["N8N_URL"].rstrip("/") + f"/webhook/{webhook_id}/chat"
+    )
+    resolved["N8N_CHAT_WEBHOOK_ID"] = webhook_id
+    return resolved
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
@@ -226,6 +256,7 @@ def receive_ws_message(ws: Any, *, timeout_seconds: int) -> str:
 def receive_ws_message_until_artifact(ws: Any, *, timeout_seconds: int, since_epoch: float) -> str:
     deadline = time.monotonic() + timeout_seconds
     chunks: list[str] = []
+    artifact_observed = False
     while time.monotonic() < deadline:
         try:
             message = ws.recv(timeout=5)
@@ -247,11 +278,23 @@ def receive_ws_message_until_artifact(ws: Any, *, timeout_seconds: int, since_ep
                 chunks.append(message)
                 return "\n".join(chunks)
 
-        artifact = newest_created_file(PROJECT_ROOT / "outputs" / "run_artifacts", "sim_*.sqlite*", since_epoch=since_epoch)
-        scenario = newest_created_file(PROJECT_ROOT / "outputs" / "scenario_specs", "scn_*.json", since_epoch=since_epoch)
-        if artifact is not None and scenario is not None and active_isaac_process_count() == 0:
-            chunks.append(f"ARTIFACT_DETECTED: scenario_spec_id={scenario.stem} run_id={artifact.stem}")
-            return "\n".join(chunks)
+        if not artifact_observed:
+            artifact = newest_created_file(
+                PROJECT_ROOT / "outputs" / "run_artifacts",
+                "sim_*.sqlite",
+                since_epoch=since_epoch,
+            )
+            scenario = newest_created_file(
+                PROJECT_ROOT / "outputs" / "scenario_specs",
+                "scn_*.json",
+                since_epoch=since_epoch,
+            )
+            if artifact is not None and scenario is not None:
+                chunks.append(
+                    f"ARTIFACT_OBSERVED_WHILE_BATCH_RUNNING: "
+                    f"scenario_spec_id={scenario.stem} run_id={artifact.stem}"
+                )
+                artifact_observed = True
 
     return "\n".join(chunks) if chunks else "WEBSOCKET_TIMEOUT"
 
@@ -351,10 +394,23 @@ def response_requests_operator_details(text: str) -> bool:
 def newest_created_file(directory: Path, pattern: str, *, since_epoch: float) -> Path | None:
     if not directory.exists():
         return None
-    candidates = [path for path in directory.glob(pattern) if path.stat().st_mtime >= since_epoch]
+    candidates: list[Path] = []
+    for path in directory.glob(pattern):
+        try:
+            if path.stat().st_mtime >= since_epoch:
+                candidates.append(path)
+        except FileNotFoundError:
+            # SQLite journal files can disappear between glob() and stat().
+            continue
     if not candidates:
         return None
-    return max(candidates, key=lambda path: path.stat().st_mtime)
+    existing: list[tuple[float, Path]] = []
+    for path in candidates:
+        try:
+            existing.append((path.stat().st_mtime, path))
+        except FileNotFoundError:
+            continue
+    return max(existing, default=(0.0, None), key=lambda item: item[0])[1]
 
 
 def load_rows(packet_dir: Path) -> list[dict[str, str]]:
@@ -475,7 +531,18 @@ def start_chat_websocket(env: dict[str, str], *, session_id: str, message: str) 
     return execution_id, ws, json.dumps(body, sort_keys=True)
 
 
-def record_result(row: dict[str, Any], combined_path: Path, status: str, session_id: str, execution_ids: list[str]) -> None:
+def record_result(
+    row: dict[str, Any],
+    combined_path: Path,
+    status: str,
+    session_id: str,
+    execution_ids: list[str],
+    out_dir: Path,
+    *,
+    run_id: str | None = None,
+    scenario_spec_id: str | None = None,
+    transcript_path: Path | None = None,
+) -> None:
     cmd = [
         "python",
         "-m",
@@ -488,9 +555,19 @@ def record_result(row: dict[str, Any], combined_path: Path, status: str, session
         status,
         "--chat-session-id",
         session_id,
+        "--output",
+        str(out_dir / "manual_results.jsonl"),
+        "--metrics-output",
+        str(out_dir / "m12_metrics.sqlite3"),
     ]
     if execution_ids:
         cmd.extend(["--n8n-execution-id", execution_ids[-1]])
+    if run_id:
+        cmd.extend(["--run-id", run_id])
+    if scenario_spec_id:
+        cmd.extend(["--scenario-spec-id", scenario_spec_id])
+    if transcript_path:
+        cmd.extend(["--transcript-output", str(transcript_path)])
     subprocess.run(cmd, cwd=PROJECT_ROOT, check=False, capture_output=True, text=True)
 
 
@@ -636,7 +713,15 @@ def run_one(env: dict[str, str], row: dict[str, str], out_dir: Path, *, max_wait
             ),
             encoding="utf-8",
         )
-        record_result(row, combined_path, packet_score["status"], session_id, [])
+        record_result(
+            row,
+            combined_path,
+            packet_score["status"],
+            session_id,
+            [],
+            out_dir,
+            transcript_path=transcript_path,
+        )
         return {
             "created_at_utc": now_utc(),
             "test_id": test_id,
@@ -677,7 +762,7 @@ def run_one(env: dict[str, str], row: dict[str, str], out_dir: Path, *, max_wait
     approved = False
     should_launch_isaac = row.get("should_launch_isaac", "") != "false"
     ws: Any | None = None
-    if should_launch_isaac and not wait_for_no_isaac(timeout_seconds=300):
+    if should_launch_isaac and not wait_for_no_isaac(timeout_seconds=max_wait_seconds):
         raise RuntimeError("ISAAC_BUSY_BEFORE_TEST: refusing to start another M12 test while Isaac Sim is still running")
 
     def write_turn_payload(path: Path, payload: dict[str, Any]) -> None:
@@ -756,7 +841,7 @@ def run_one(env: dict[str, str], row: dict[str, str], out_dir: Path, *, max_wait
     run_id = first_match(RUN_ID_RE, combined_text)
     scenario_spec_id = first_match(SCENARIO_ID_RE, combined_text)
     if not run_id and approved:
-        artifact = newest_created_file(PROJECT_ROOT / "outputs" / "run_artifacts", "sim_*.sqlite*", since_epoch=test_started_epoch - 2)
+        artifact = newest_created_file(PROJECT_ROOT / "outputs" / "run_artifacts", "sim_*.sqlite", since_epoch=test_started_epoch - 2)
         if artifact is not None:
             run_id = artifact.stem
     if not scenario_spec_id and approved:
@@ -814,7 +899,7 @@ def run_one(env: dict[str, str], row: dict[str, str], out_dir: Path, *, max_wait
     combined_path.parent.mkdir(parents=True, exist_ok=True)
     combined_path.write_text(json.dumps(combined, indent=2, sort_keys=True), encoding="utf-8")
 
-    transcript_path = M12_ROOT / "manual_transcripts" / f"{safe_id}.txt"
+    transcript_path = out_dir / "manual_transcripts" / f"{safe_id}.txt"
     transcript_path.parent.mkdir(parents=True, exist_ok=True)
     transcript_path.write_text(
         "\n".join(
@@ -838,7 +923,17 @@ def run_one(env: dict[str, str], row: dict[str, str], out_dir: Path, *, max_wait
         encoding="utf-8",
     )
 
-    record_result(row, combined_path, status, session_id, execution_ids)
+    record_result(
+        row,
+        combined_path,
+        status,
+        session_id,
+        execution_ids,
+        out_dir,
+        run_id=run_id or None,
+        scenario_spec_id=scenario_spec_id or None,
+        transcript_path=transcript_path,
+    )
     result = {
         "created_at_utc": now_utc(),
         "test_id": test_id,
@@ -918,7 +1013,7 @@ def main() -> int:
         }
         raise SystemExit(json.dumps(message, indent=2, sort_keys=True))
 
-    env = load_env()
+    env = resolve_active_chat_url(load_env())
     local_execution_db = Path(os.environ.get("N8N_DATABASE_PATH") or (PROJECT_ROOT.parent / "database.sqlite"))
     missing = [key for key in ["N8N_URL", "N8N_CHAT_URL"] if not env.get(key)]
     if not env.get("N8N_API_KEY") and not local_execution_db.exists():

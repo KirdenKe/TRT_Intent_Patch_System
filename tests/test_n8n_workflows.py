@@ -197,6 +197,9 @@ def test_chat_operator_workflow_saves_required_field_state_and_clears_cancel():
     assert "/chat/session/" in save_required["parameters"]["url"]
     assert "WAITING_FOR_REQUIRED_FIELDS" in save_required["parameters"]["jsonBody"]
     assert "original_intent_text" in save_required["parameters"]["jsonBody"]
+    assert "raw_backend_response?.context" in save_required["parameters"]["jsonBody"]
+    assert "simulation_config_updates" in save_required["parameters"]["jsonBody"]
+    assert "kpi_updates" in save_required["parameters"]["jsonBody"]
     assert clear_session["type"] == "n8n-nodes-base.httpRequest"
     assert clear_session["parameters"]["method"] == "DELETE"
     assert "/chat/session/" in clear_session["parameters"]["url"]
@@ -226,8 +229,11 @@ def test_intent_workflow_supports_simulation_config_update_candidate():
         assert "add_reference_number" in prompt
         assert "simulation_config_updates" in prompt
         assert "Do not ask which five tools unless the user names specific tools to keep." in prompt
-    assert "simulation_config_updates: extracted.simulation_config_updates || null" in normalizer_code
-    assert "simulation_config_updates: extracted.simulation_config_updates || null" in retry_normalizer_code
+    for code in [normalizer_code, retry_normalizer_code]:
+        assert "sourceInput.pending_intent?.simulation_config_updates" in code
+        assert "sourceInput.loaded_session?.normalized_request?.simulation_config_updates" in code
+        assert "...preservedSimulationConfig" in code
+        assert "...(extracted.simulation_config_updates || {})" in code
     assert "manipulator_priority: extracted.manipulator_priority ?? null" in normalizer_code
     assert "manipulator_priority: extracted.manipulator_priority ?? null" in retry_normalizer_code
     assert "const simulationConfigUpdates = candidatePatch.simulation_config_updates || null;" in reviewed_code

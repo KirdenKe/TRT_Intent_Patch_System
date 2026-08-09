@@ -1594,6 +1594,8 @@ def parse_tooling_count_request(text: str) -> dict[str, int] | None:
         r"number of tooling per production line to\s+(\d+)",
         r"tooling per production line to\s+(\d+)",
         r"tools? per production line to\s+(\d+)",
+        r"simulated tooling count per (?:production )?line(?:\s+to|\s*=)?\s*(\d+)",
+        r"(?:simulate|show|use|set)?\s*(\d+)\s+(?:tools?|tooling)\s+per\s+(?:production\s+)?line",
     ]
     for pattern in patterns:
         match = re.search(pattern, normalized)
@@ -1722,6 +1724,12 @@ def explicit_simulation_config_expectations(text: str) -> dict[str, Any]:
         or "immediate stop" in normalized
     ):
         expected["chosen_intervention_mode"] = "immediate-stop"
+    line_match = re.search(r"\b(\d+)\s+production lines?\s+remaining\b", normalized)
+    if line_match:
+        expected["num_envs"] = int(line_match.group(1))
+    tooling_count = parse_tooling_count_request(normalized)
+    if tooling_count:
+        expected.update(tooling_count)
     return expected
 
 

@@ -11,7 +11,7 @@ from trt_core.m12 import (
     M12_ROOT,
     collect_run_metrics,
     connect_metrics_db,
-    export_metrics_csv,
+    export_query_to_csv,
     now_utc,
     parse_ts,
     provenance,
@@ -93,50 +93,87 @@ def normalize_timestamp(value: Any) -> str | None:
     return None
 
 
-def candidate_timestamps(payload: Any) -> list[tuple[str, str, str]]:
-    candidates: list[tuple[str, str, str]] = []
+def n8n_node_runs(payload: Any) -> list[dict[str, Any]]:
+    """Return n8n runData entries while retaining their parent node names."""
+
+    runs: list[dict[str, Any]] = []
+    seen: set[tuple[str, int, int]] = set()
     for item in walk(payload):
         if not isinstance(item, dict):
             continue
-        node_name = str(item.get("name") or item.get("node") or item.get("nodeName") or item.get("displayName") or "")
-        for key in ["startedAt", "stoppedAt", "startTime", "executionTime", "createdAt", "updatedAt"]:
-            if key in item:
-                ts = normalize_timestamp(item.get(key))
-                if ts:
-                    candidates.append((node_name, key, ts))
-    return sorted(set(candidates), key=lambda row: row[2])
+        run_data = item.get("runData")
+        if not isinstance(run_data, dict):
+            continue
+        for node_name, entries in run_data.items():
+            if not isinstance(entries, list):
+                entries = [entries]
+            for entry in entries:
+                if not isinstance(entry, dict) or entry.get("startTime") is None:
+                    continue
+                start_ms = int(entry["startTime"])
+                duration_ms = int(entry.get("executionTime") or 0)
+                identity = (str(node_name), start_ms, duration_ms)
+                if identity in seen:
+                    continue
+                seen.add(identity)
+                runs.append(
+                    {
+                        "node_name": str(node_name),
+                        "start_ms": start_ms,
+                        "duration_ms": duration_ms,
+                        "start_at_utc": normalize_timestamp(start_ms),
+                        "end_at_utc": normalize_timestamp(start_ms + duration_ms),
+                    }
+                )
+    return sorted(runs, key=lambda row: (row["start_ms"], row["node_name"]))
 
 
 def infer_lifecycle_timestamps(payload: Any) -> dict[str, str | None]:
-    timestamps = candidate_timestamps(payload)
-    if not timestamps:
-        return {
-            "INTENT_CREATED": None,
-            "CANDIDATE_SUMMARY_CREATED": None,
-            "CANDIDATE_REVIEW_ENDED": None,
-            "SCENARIO_CREATED": None,
-            "RUN_ARTIFACT_CREATED": None,
-            "DEPLOYMENT_REVIEW_ENDED": None,
-        }
-    earliest = timestamps[0][2]
-    latest = timestamps[-1][2]
+    runs = n8n_node_runs(payload)
 
-    def by_name(*terms: str) -> str | None:
-        lowered = [term.lower() for term in terms]
-        for node, _key, ts in timestamps:
-            name = node.lower()
-            if any(term in name for term in lowered):
-                return ts
-        return None
+    def first_start(*exact_names: str) -> str | None:
+        names = {name.lower() for name in exact_names}
+        return next((row["start_at_utc"] for row in runs if row["node_name"].lower() in names), None)
 
-    return {
-        "INTENT_CREATED": by_name("chat trigger", "chat", "webhook", "intent") or earliest,
-        "CANDIDATE_SUMMARY_CREATED": by_name("candidate summary", "summary", "release prepare", "prepare release", "intentpatch"),
-        "CANDIDATE_REVIEW_ENDED": by_name("approval", "review ended", "candidate review"),
-        "SCENARIO_CREATED": by_name("scenario"),
-        "RUN_ARTIFACT_CREATED": by_name("artifact", "simulation", "isaac") or latest,
-        "DEPLOYMENT_REVIEW_ENDED": by_name("deployment review", "deploy decision"),
+    def first_end(*exact_names: str) -> str | None:
+        names = {name.lower() for name in exact_names}
+        return next((row["end_at_utc"] for row in runs if row["node_name"].lower() in names), None)
+
+    def last_end(*exact_names: str) -> str | None:
+        names = {name.lower() for name in exact_names}
+        matches = [row["end_at_utc"] for row in runs if row["node_name"].lower() in names]
+        return matches[-1] if matches else None
+
+    lifecycle = {
+        "INTENT_CREATED": first_start("Receive Operator Intent"),
+        "CANDIDATE_SUMMARY_CREATED": first_end("Chat Candidate Patch Summary"),
+        "CANDIDATE_REVIEW_ENDED": first_end("Build Direct Approval Decision Turn"),
+        "SCENARIO_CREATED": None,
+        "SIMULATION_STARTED": None,
+        "RUN_ARTIFACT_CREATED": None,
+        "DEPLOYMENT_REVIEW_ENDED": last_end(
+            "Restore Deployment Success After Clear",
+            "Restore Non-Deploy Message After Clear",
+            "Return Deployment Success",
+            "Return Non-Deploy Decision Message",
+        ),
     }
+
+    strategy_selection = payload.get("strategy_selection") if isinstance(payload, dict) else None
+    selected_run_id = payload.get("run_id") if isinstance(payload, dict) else None
+    if isinstance(strategy_selection, dict):
+        selected_run_id = strategy_selection.get("selected_run_id") or selected_run_id
+        candidates = strategy_selection.get("ranked_candidates") or []
+        candidate = next(
+            (row for row in candidates if isinstance(row, dict) and row.get("run_id") == selected_run_id),
+            None,
+        )
+        if isinstance(candidate, dict):
+            timing = candidate.get("timing") if isinstance(candidate.get("timing"), dict) else {}
+            lifecycle["SCENARIO_CREATED"] = normalize_timestamp(candidate.get("scenario_created_at_utc"))
+            lifecycle["SIMULATION_STARTED"] = normalize_timestamp(timing.get("isaac_command_started_at_utc"))
+            lifecycle["RUN_ARTIFACT_CREATED"] = normalize_timestamp(candidate.get("artifact_created_at_utc"))
+    return lifecycle
 
 
 def extract_messages(payload: Any) -> str:
@@ -244,6 +281,9 @@ def main() -> int:
     parser.add_argument("--status", choices=sorted(STATUS_VALUES))
     parser.add_argument("--chat-session-id")
     parser.add_argument("--n8n-execution-id")
+    parser.add_argument("--run-id")
+    parser.add_argument("--scenario-spec-id")
+    parser.add_argument("--transcript-output")
     parser.add_argument("--output", default=str(M12_ROOT / "manual_results.jsonl"))
     parser.add_argument("--metrics-output", default=str(M12_ROOT / "m12_metrics.sqlite3"))
     args = parser.parse_args()
@@ -252,10 +292,23 @@ def main() -> int:
     input_path = resolve_path(repository, args.execution_json)
     payload = load_payload(input_path)
     text = json_text(payload)
-    run_id = first_match(RUN_ID_RE, text)
-    scenario_spec_id = first_match(SCENARIO_ID_RE, text)
+    strategy_selection = payload.get("strategy_selection") if isinstance(payload, dict) else {}
+    run_id = (
+        args.run_id
+        or (strategy_selection.get("selected_run_id") if isinstance(strategy_selection, dict) else None)
+        or (payload.get("run_id") if isinstance(payload, dict) else None)
+        or first_match(RUN_ID_RE, text)
+    )
+    scenario_spec_id = (
+        args.scenario_spec_id
+        or (strategy_selection.get("selected_scenario_spec_id") if isinstance(strategy_selection, dict) else None)
+        or (payload.get("scenario_spec_id") if isinstance(payload, dict) else None)
+        or first_match(SCENARIO_ID_RE, text)
+    )
     output_db_path = first_match(SQLITE_PATH_RE, text)
-    workflow_execution_id = args.n8n_execution_id or str(payload.get("id") or payload.get("executionId") or "") if isinstance(payload, dict) else args.n8n_execution_id
+    workflow_execution_id = args.n8n_execution_id
+    if not workflow_execution_id and isinstance(payload, dict):
+        workflow_execution_id = str(payload.get("id") or payload.get("executionId") or "")
     chat_session_id = args.chat_session_id
     if not chat_session_id:
         for item in walk(payload):
@@ -268,7 +321,11 @@ def main() -> int:
     transcript_text = extract_messages(payload)
     status = args.status or infer_status(payload)
 
-    transcript_path = repository.root / M12_ROOT / "manual_transcripts" / f"{args.test_id}.txt"
+    transcript_path = (
+        resolve_path(repository, args.transcript_output)
+        if args.transcript_output
+        else repository.root / M12_ROOT / "manual_transcripts" / f"{args.test_id}.txt"
+    )
     transcript_path.parent.mkdir(parents=True, exist_ok=True)
     transcript_path.write_text(
         "\n".join(
@@ -321,9 +378,12 @@ def main() -> int:
                 )
             except Exception as exc:
                 metrics_error = f"{type(exc).__name__}: {exc}"
-
-    if metrics_result is not None:
-        export_metrics_csv(repository=repository)
+        if metrics_result is not None:
+            export_query_to_csv(
+                connection,
+                "SELECT * FROM m12_run_metrics ORDER BY run_id",
+                metrics_db.with_suffix(".csv"),
+            )
 
     result = {
         "created_at_utc": now_utc(),

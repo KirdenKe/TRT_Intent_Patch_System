@@ -1,4 +1,8 @@
-from trt_core.isaac_startup_timing import fallback_startup_timing, startup_marker_name
+from trt_core.isaac_startup_timing import (
+    fallback_startup_timing,
+    finalized_startup_timing,
+    startup_marker_name,
+)
 from trt_core.m12 import verification_seconds_excluding_startup
 
 
@@ -30,6 +34,41 @@ def test_internal_timestamp_fallback_uses_latest_matching_startup_structure():
     assert timing["isaac_startup_seconds"] == 11.5
     assert timing["startup_reference_pattern"] == "GPU_MEMORY_BUDGET_FACTORY_WARNING"
     assert timing["startup_reference_source"] == "ISAAC_INTERNAL_TIMESTAMP"
+
+
+def test_finalized_timing_uses_initial_gpu_marker_not_teardown_repetition():
+    timing = finalized_startup_timing(
+        [
+            "2026-08-08T14:44:10Z [24.802s] Cannot assign velocities to rigid body at "
+            "'/World/Envs/Env3/ur5/Gripper/robotiq_arg2f_base_link'",
+            "2026-08-08T14:44:30Z [44.278s] Client gpu.foundation.plugin has acquired "
+            "[gpu::unstable::IMemoryBudgetManagerFactory v0.1] 100 times",
+            "2026-08-08T14:46:39Z [173.5s] Cannot assign velocities to rigid body at "
+            "'/World/Envs/Env3/ur5/Gripper/robotiq_arg2f_base_link'",
+        ],
+        command_started_at_utc="2026-08-08T14:43:45.153119Z",
+    )
+
+    assert timing is not None
+    assert timing["startup_reference_pattern"] == "GPU_MEMORY_BUDGET_FACTORY_WARNING"
+    assert timing["startup_reference_at_utc"] == "2026-08-08T14:44:30Z"
+    assert timing["isaac_startup_seconds"] == 44.846881
+
+
+def test_finalized_timing_uses_end_of_first_articulation_burst_without_gpu_marker():
+    timing = finalized_startup_timing(
+        [
+            "[24.8s] Cannot assign transform to non-root articulation link at "
+            "'/World/Envs/Env0/ur5/Gripper/robotiq_arg2f_base_link'",
+            "[25.4s] Cannot assign velocities to rigid body at "
+            "'/World/Envs/Env4/ur5/Gripper/robotiq_arg2f_base_link'",
+            "[174.7s] Cannot assign velocities to rigid body at "
+            "'/World/Envs/Env4/ur5/Gripper/robotiq_arg2f_base_link'",
+        ]
+    )
+
+    assert timing is not None
+    assert timing["isaac_startup_seconds"] == 25.4
 
 
 def test_verification_time_excludes_measured_isaac_startup():

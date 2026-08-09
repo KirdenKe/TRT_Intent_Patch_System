@@ -1,0 +1,40 @@
+{
+  "conversation": [],
+  "latest_dialogue_decision": null,
+  "normalized_request": {
+    "affected_lines": [],
+    "debug": false,
+    "dry_run_only": false,
+    "intent_text": "set the intervention mode to teleport-recover for all production lines",
+    "kpi_updates": null,
+    "line_ids": [],
+    "operator_id": null,
+    "pending_deployment": null,
+    "pending_intent": null,
+    "query_targets": [],
+    "reason": null,
+    "run_id": null,
+    "scenario_spec_id": null,
+    "session_id": "m12-full-SMOKE_027-1786205471",
+    "simulation_config_updates": null
+  },
+  "pending_intent": {
+    "intent_text": "set the intervention mode to teleport-recover for all production lines",
+    "kpi_updates": null,
+    "missing_fields": [
+      "operator_id",
+      "reason"
+    ],
+    "operator_id": null,
+    "original_intent_text": "set the intervention mode to teleport-recover for all production lines",
+    "pending_status": "WAITING_FOR_REQUIRED_FIELDS",
+    "reason": null,
+    "request_types": [],
+    "simulation_config_updates": null,
+    "target_lines": [],
+    "target_scope": null
+  },
+  "session_id": "m12-full-SMOKE_027-1786205471",
+  "state": "WAITING_FOR_REQUIRED_FIELDS",
+  "updated_at": "2026-08-08T16:11:13.238303Z"
+}

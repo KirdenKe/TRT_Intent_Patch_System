@@ -33,8 +33,8 @@ CHECKPOINTS = {
         "mode": "AUTOMATED",
     },
     "CP5": {
-        "test_object": "KPI, placement, reset, and safety constraints",
-        "pass_criteria": "All mandatory evidence checks pass and no deployment-blocking evidence is missing.",
+        "test_object": "KPI, placement, priority, batch-gating, and safety constraints",
+        "pass_criteria": "All mandatory evidence gates pass. Reset completion is reported diagnostically and is not a deployment-blocking constraint.",
         "mode": "AUTOMATED",
     },
     "CP6": {

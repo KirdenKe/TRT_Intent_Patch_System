@@ -32,15 +32,29 @@ def read_csv(path: Path) -> list[dict[str, str]]:
 
 def optional_bool(value: Any) -> bool | None:
     normalized = str(value or "").strip().lower()
-    if value is True or normalized in {"true", "1", "yes", "pass"}:
+    if value is True or normalized in {"true", "1", "yes", "pass", "partial"}:
         return True
-    if value is False or normalized in {"false", "0", "no", "fail"}:
+    if value is False or normalized in {"false", "0", "no", "fail", "fail_expected"}:
         return False
     return None
 
 
 def load_manual_reviews(source_run_dir: Path) -> dict[str, dict[str, Any]]:
     reviews: dict[str, dict[str, Any]] = {}
+    verdicts = source_run_dir / "manual_review_verdicts.csv"
+    if verdicts.exists():
+        for row in read_csv(verdicts):
+            reviews[row["test_id"]] = {
+                "manual_result": row.get("manual_verdict"),
+                "manual_reason": row.get("manual_reason"),
+                "reviewer_type": row.get("manual_review_method") or "EVIDENCE_BASED_MANUAL_REVIEW",
+                "reviewed_at_utc": row.get("reviewed_at_utc"),
+                "failure_cause_code": row.get("failure_source_code"),
+                "failure_stage": row.get("failure_stage"),
+                "correction_method": row.get("correction_method"),
+                "outcome_class": row.get("workflow_outcome_class"),
+                "checkpoints": {cp: optional_bool(row.get(cp)) for cp in CHECKPOINTS},
+            }
     legacy = source_run_dir / "human_reviewed" / "m12_smoke_human_reviewed.csv"
     if legacy.exists():
         for row in read_csv(legacy):
@@ -126,6 +140,24 @@ def mean(values: list[float]) -> float | None:
     return sum(values) / len(values) if values else None
 
 
+def unique_metric_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return one validated metric row per selected live simulation run."""
+
+    selected: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in rows:
+        run_id = str(row.get("run_id") or "")
+        if not run_id or run_id in seen or not row.get("include_in_metric_figures", True):
+            continue
+        if row.get("suite") not in {"TC1", "TC3"}:
+            continue
+        if row.get("T_verification_wall_seconds") is None:
+            continue
+        seen.add(run_id)
+        selected.append(row)
+    return selected
+
+
 def seconds_between(start: str | None, end: str | None) -> float | None:
     if not start or not end:
         return None
@@ -161,7 +193,9 @@ def load_metrics_by_run(db_path: Path) -> dict[str, dict[str, Any]]:
                 SELECT run_id, scenario_spec_id, R_storage, R_reset,
                        N_tool_storage_total, N_tool_storage_passed, N_failed_tool_storage,
                        C_reset_requested, C_reset_completed,
-                       T_wait_seconds, T_verification_seconds, T_loop_seconds,
+                       T_wait_seconds, T_verification_seconds,
+                       T_verification_wall_seconds, T_isaac_startup_seconds,
+                       verification_timing_source, T_loop_seconds, loop_review_definition,
                        data_quality_status, data_quality_reason, data_source, is_live_test
                 FROM m12_run_metrics
                 WHERE run_id IS NOT NULL AND run_id != ''
@@ -285,9 +319,9 @@ def build_rows(source_run_dir: Path, db_path: Path) -> list[dict[str, Any]]:
         passed = None if total is None or failed is None else max(0.0, total - failed)
         manual_result = str(review.get("manual_result") or result.get("manual_result", "")).upper()
         manual_correction_used = optional_bool(result.get("manual_correction_used"))
-        failure_stage = str(result.get("failure_stage") or "")
+        failure_stage = str(review.get("failure_stage") or result.get("failure_stage") or "")
         failure_cause_code_value = str(review.get("failure_cause_code") or result.get("failure_cause_code", ""))
-        outcome_class = finalized_outcome(
+        outcome_class = str(review.get("outcome_class") or "") or finalized_outcome(
             recorded=str(result.get("outcome_class") or "EVALUATION_INCOMPLETE"),
             manual_result=manual_result,
             manual_correction_used=manual_correction_used,
@@ -318,7 +352,7 @@ def build_rows(source_run_dir: Path, db_path: Path) -> list[dict[str, Any]]:
                 "failure_cause": result.get("failure_cause", ""),
                 "failure_cause_code": failure_cause_code_value,
                 "correction_method": review.get("correction_method") or result.get("correction_method", ""),
-                "checkpoints": {cp: optional_bool(result.get(cp)) for cp in CHECKPOINTS},
+                "checkpoints": review.get("checkpoints") or {cp: optional_bool(result.get(cp)) for cp in CHECKPOINTS},
                 "scenario_spec_id": scenario_spec_id,
                 "run_id": run_id,
                 "strategy_batch_id": result.get("strategy_batch_id", ""),
@@ -331,10 +365,17 @@ def build_rows(source_run_dir: Path, db_path: Path) -> list[dict[str, Any]]:
                 "N_tool_storage_total": total,
                 "N_tool_storage_passed": passed,
                 "N_failed_tool_storage": failed,
-                "T_wait_seconds": timing["T_wait_seconds"],
+                "R_reset": fnum(metric.get("R_reset")),
+                "C_reset_requested": fnum(metric.get("C_reset_requested")),
+                "C_reset_completed": fnum(metric.get("C_reset_completed")),
+                "T_wait_seconds": fnum(metric.get("T_wait_seconds")),
                 "T_verification_seconds": db_verification,
                 "T_verification_source": "metrics database with measured Isaac startup excluded" if db_verification is not None else "DATA_INCOMPLETE",
-                "T_loop_seconds": timing["T_loop_seconds"],
+                "T_verification_wall_seconds": fnum(metric.get("T_verification_wall_seconds")),
+                "T_isaac_startup_seconds": fnum(metric.get("T_isaac_startup_seconds")),
+                "T_loop_seconds": fnum(metric.get("T_loop_seconds")),
+                "loop_review_definition": metric.get("loop_review_definition"),
+                "include_in_metric_figures": result.get("suite", "") in {"TC1", "TC3"} and bool(metric),
                 "data_source": "LIVE_N8N_CHAT",
                 "metric_data_quality_status": metric.get("data_quality_status", "DATA_INCOMPLETE" if run_id else "NO_RUN"),
                 "chat_session_id": result.get("chat_session_id", ""),
@@ -343,6 +384,95 @@ def build_rows(source_run_dir: Path, db_path: Path) -> list[dict[str, Any]]:
                 "transcript_path": str(transcript_path),
             }
         )
+    extension_results_path = source_run_dir / "smoke_extensions" / "smoke_extension_results.csv"
+    extension_packet_path = M12_ROOT / "manual_test_packet" / "smoke_extension_tc5_tc7.csv"
+    if extension_results_path.exists() and extension_packet_path.exists():
+        extension_results = {row["extension_id"]: row for row in read_csv(extension_results_path)}
+        extension_packets = {row["extension_id"]: row for row in read_csv(extension_packet_path)}
+        repetition_path = source_run_dir / "smoke_extensions" / "llm_generation" / "llm_generation_repetitions.jsonl"
+        repetitions = [
+            json.loads(line)
+            for line in repetition_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ] if repetition_path.exists() else []
+        core_by_id = {row["test_id"]: row for row in rows}
+        for index, extension_id in enumerate(("SMOKE_028", "SMOKE_029", "SMOKE_030"), start=28):
+            result = extension_results.get(extension_id)
+            packet = extension_packets.get(extension_id)
+            review = reviewed.get(extension_id, {})
+            if not result or not packet:
+                continue
+            suite = packet["test_case_id"]
+            source_row = core_by_id.get(packet.get("source_smoke_sequence", ""), {})
+            metric = metrics.get(result.get("run_id", ""), {})
+            if suite == "TC6":
+                evidence_rows = [row for row in repetitions if "TC6" in row.get("test_case_ids", [])]
+            elif suite == "TC7":
+                evidence_rows = [row for row in repetitions if "TC7" in row.get("test_case_ids", [])]
+            else:
+                evidence_rows = []
+            full_evidence = (
+                source_row.get("full_transcript", "")
+                if suite == "TC5"
+                else "\n".join(json.dumps(row, sort_keys=True) for row in evidence_rows)
+            )
+            manual_result = str(review.get("manual_result") or "").upper()
+            rows.append(
+                {
+                    "test_label": f"T{index:02d}",
+                    "test_id": extension_id,
+                    "packet_test_id": suite,
+                    "suite": suite,
+                    "operator_instruction": packet.get("natural_language_trigger", ""),
+                    "system_response_excerpt": short(result.get("measurements_json", ""), 360),
+                    "full_transcript": full_evidence or "DATA_INCOMPLETE - detailed extension evidence missing.",
+                    "expected_criteria": json.dumps(packet, sort_keys=True),
+                    "automated_status": result.get("status", ""),
+                    "automated_result": result.get("status", ""),
+                    "reviewed_status": manual_result,
+                    "manual_result": manual_result,
+                    "review_reason": review.get("manual_reason", ""),
+                    "reviewer_type": review.get("reviewer_type", "UNREVIEWED"),
+                    "reviewed_at_utc": review.get("reviewed_at_utc"),
+                    "outcome_class": review.get("outcome_class") or "EVALUATION_INCOMPLETE",
+                    "manual_correction_used": False,
+                    "manual_intervention_required": False,
+                    "failure_stage": review.get("failure_stage", ""),
+                    "failure_cause": review.get("manual_reason", ""),
+                    "failure_cause_code": review.get("failure_cause_code", ""),
+                    "correction_method": review.get("correction_method", ""),
+                    "checkpoints": review.get("checkpoints") or {cp: None for cp in CHECKPOINTS},
+                    "scenario_spec_id": result.get("scenario_spec_id", ""),
+                    "run_id": result.get("run_id", ""),
+                    "strategy_batch_id": source_row.get("strategy_batch_id", ""),
+                    "candidate_count": source_row.get("candidate_count", ""),
+                    "candidate_run_ids": source_row.get("candidate_run_ids", ""),
+                    "selected_candidate_strategy_id": source_row.get("selected_candidate_strategy_id", ""),
+                    "selection_objective_id": source_row.get("selection_objective_id", ""),
+                    "selection_objective_score": source_row.get("selection_objective_score", ""),
+                    "R_storage": fnum(metric.get("R_storage")),
+                    "N_tool_storage_total": fnum(metric.get("N_tool_storage_total")),
+                    "N_tool_storage_passed": fnum(metric.get("N_tool_storage_passed")),
+                    "N_failed_tool_storage": fnum(metric.get("N_failed_tool_storage")),
+                    "R_reset": fnum(metric.get("R_reset")),
+                    "C_reset_requested": fnum(metric.get("C_reset_requested")),
+                    "C_reset_completed": fnum(metric.get("C_reset_completed")),
+                    "T_wait_seconds": fnum(metric.get("T_wait_seconds")),
+                    "T_verification_seconds": fnum(metric.get("T_verification_seconds")),
+                    "T_verification_source": "metrics database with measured Isaac startup excluded" if metric else "NOT_APPLICABLE",
+                    "T_verification_wall_seconds": fnum(metric.get("T_verification_wall_seconds")),
+                    "T_isaac_startup_seconds": fnum(metric.get("T_isaac_startup_seconds")),
+                    "T_loop_seconds": fnum(metric.get("T_loop_seconds")),
+                    "loop_review_definition": metric.get("loop_review_definition"),
+                    "include_in_metric_figures": False,
+                    "data_source": metric.get("data_source") or result.get("data_source", "DATA_MISSING"),
+                    "metric_data_quality_status": metric.get("data_quality_status") or result.get("data_quality_status", "DATA_INCOMPLETE"),
+                    "chat_session_id": source_row.get("chat_session_id", ""),
+                    "n8n_execution_ids": source_row.get("n8n_execution_ids", ""),
+                    "combined_execution_json": source_row.get("combined_execution_json", ""),
+                    "transcript_path": source_row.get("transcript_path", "") if suite == "TC5" else str(repetition_path),
+                }
+            )
     return rows
 
 
@@ -556,7 +686,7 @@ CASE_OBJECTIVES = {
     "TC4": ["Deployment-relevant error interception", "Unsafe or invalid state proceeds beyond its required gate", "Inject a defined error and verify interception before deployment"],
     "TC5": ["Human review and closed-loop timing", "Lifecycle events or review completion are missing", "Measure operator-facing wait, verification, and loop time"],
     "TC6": ["Single-model repeated-generation stability", "Same prompt produces malformed, incomplete, or semantically inconsistent output", "Repeat the same prompt with the same model and server presets"],
-    "TC7": ["Cross-model structured-generation comparison", "Model-dependent format, semantic, latency, or token differences", "Run identical fixtures against Gemma, Qwen, and Llama"],
+    "TC7": ["Direct cross-model structured-generation benchmark", "Model-dependent format, semantic, consistency, latency, or token differences", "Send identical fixtures, prompt, context, and schema directly to Gemma, Qwen, and Llama with equal repetitions"],
 }
 
 
@@ -672,23 +802,31 @@ def write_detailed_appendix(output: Path, rows: list[dict[str, Any]]) -> None:
             f"- Selection objective: `{row['selection_objective_id'] or 'null'}`; score=`{row['selection_objective_score'] or 'null'}`",
             f"- Data source: `{row['data_source']}`",
             f"- R_storage: `{fmt_num(row['R_storage'], 6)}` from passed=`{fmt_num(row['N_tool_storage_passed'], 0)}` / total=`{fmt_num(row['N_tool_storage_total'], 0)}`",
+            f"- R_reset: `{fmt_num(row['R_reset'], 6)}` from completed=`{fmt_num(row['C_reset_completed'], 0)}` / requested=`{fmt_num(row['C_reset_requested'], 0)}`",
             f"- T_wait: `{fmt_num(row['T_wait_seconds'], 6)}` seconds",
-            f"- T_verification: `{fmt_num(row['T_verification_seconds'], 6)}` seconds; source: {row['T_verification_source']}",
-            f"- T_loop: `{fmt_num(row['T_loop_seconds'], 6)}` seconds",
+            f"- T_verification wall interval: `{fmt_num(row['T_verification_wall_seconds'], 6)}` seconds",
+            f"- Excluded Isaac startup/model-loading interval: `{fmt_num(row['T_isaac_startup_seconds'], 6)}` seconds",
+            f"- T_verification after startup exclusion: `{fmt_num(row['T_verification_seconds'], 6)}` seconds; source: {row['T_verification_source']}",
+            f"- T_loop: `{fmt_num(row['T_loop_seconds'], 6)}` seconds; review definition: `{row['loop_review_definition'] or 'DATA_INCOMPLETE'}`",
             f"- Data quality: `{row['metric_data_quality_status']}`",
             "",
         ])
     (output / "APPENDIX_DETAILED_TRIAL_EVIDENCE.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def write_report(output: Path, rows: list[dict[str, Any]], summary: dict[str, Any]) -> None:
+def write_report(
+    output: Path,
+    rows: list[dict[str, Any]],
+    summary: dict[str, Any],
+    source_run_dir: Path,
+) -> None:
     suite_counts: dict[str, dict[str, int]] = {}
     for row in rows:
         suite = row["suite"]
         suite_counts.setdefault(suite, {"PASS": 0, "FAIL": 0})
         if row["reviewed_status"] in {"PASS", "FAIL"}:
             suite_counts[suite][row["reviewed_status"]] += 1
-    metric_rows = [row for row in rows if row.get("run_id")]
+    metric_rows = unique_metric_rows(rows)
     detail_rows = [
         [
             "Trial",
@@ -710,7 +848,12 @@ def write_report(output: Path, rows: list[dict[str, Any]], summary: dict[str, An
                 short(row["review_reason"], 170),
             ]
         )
-    metric_detail = [["Trial", "RunArtifact", "R_storage", "Placement passed/total", "T_wait (s)", "T_verification (s)", "T_loop (s)", "Verification source"]]
+    metric_detail = [[
+        "Trial", "RunArtifact", "R_storage", "Placement passed/total", "R_reset",
+        "Reset completed/requested", "T_wait (s)", "Verification wall (s)",
+        "Excluded startup (s)", "T_verification (s)", "T_loop (s)",
+        "Loop review definition", "Verification source",
+    ]]
     for row in metric_rows:
         total = fnum(row.get("N_tool_storage_total"))
         passed = fnum(row.get("N_tool_storage_passed"))
@@ -721,9 +864,18 @@ def write_report(output: Path, rows: list[dict[str, Any]], summary: dict[str, An
                 f'`{row["run_id"]}`',
                 fmt_num(row.get("R_storage"), 2),
                 placement,
+                fmt_num(row.get("R_reset"), 2),
+                (
+                    "null"
+                    if row.get("C_reset_requested") in {None, 0, 0.0}
+                    else f"{int(row.get('C_reset_completed') or 0)}/{int(row['C_reset_requested'])}"
+                ),
                 fmt_num(row.get("T_wait_seconds"), 2),
+                fmt_num(row.get("T_verification_wall_seconds"), 2),
+                fmt_num(row.get("T_isaac_startup_seconds"), 2),
                 fmt_num(row.get("T_verification_seconds"), 2),
                 fmt_num(row.get("T_loop_seconds"), 2),
+                row.get("loop_review_definition") or "DATA_INCOMPLETE",
                 row.get("T_verification_source", ""),
             ]
         )
@@ -765,9 +917,24 @@ def write_report(output: Path, rows: list[dict[str, Any]], summary: dict[str, An
         [row["test_label"], row["automated_result"], row["manual_result"], short(row["review_reason"], 180)]
         for row in rows if row.get("test_id") in disagreement_ids
     ]
-    llm_manifest = M12_ROOT / "llm_comparison" / "llm_generation_benchmark_manifest.json"
+    llm_roots = [
+        source_run_dir / "smoke_extensions" / "llm_generation",
+        M12_ROOT / "smoke_extensions" / "llm_generation",
+        M12_ROOT / "llm_comparison",
+    ]
+    llm_root = next(
+        (path for path in llm_roots if (path / "llm_generation_benchmark_manifest.json").exists()),
+        llm_roots[0],
+    )
+    llm_manifest = llm_root / "llm_generation_benchmark_manifest.json"
+    tc7_csv = llm_root / "tc7_model_comparison_results.csv"
+    tc7_rows = read_csv(tc7_csv) if tc7_csv.exists() else []
+    tc7_manual_csv = llm_root / "tc7_model_comparison_manual_review.csv"
+    tc7_manual = {
+        row["model"]: row for row in read_csv(tc7_manual_csv)
+    } if tc7_manual_csv.exists() else {}
     llm_status = (
-        f"Measured benchmark manifest: `{llm_manifest}`"
+        "Measured benchmark manifest: `llm_generation_benchmark_manifest.json`"
         if llm_manifest.exists()
         else "DATA_INCOMPLETE - TC6/TC7 are defined, but no post-improvement model benchmark has been run."
     )
@@ -778,7 +945,7 @@ def write_report(output: Path, rows: list[dict[str, Any]], summary: dict[str, An
         "",
         "## 1. Purpose",
         "",
-        "This document summarizes the manually reviewed Milestone 12 trial run used before a larger comparison campaign. The run exercised natural-language operator requests, n8n chat routing, TRT patch review, ScenarioSpec generation, Isaac Sim execution, evidence extraction, and deployment-safety checks.",
+        "This document summarizes the manually reviewed Milestone 12 trial run used before a larger comparison campaign. The run exercised natural-language operator requests, n8n chat routing, TRT patch review, ScenarioSpec generation, Isaac Sim execution, evidence extraction, deployment-safety checks, lifecycle timing, repeated generation, and cross-model comparison.",
         "",
         "The final result uses manual-review binary adjudication rather than the raw automated status. The automated runner is treated as an evidence collector and first-pass classifier; reviewer provenance remains explicit.",
         "",
@@ -814,7 +981,7 @@ def write_report(output: Path, rows: list[dict[str, Any]], summary: dict[str, An
         "",
         markdown_table(checkpoint_table),
         "",
-        "A checkpoint denominator includes only cases that entered that checkpoint. `NOT ENTERED` is not silently converted to pass or fail.",
+        "A checkpoint denominator includes only cases that entered that checkpoint. `NOT ENTERED` is not silently converted to pass or fail. In negative interception tests, `FAIL_EXPECTED` means the deliberately invalid input failed that checkpoint as intended; the test case itself may still pass when the system intercepts it at the required stage.",
         "",
         "## 6. Automated Checks And Manual Review",
         "",
@@ -836,7 +1003,38 @@ def write_report(output: Path, rows: list[dict[str, Any]], summary: dict[str, An
         "",
         llm_status,
         "",
-        "TC6 records repeated-output JSON accuracy, required-field completeness, intent-classification consistency, field-content consistency, semantic accuracy, output variants, latency, tokens, prompt version, server sampling provenance, and hardware description. TC7 applies the same fixtures to Gemma, Qwen, and Llama. Client requests do not set temperature, top-p, top-k, min-p, presence penalty, or repetition penalty; unreported server preset values remain null.",
+        "TC6 records repeated-output JSON accuracy, required-field completeness, intent-classification consistency, field-content consistency, semantic accuracy, output variants, latency, tokens, prompt version, server sampling provenance, and hardware description.",
+        "",
+        "### 8.1 TC7 Direct Cross-Model Benchmark",
+        "",
+        "TC7 uses Gemma, Qwen, and Llama as benchmark models. Every model receives the same natural-language fixture, system prompt, state context, JSON Schema, and number of repetitions. The only intentional differences are the model identifier and its matching endpoint. The benchmark calls the three live model endpoints directly; it does not traverse n8n, does not invoke the trt-api HTTP service, does not run Isaac Sim, and does not attempt deployment.",
+        "",
+        "The preliminary protocol contains one fixture repeated three times per model, for nine measured generations. Automated schema and gold-field scores are reported separately from manual semantic review. TC7 evaluates model behavior under this study's fixed structured-generation contract; it does not claim end-to-end n8n model interchangeability.",
+        "",
+        "Client requests do not set temperature, top-p, top-k, min-p, presence penalty, or repetition penalty. Unreported server preset values remain null. Exact request, prompt, and schema hashes are retained in the benchmark request snapshots.",
+        "",
+        markdown_table(
+            [["Model", "Fixtures", "Repetitions", "JSON schema accuracy", "Required-field completeness", "Semantic accuracy", "Mean latency (s)", "Max latency (s)", "Manual semantic review"]]
+            + [
+                [
+                    row.get("model", ""),
+                    row.get("fixtures", ""),
+                    row.get("repetitions_per_fixture", ""),
+                    row.get("json_format_accuracy", ""),
+                    row.get("required_field_completeness_rate", ""),
+                    row.get("semantic_accuracy", ""),
+                    row.get("average_generation_seconds", ""),
+                    row.get("maximum_generation_seconds", ""),
+                    (
+                        f"COMPLETED: {tc7_manual[row.get('model', '')].get('strict_semantic_passes', '')}/"
+                        f"{tc7_manual[row.get('model', '')].get('repetitions', '')} strict pass"
+                        if row.get("model", "") in tc7_manual
+                        else row.get("manual_semantic_review_status", "PENDING_MANUAL_REVIEW")
+                    ),
+                ]
+                for row in tc7_rows
+            ]
+        ) if tc7_rows else "DATA_INCOMPLETE - TC7 has not been executed after the latest system improvements. No cross-model values are reported.",
         "",
         "## 9. Suite-Level Outcomes",
         "",
@@ -892,9 +1090,9 @@ def write_report(output: Path, rows: list[dict[str, Any]], summary: dict[str, An
         "",
         "## 11. Timing Scope",
         "",
-        "`T_verification = T_artifact_created - T_scenario_created` is an end-to-end lifecycle interval and therefore includes host queueing, Isaac startup, rendering when headless mode is false, reset/initialization, strategy simulation, artifact persistence, and any inseparable host overhead between those timestamps. It is not the isolated strategy validation time.",
+        "`T_verification_wall = T_artifact_created - T_scenario_created` is the measured end-to-end verification wall interval. The reported thesis value is `T_verification = T_verification_wall - T_isaac_startup`, so the measured initial Isaac pre-rendering and model-loading interval is excluded.",
         "",
-        "`strategy_simulation_seconds` is derived from in-simulation sorting evidence and excludes the initial Isaac launch/render wall time. The worker separately records `simulation_startup_and_execution_seconds`; startup alone remains null with `SIMULATION_STARTUP_NOT_SEPARABLE_FROM_HOST_WALL_TIME` unless the host runner exposes a dedicated event.",
+        "The startup boundary is reconstructed from the initial host-timestamped Isaac warning sequence. The first GPU memory-budget warning terminates the initial startup sequence; when it is absent, the initial articulation-warning burst is used. Repeated articulation warnings near process shutdown are explicitly ignored. The remaining interval includes post-startup initialization, strategy simulation, artifact persistence, and inseparable evidence-pipeline overhead, so it is broader than pure physics-step time.",
         "",
         "## 12. Failure Sources",
         "",
@@ -904,9 +1102,9 @@ def write_report(output: Path, rows: list[dict[str, Any]], summary: dict[str, An
         "",
         "The system successfully answered several configuration and state queries that the automated trace scorer originally marked as failed. This shows that internal tool-trace matching is too brittle to serve as the final experimental judgment.",
         "",
-        "The system also showed clear validator gaps. Invalid or unsafe values such as an out-of-range line identifier, an impossible throughput target, and an unsupported intervention mode reached candidate approval. These should be deterministic validation failures before any approval path.",
+        "The system also showed validator and routing gaps. A negative production-line count reached candidate approval, while the negative-throughput and unsupported-intervention cases were blocked. A valid 99-line task-table query was incorrectly routed as a production modification instead of being answered as an information request. These distinctions matter: large positive values are not inherently invalid, whereas physically meaningless negative line counts require deterministic interception.",
         "",
-        "The strongest evidence contribution is the ability to connect natural-language planning with physical simulation artifacts. However, formal lifecycle event logging must be strengthened before this can be treated as a complete final comparison dataset.",
+        "The strongest evidence contribution is the ability to connect natural-language planning with physical simulation artifacts and to retain human refusal as a deployment-safety gate. The corrected lifecycle reconstruction supplies formal events for selected live runs, but rows without a post-evidence review or reset evidence remain explicitly incomplete.",
         "",
         "## Appendix A. Metric Calculation Method",
         "",
@@ -918,9 +1116,9 @@ def write_report(output: Path, rows: list[dict[str, Any]], summary: dict[str, An
         "",
         "### A.2 Operator Wait Time",
         "",
-        "`T_wait = T_candidate_or_answer_ready - T_first_operator_turn`",
+        "`T_wait = T_summary_created - T_intent_created`",
         "",
-        "The trial did not yet persist complete formal M12 event-log timestamps for every row. Therefore, `T_wait` was calculated from the combined n8n execution JSON as a proxy: first chat turn start to the first candidate, answer, clarification, or revision response that completed the operator-facing step.",
+        "For selected live runs, `T_intent_created` is the start of the n8n `Receive Operator Intent` node and `T_summary_created` is the completion of `Chat Candidate Patch Summary`. Both timestamps come from preserved n8n `runData`; chat text is not used to invent timing values.",
         "",
         "### A.3 Verification Time",
         "",
@@ -928,15 +1126,15 @@ def write_report(output: Path, rows: list[dict[str, Any]], summary: dict[str, An
         "",
         "`T_verification = T_verification_wall - T_isaac_startup`",
         "",
-        "`T_isaac_startup` begins when the host runner launches the Isaac command and ends at the last configured startup warning observed with a host system timestamp. The two articulation warnings match any `Env<id>`; the GPU memory-budget warning is also recognized. An Isaac internal timestamp is accepted only as an explicit fallback. File modification times are not used. If the startup boundary is unavailable, `T_verification` remains null and is labelled `DATA_INCOMPLETE`.",
+        "`T_isaac_startup` begins when the host runner launches the Isaac command and ends at the terminal marker in the initial startup-warning sequence. The preferred terminal marker is the first GPU memory-budget warning; otherwise the initial articulation-warning burst is used. The two articulation warnings match any `Env<id>`. Shutdown-time repetitions are ignored. Host UTC timestamps are preferred, and an Isaac internal timestamp is accepted only as an explicit fallback. If the boundary is unavailable, `T_verification` remains null and is labelled `DATA_INCOMPLETE`.",
         "",
         "### A.4 Closed-Loop Elapsed Time",
         "",
-        "`T_loop = T_last_recorded_test_turn - T_first_operator_turn`",
+        "`T_loop = T_review_end - T_intent_created`",
         "",
-        "The trial did not perform deployment. `T_loop` is therefore an automated no-deploy test-loop proxy from combined execution turn timestamps, not a human deployment-review duration. It should be compared with `T_verification` only when both values come from the same lifecycle source; otherwise the report labels the proxy source explicitly.",
+        "For a run that produced a RunArtifact, `T_review_end` must be a post-evidence candidate, deployment, or final operator review event. A pre-simulation candidate approval is not accepted as loop completion. If no post-evidence review was recorded, `T_loop` is null rather than a shorter proxy interval.",
         "",
-        "The summary mean for `T_loop` is calculated over all reviewed trial rows that have chat-turn timestamps, including fast query, clarification, and rejection cases. The summary mean for `T_verification` is calculated only over simulation rows. Therefore the two summary means are not a nested timing comparison; use Appendix C for row-level simulation comparisons.",
+        "The `T_wait`, `T_verification`, and `T_loop` figure datasets contain only unique selected live simulation rows. A TC5 timing extension that reuses an existing RunArtifact remains in the appendix but is excluded from metric figures to avoid double counting.",
         "",
         "### A.5 Manual Review Pass/Fail",
         "",
@@ -953,7 +1151,9 @@ def write_report(output: Path, rows: list[dict[str, Any]], summary: dict[str, An
         "## Appendix D. Data Quality Notes",
         "",
         "- Raw automated statuses were not used as final results without review.",
-        "- Timing values are real measurements from stored execution/file timestamps, but several are proxies because formal event rows were incomplete.",
+        "- Timing values are reconstructed from preserved n8n node-run timestamps, ScenarioSpec/RunArtifact events, and host-runner logs. Missing lifecycle boundaries remain null.",
+        "- `T_verification` excludes the measured initial Isaac startup/model-loading interval; its wall interval and excluded startup value are retained separately.",
+        "- `T_loop` is null when no post-evidence review event exists, so it cannot become artificially shorter than verification time.",
         "- Rows with `R_storage = null` had no coordinate-based placement records and were not treated as successful placement evidence.",
         "- The trial did not deploy to a production line.",
         "- Source CSV files retain internal raw identifiers for traceability, but the report uses neutral trial labels.",
@@ -994,19 +1194,22 @@ def main() -> int:
             "scenario_spec_id", "run_id", "strategy_batch_id", "candidate_count", "candidate_run_ids",
             "selected_candidate_strategy_id", "selection_objective_id", "selection_objective_score",
             "R_storage", "N_tool_storage_total", "N_tool_storage_passed",
-            "N_failed_tool_storage", "T_wait_seconds", "T_verification_seconds", "T_verification_source",
-            "T_loop_seconds", "data_source", "metric_data_quality_status", "chat_session_id",
+            "N_failed_tool_storage", "R_reset", "C_reset_requested", "C_reset_completed",
+            "T_wait_seconds", "T_verification_wall_seconds", "T_isaac_startup_seconds",
+            "T_verification_seconds", "T_verification_source", "T_loop_seconds",
+            "loop_review_definition", "include_in_metric_figures", "data_source",
+            "metric_data_quality_status", "chat_session_id",
             "n8n_execution_ids", "combined_execution_json",
         ],
     )
     tc2 = [row for row in rows if row["suite"] == "TC2"]
     tc3 = [row for row in rows if row["suite"] == "TC3"]
     tc4 = [row for row in rows if row["suite"] == "TC4"]
-    sim_rows = [row for row in rows if row["run_id"]]
+    sim_rows = unique_metric_rows(rows)
     r_storage = [row["R_storage"] for row in sim_rows if row["R_storage"] is not None]
-    t_wait = [row["T_wait_seconds"] for row in rows if row["T_wait_seconds"] is not None]
+    t_wait = [row["T_wait_seconds"] for row in sim_rows if row["T_wait_seconds"] is not None]
     t_ver = [row["T_verification_seconds"] for row in sim_rows if row["T_verification_seconds"] is not None]
-    t_loop = [row["T_loop_seconds"] for row in rows if row["T_loop_seconds"] is not None]
+    t_loop = [row["T_loop_seconds"] for row in sim_rows if row["T_loop_seconds"] is not None]
     pass_count = sum(1 for row in rows if row["reviewed_status"] == "PASS")
     fail_count = sum(1 for row in rows if row["reviewed_status"] == "FAIL")
     tc2_pass = sum(1 for row in tc2 if row["reviewed_status"] == "PASS")
@@ -1021,8 +1224,8 @@ def main() -> int:
         rows=[
             {"label": "LLMAPM generated import", "value": refs["LLMAPM"]["reference_timing_minutes"]["generated_process_import_time"], "series": "Literature", "display": "6 min", "note": "import/code logic only"},
             {"label": "LLMAPM manual engineer", "value": refs["LLMAPM"]["reference_timing_minutes"]["engineer_manual_process_time"], "series": "Literature", "display": "30 min", "note": "manual process creation"},
-            {"label": "This study's T_wait mean", "value": (mean(t_wait) or 0) / 60, "series": "This study", "display": f"{(mean(t_wait) or 0):.1f}s", "note": "automated chat wait proxy"},
-            {"label": "This study's T_verification mean", "value": (mean(t_ver) or 0) / 60, "series": "This study (different scope)", "display": f"{(mean(t_ver) or 0):.1f}s", "note": "ScenarioSpec file to RunArtifact file"},
+            {"label": "This study's T_wait mean", "value": (mean(t_wait) or 0) / 60, "series": "This study", "display": f"{(mean(t_wait) or 0):.1f}s", "note": "intent node to candidate-summary node"},
+            {"label": "This study's T_verification mean", "value": (mean(t_ver) or 0) / 60, "series": "This study (different scope)", "display": f"{(mean(t_ver) or 0):.1f}s", "note": "wall interval minus measured Isaac startup"},
         ],
     )
     svg_grouped_horizontal(
@@ -1072,23 +1275,42 @@ def main() -> int:
         title="Operator Wait Time Distribution",
         metric="T_wait_seconds",
         values=t_wait,
-        source_note="Source: combined execution JSON turn timestamps; live chat trial rows.",
+        source_note="Source: preserved n8n runData lifecycle events for unique live simulation rows.",
     )
     distribution_rows += svg_time_distribution(
         fig_dir / "fig_07_T_verification_distribution.svg",
         title="Verification Time Distribution",
         metric="T_verification_seconds",
         values=t_ver,
-        source_note="Source: ScenarioSpec and RunArtifact file timestamps for simulation rows.",
+        source_note="Source: ScenarioSpec/RunArtifact lifecycle events minus measured initial Isaac startup.",
     )
     distribution_rows += svg_time_distribution(
         fig_dir / "fig_08_T_loop_distribution.svg",
         title="Closed-Loop Elapsed Time Distribution",
         metric="T_loop_seconds",
         values=t_loop,
-        source_note="Source: combined execution JSON turn timestamps; automated no-deploy loop.",
+        source_note="Source: intent event to recorded post-evidence operator review; incomplete loops excluded.",
     )
     cp_values = checkpoint_summary(rows)
+    write_csv(
+        output / "checkpoint_summary.csv",
+        [
+            {
+                "checkpoint": cp,
+                "test_object": CHECKPOINTS[cp]["test_object"],
+                "pass_criteria": CHECKPOINTS[cp]["pass_criteria"],
+                "entered": values["entered"],
+                "passed": values["passed"],
+                "pass_rate": values["rate"],
+                "assessment_mode": CHECKPOINTS[cp]["mode"],
+            }
+            for cp, values in cp_values.items()
+        ],
+        [
+            "checkpoint", "test_object", "pass_criteria", "entered", "passed",
+            "pass_rate", "assessment_mode",
+        ],
+    )
     svg_grouped_horizontal(
         fig_dir / "fig_09_checkpoint_pass_rates.svg",
         title="Checkpoint Pass Rates",
@@ -1147,7 +1369,7 @@ def main() -> int:
         "output": str(output),
     }
     (output / "reviewed_trial_summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
-    write_report(output, rows, summary)
+    write_report(output, rows, summary, source_run_dir)
     write_detailed_appendix(output, rows)
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0

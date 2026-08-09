@@ -1,0 +1,25 @@
+{
+  "audit_id": "audit-51baedfe-eb13-4433-ae8e-13629dfef7fb",
+  "intent_text": "with two production lines remaining, reduce the current arrival time by 0.5 seconds, reduce the current entanglement fix time by 1 second, make the current recovery delay 1 second slower, and simulate 4 tooling per line",
+  "operations": [],
+  "operator_id": "op_001",
+  "patch_id": "patch-1786202481980",
+  "reason": "m12 seed",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-08-08T15:21:32.195766Z",
+  "trt_after_hash": "5746cf4ee15334cd791e51794538ddadf58b6336fe82ec300fe7527177049dc6",
+  "trt_after_version": "v189",
+  "trt_before_hash": "da3547f10ab871129b08bf48e11c9fba81e411b09d137992d5383ce6878885da",
+  "trt_before_version": "v188",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

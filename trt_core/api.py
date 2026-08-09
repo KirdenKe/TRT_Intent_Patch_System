@@ -1637,12 +1637,39 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
     }
     url = os.getenv("VLLM_CHAT_COMPLETIONS_URL", DEFAULT_VLLM_CHAT_COMPLETIONS_URL)
     semantic_attempts: list[dict[str, Any]] = []
+    model_call_attempts: list[dict[str, Any]] = []
     try:
-        raw = _post_json(
-            url,
-            body,
-            float(os.getenv("VLLM_DIALOGUE_DECISION_TIMEOUT_SECONDS", "30")),
-        )
+        timeout_seconds = float(os.getenv("VLLM_DIALOGUE_DECISION_TIMEOUT_SECONDS", "120"))
+        call_attempts = max(1, int(os.getenv("VLLM_DIALOGUE_DECISION_ATTEMPTS", "2")))
+        call_errors: list[str] = []
+        raw: dict[str, Any] | None = None
+        for call_attempt in range(1, call_attempts + 1):
+            try:
+                raw = _post_json(url, body, timeout_seconds)
+                model_call_attempts.append(
+                    {
+                        "attempt": call_attempt,
+                        "stage": "MODEL_CALL",
+                        "status": "COMPLETED",
+                        "timeout_seconds": timeout_seconds,
+                    }
+                )
+                break
+            except (OSError, TimeoutError, urllib.error.URLError) as exc:
+                call_errors.append(f"attempt {call_attempt}: {exc}")
+                model_call_attempts.append(
+                    {
+                        "attempt": call_attempt,
+                        "stage": "MODEL_CALL",
+                        "status": "SYSTEM_ERROR",
+                        "error": str(exc),
+                        "timeout_seconds": timeout_seconds,
+                    }
+                )
+        if raw is None:
+            raise TimeoutError(
+                "dialogue classifier failed after automatic retries: " + "; ".join(call_errors)
+            )
         content = raw.get("choices", [{}])[0].get("message", {}).get("content", raw)
         decision = json.loads(content) if isinstance(content, str) else content
         if not isinstance(decision, dict):
@@ -1650,7 +1677,8 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
         validation_errors = _dialogue_time_arrival_validation_errors(decision, decision_input)
         semantic_attempts.append(
             {
-                "attempt": 1,
+                "attempt": len(semantic_attempts) + 1,
+                "stage": "SEMANTIC_VALIDATION",
                 "status": "VALID" if not validation_errors else "INVALID_DIAGNOSTIC",
                 "errors": validation_errors,
                 "classification_preserved": True,
@@ -1659,16 +1687,23 @@ def post_chat_dialogue_decision(payload: dict[str, Any]) -> dict[str, Any]:
         if validation_errors:
             decision["semantic_validation_status"] = "INVALID_DIAGNOSTIC"
             decision["semantic_validation_errors"] = validation_errors
+        decision["llm_call_attempts"] = model_call_attempts
         decision["llm_semantic_validation_attempts"] = semantic_attempts
     except (OSError, TimeoutError, urllib.error.URLError, ValueError, KeyError, TypeError) as exc:
         decision = {
             "dialogue_state": "UNKNOWN",
             "turn_type": "UNKNOWN",
-            "operator_message": f"I could not evaluate the dialogue state: {exc}",
+            "operator_message": (
+                "The intent classifier could not complete after automatic retries. "
+                "This is a system/model error; retry the same request unchanged."
+            ),
             "normalized_request": None,
-            "missing_or_unclear_items": ["dialogue_state"],
+            "missing_or_unclear_items": [],
             "approval_decision": None,
             "deployment_decision": None,
+            "failure_classification": "SYSTEM_MODEL_ERROR",
+            "system_error_detail": str(exc),
+            "llm_call_attempts": model_call_attempts,
             "llm_semantic_validation_attempts": semantic_attempts,
         }
 

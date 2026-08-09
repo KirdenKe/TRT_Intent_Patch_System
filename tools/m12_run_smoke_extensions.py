@@ -93,6 +93,11 @@ def main() -> int:
     parser.add_argument("--repetitions", type=int, default=3)
     parser.add_argument("--timeout-seconds", type=float, default=120)
     parser.add_argument("--plan-only", action="store_true")
+    parser.add_argument(
+        "--reuse-llm-results",
+        action="store_true",
+        help="Reuse preserved live TC6/TC7 result CSVs while recalculating TC5.",
+    )
     args = parser.parse_args()
 
     resolve = lambda path: path if path.is_absolute() else PROJECT_ROOT / path
@@ -127,13 +132,30 @@ def main() -> int:
         "operator_text": plan[1]["natural_language_trigger"],
         "expected_simulation_config_updates": {"num_envs": 4, "add_reference_number": 2},
     }
-    benchmark_manifest = run_benchmark(
-        rows=fixture,
-        repetitions=args.repetitions,
-        output=benchmark_dir,
-        timeout_seconds=args.timeout_seconds,
-        hardware_description=f"client={platform.platform()}; model_server_hardware=NOT_REPORTED",
-    )
+    benchmark_manifest_path = benchmark_dir / "llm_generation_benchmark_manifest.json"
+    if args.reuse_llm_results:
+        required_results = [
+            benchmark_dir / "tc6_generation_stability_results.csv",
+            benchmark_dir / "tc7_model_comparison_results.csv",
+            benchmark_manifest_path,
+        ]
+        missing = [str(path) for path in required_results if not path.exists()]
+        if missing:
+            raise SystemExit(f"Cannot reuse TC6/TC7 results; missing: {', '.join(missing)}")
+        benchmark_manifest = json.loads(benchmark_manifest_path.read_text(encoding="utf-8"))
+        benchmark_manifest = {
+            **benchmark_manifest,
+            "reused_for_extension_recalculation_at_utc": now_utc(),
+            "live_model_calls_repeated": False,
+        }
+    else:
+        benchmark_manifest = run_benchmark(
+            rows=fixture,
+            repetitions=args.repetitions,
+            output=benchmark_dir,
+            timeout_seconds=args.timeout_seconds,
+            hardware_description=f"client={platform.platform()}; model_server_hardware=NOT_REPORTED",
+        )
     for test_case_id, filename in (
         ("TC6", "tc6_generation_stability_results.csv"),
         ("TC7", "tc7_model_comparison_results.csv"),
@@ -151,7 +173,7 @@ def main() -> int:
                 "measurements_json": json.dumps(rows, sort_keys=True),
                 "missing_fields_json": "[]",
                 "data_source": "LIVE_TRT_API",
-                "data_source_detail": "Direct live model endpoint using the trt-api dialogue prompt and structured-output schema; n8n is not used for TC6/TC7.",
+                "data_source_detail": "Direct live model endpoints using the dialogue-decision prompt implemented in trt-api. Requests do not traverse the n8n workflow or the trt-api HTTP service, and TC7 does not invoke Isaac Sim or deployment.",
                 "data_quality_status": "OK" if rows else "DATA_INCOMPLETE",
                 "created_at_utc": now_utc(),
             }

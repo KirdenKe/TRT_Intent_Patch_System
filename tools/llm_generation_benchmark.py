@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from jsonschema import ValidationError, validate
+
 from trt_core.api import _build_dialogue_decision_prompt, _dialogue_decision_schema
 
 
@@ -33,7 +35,7 @@ MODELS = [
         "endpoint": "http://192.168.50.168:26337/v1/chat/completions",
     },
 ]
-PROMPT_VERSION = "dialogue-decision-v2.0-time-arrival-state-aligned"
+PROMPT_VERSION = "tc7-cross-model-dialogue-decision-v1"
 PROHIBITED_SAMPLING_FIELDS = {
     "temperature",
     "top_p",
@@ -140,8 +142,15 @@ def run_benchmark(
 ) -> dict[str, Any]:
     output.mkdir(parents=True, exist_ok=True)
     raw_path = output / "llm_generation_repetitions.jsonl"
+    request_path = output / "llm_generation_requests.jsonl"
     records: list[dict[str, Any]] = []
-    with raw_path.open("w", encoding="utf-8") as raw_handle:
+    request_hashes: set[str] = set()
+    prompt_hashes: set[str] = set()
+    schema_hashes: set[str] = set()
+    with (
+        raw_path.open("w", encoding="utf-8") as raw_handle,
+        request_path.open("w", encoding="utf-8") as request_handle,
+    ):
         for model in MODELS:
             for fixture in rows:
                 text = str(fixture.get("operator_text") or "")
@@ -161,6 +170,36 @@ def run_benchmark(
                     "max_tokens": 4000,
                     "structured_outputs": {"json": _dialogue_decision_schema()},
                 }
+                canonical_prompt = json.dumps(messages, sort_keys=True, separators=(",", ":"))
+                canonical_schema = json.dumps(
+                    body["structured_outputs"]["json"],
+                    sort_keys=True,
+                    separators=(",", ":"),
+                )
+                canonical_request = json.dumps(body, sort_keys=True, separators=(",", ":"))
+                prompt_sha256 = hashlib.sha256(canonical_prompt.encode("utf-8")).hexdigest()
+                schema_sha256 = hashlib.sha256(canonical_schema.encode("utf-8")).hexdigest()
+                request_sha256 = hashlib.sha256(canonical_request.encode("utf-8")).hexdigest()
+                prompt_hashes.add(prompt_sha256)
+                schema_hashes.add(schema_sha256)
+                request_hashes.add(request_sha256)
+                request_handle.write(
+                    json.dumps(
+                        {
+                            "test_case_id": "TC7",
+                            "fixture_id": fixture["id"],
+                            "model": model["model"],
+                            "endpoint": model["endpoint"],
+                            "prompt_version": PROMPT_VERSION,
+                            "prompt_sha256": prompt_sha256,
+                            "schema_sha256": schema_sha256,
+                            "request_sha256": request_sha256,
+                            "request_body": body,
+                        },
+                        sort_keys=True,
+                    )
+                    + "\n"
+                )
                 for repetition in range(1, repetitions + 1):
                     started_at = now_utc()
                     started = time.perf_counter()
@@ -173,7 +212,16 @@ def run_benchmark(
                         decision = json.loads(content) if isinstance(content, str) else content
                         if not isinstance(decision, dict):
                             raise ValueError("Structured output is not an object.")
-                    except (OSError, TimeoutError, urllib.error.URLError, ValueError, KeyError, TypeError) as exc:
+                        validate(instance=decision, schema=body["structured_outputs"]["json"])
+                    except (
+                        OSError,
+                        TimeoutError,
+                        urllib.error.URLError,
+                        ValidationError,
+                        ValueError,
+                        KeyError,
+                        TypeError,
+                    ) as exc:
                         error = str(exc)
                     latency = time.perf_counter() - started
                     canonical = json.dumps(decision, sort_keys=True, separators=(",", ":")) if decision else None
@@ -185,6 +233,9 @@ def run_benchmark(
                         "endpoint": model["endpoint"],
                         "repetition": repetition,
                         "prompt_version": PROMPT_VERSION,
+                        "prompt_sha256": prompt_sha256,
+                        "schema_sha256": schema_sha256,
+                        "request_sha256": request_sha256,
                         "temperature": None,
                         "top_p": None,
                         "seed": None,
@@ -214,7 +265,7 @@ def run_benchmark(
                         "input_tokens": (response or {}).get("usage", {}).get("prompt_tokens"),
                         "output_tokens": (response or {}).get("usage", {}).get("completion_tokens"),
                         "total_tokens": (response or {}).get("usage", {}).get("total_tokens"),
-                        "failure_type": "NONE" if not error else "MODEL_REQUEST_OR_FORMAT_ERROR",
+                        "failure_type": "NONE" if not error else "MODEL_REQUEST_OR_SCHEMA_ERROR",
                         "error": error,
                         "decision": decision,
                     }
@@ -269,6 +320,7 @@ def run_benchmark(
                 "test_case_id": "TC7",
                 "model": model["model"],
                 "fixtures": len(model_rows),
+                "repetitions_per_fixture": repetitions,
                 "json_format_accuracy": _mean_present(row["json_format_accuracy"] for row in model_rows),
                 "required_field_completeness_rate": _mean_present(
                     row["required_field_completeness_rate"] for row in model_rows
@@ -289,6 +341,7 @@ def run_benchmark(
                 ),
                 "average_input_tokens": _mean_present(row["average_input_tokens"] for row in model_rows),
                 "average_output_tokens": _mean_present(row["average_output_tokens"] for row in model_rows),
+                "manual_semantic_review_status": "PENDING_MANUAL_REVIEW",
                 "data_quality_status": "OK" if model_rows else "DATA_MISSING",
             }
         )
@@ -299,18 +352,28 @@ def run_benchmark(
     manifest = {
         "created_at_utc": now_utc(),
         "prompt_version": PROMPT_VERSION,
+        "benchmark_scope": "DIRECT_CROSS_MODEL_STRUCTURED_GENERATION",
+        "n8n_used": False,
+        "trt_api_http_used": False,
+        "isaac_sim_used": False,
+        "deployment_attempted": False,
         "models": MODELS,
         "fixture_count": len(rows),
         "repetitions_per_fixture": repetitions,
         "request_sampling_policy": "SERVER_PRESET_NOT_OVERRIDDEN",
         "hardware_environment": hardware_description,
         "raw_results": str(raw_path),
+        "request_snapshots": str(request_path),
+        "prompt_sha256_values": sorted(prompt_hashes),
+        "schema_sha256_values": sorted(schema_hashes),
+        "request_sha256_values": sorted(request_hashes),
         "summary_csv": str(csv_path),
         "tc6_results": str(output / "tc6_generation_stability_results.csv"),
         "tc7_results": str(output / "tc7_model_comparison_results.csv"),
         "data_quality_warnings": [
             "Temperature, top-p, and seed are null because the client does not override model-server presets.",
             "GPU memory requirement remains null unless measured independently on the model servers.",
+            "Automated semantic scores require a separate manual semantic review before final interpretation.",
         ],
     }
     (output / "llm_generation_benchmark_manifest.json").write_text(

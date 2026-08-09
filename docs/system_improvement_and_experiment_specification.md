@@ -398,6 +398,13 @@ not send `temperature`, `top_p`, `top_k`, `min_p`, `presence_penalty`, or
 null with `SERVER_PRESET_NOT_OVERRIDDEN` unless model-server metadata is
 collected separately. Null is required; guessed server settings are forbidden.
 
+TC7 is strictly a direct cross-model structured-generation benchmark. It uses
+Gemma, Qwen, and Llama as benchmark models and changes only the model identifier
+and matching endpoint. It does not switch models inside n8n, does not invoke
+Isaac Sim or deployment, and does not claim complete workflow interchangeability.
+Exact request, prompt, and schema hashes must be retained for reproducibility,
+and automated semantic scores must remain separate from manual semantic review.
+
 Recorded outcomes include JSON accuracy, required-field completeness, intent
 classification accuracy and consistency, semantic accuracy, field-content
 consistency, output variants, failure type, average/maximum latency, and token

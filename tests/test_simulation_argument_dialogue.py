@@ -3,7 +3,11 @@ from __future__ import annotations
 import pytest
 
 from trt_core.digital_twin_adapter.isaac_command_builder import build_isaac_command_args_with_sources
-from trt_core.intent_normalizer import normalize_domain_candidate
+from trt_core.intent_normalizer import (
+    normalize_domain_candidate,
+    parse_tooling_count_request,
+    relative_time_arrival_validation_errors,
+)
 
 
 def current_trt() -> dict:
@@ -253,6 +257,21 @@ def test_relative_time_arrival_request_accepts_gemma_derived_values():
         "resume_delay": 2.0,
         "add_reference_number": 4,
     }
+
+
+def test_simulate_tooling_per_line_phrase_is_an_explicit_simulation_value():
+    text = "simulate 4 tooling per line"
+
+    assert parse_tooling_count_request(text) == {"add_reference_number": 4}
+    errors = relative_time_arrival_validation_errors(
+        {
+            "intent_text": text,
+            "simulation_config_updates": {"num_envs": 2},
+        },
+        None,
+    )
+
+    assert errors == ["Gemma omitted the derived add_reference_number value"]
 
 
 def test_relative_time_arrival_request_rejects_incorrect_gemma_derivation():

@@ -1,0 +1,31 @@
+{
+  "audit_id": "audit-963ce4dd-826c-4338-a4dd-d43431f1a1c6",
+  "intent_text": "set line 1 throughput/hr to at least 90 and simulate four production lines with 2 tooling per line",
+  "operations": [
+    {
+      "op": "replace",
+      "path": "/lines/line_1/kpi/min_throughput_per_hour",
+      "value": 90
+    }
+  ],
+  "operator_id": "op_001",
+  "patch_id": "patch-1786200208281",
+  "reason": "m12 seed",
+  "rejection_reasons": [],
+  "run_artifact_id": null,
+  "scenario_spec_id": null,
+  "status": "ACCEPTED",
+  "timestamp_utc": "2026-08-08T14:43:32.869513Z",
+  "trt_after_hash": "cfcb9644b0a5d3386e2d2bceb6279ae2640a3a533196b8475ef1a3cb6fb0a69e",
+  "trt_after_version": "v186",
+  "trt_before_hash": "643c617fae12841edf81ab5bab8483575e35d460991f70c456af0a22cdd2ff09",
+  "trt_before_version": "v185",
+  "trt_id": "trt-demo",
+  "validation_results": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  }
+}

@@ -20,6 +20,7 @@ from typing import Any, Iterable
 import yaml
 
 from trt_core.digital_twin_adapter.result_reader import read_simulation_results
+from trt_core.isaac_startup_timing import finalized_startup_timing
 from trt_core.repository import PROJECT_ROOT, TRTRepository
 
 
@@ -536,7 +537,9 @@ def _event_time(connection: sqlite3.Connection, run_id: str, event_name: str) ->
 def _event_meta(connection: sqlite3.Connection, run_id: str) -> dict[str, Any]:
     row = connection.execute(
         """
-        SELECT session_id, operator_id, trt_id, trt_version
+        SELECT session_id, operator_id, trt_id, trt_version,
+               test_case_id, workflow_execution_id, chat_session_id,
+               semi_manual, deployment_suppressed
           FROM m12_event_log
          WHERE run_id = ?
       ORDER BY event_ts_utc DESC
@@ -573,17 +576,30 @@ def _host_timing_for_run(
     artifact_path: Path,
 ) -> dict[str, Any]:
     event_payload = _event_payload(connection, run_id, "RUN_ARTIFACT_CREATED")
-    timing = event_payload.get("host_timing")
-    if isinstance(timing, dict):
-        return timing
+    event_timing = event_payload.get("host_timing")
+    timing = dict(event_timing) if isinstance(event_timing, dict) else {}
     sidecar_path = artifact_path.with_name(f"{run_id}.timing.json")
-    if not sidecar_path.exists():
-        return {}
-    try:
-        value = json.loads(sidecar_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    return value if isinstance(value, dict) else {}
+    if sidecar_path.exists():
+        try:
+            value = json.loads(sidecar_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            value = {}
+        if isinstance(value, dict):
+            timing.update(value)
+
+    lines: list[str] = []
+    for suffix in ("stdout.log", "stderr.log"):
+        log_path = artifact_path.with_name(f"{run_id}.{suffix}")
+        if log_path.exists():
+            lines.extend(log_path.read_text(encoding="utf-8", errors="replace").splitlines())
+    finalized = finalized_startup_timing(
+        lines,
+        command_started_at_utc=timing.get("isaac_command_started_at_utc"),
+    )
+    if finalized:
+        timing.update(finalized)
+        timing["startup_timing_finalized_from_logs"] = True
+    return timing
 
 
 def collect_run_metrics(
@@ -607,6 +623,7 @@ def collect_run_metrics(
     scenario_spec_id = run.get("scenario_spec_id") or artifact.get("scenario_spec_id")
     spec_path, scenario_spec = _find_scenario_spec(repository, scenario_spec_id, run.get("scenario_spec_path"))
     scenario_spec_id = scenario_spec_id or scenario_spec.get("scenario_spec_id")
+    meta = _event_meta(connection, run_id)
 
     connection.execute("DELETE FROM m12_tool_storage_records WHERE run_id = ?", (run_id,))
     storage_records = _tool_storage_records(artifact, scenario_spec_id)
@@ -616,6 +633,11 @@ def collect_run_metrics(
         generated_by=generated_by,
         run_id=run_id,
         scenario_spec_id=scenario_spec_id,
+        test_case_id=meta.get("test_case_id"),
+        workflow_execution_id=meta.get("workflow_execution_id"),
+        chat_session_id=meta.get("chat_session_id") or meta.get("session_id"),
+        semi_manual=bool(meta.get("semi_manual")),
+        deployment_suppressed=bool(meta.get("deployment_suppressed")),
     )
     if is_live_test_override is not None:
         source_provenance["is_live_test"] = 1 if is_live_test_override else 0
@@ -687,7 +709,6 @@ def collect_run_metrics(
     scenario_created = _event_time(connection, run_id, "SCENARIO_CREATED")
     if scenario_created is None and spec_path and spec_path.exists():
         scenario_created = datetime.fromtimestamp(spec_path.stat().st_mtime, timezone.utc).isoformat().replace("+00:00", "Z")
-    meta = _event_meta(connection, run_id)
     host_timing = _host_timing_for_run(connection, run_id, artifact_path)
     verification_seconds, verification_wall_seconds, startup_seconds = verification_seconds_excluding_startup(
         scenario_created,
@@ -698,11 +719,15 @@ def collect_run_metrics(
     summary_created = _event_time(connection, run_id, "CANDIDATE_SUMMARY_CREATED")
     candidate_review = _event_time(connection, run_id, "CANDIDATE_REVIEW_ENDED")
     deployment_review = _event_time(connection, run_id, "DEPLOYMENT_REVIEW_ENDED")
-    review_end = deployment_review or candidate_review
+    # A candidate approval that occurred before simulation is not the end of a
+    # completed simulated loop. Post-artifact runs require a post-evidence
+    # deployment/rejection review; otherwise T_loop is incomplete.
+    review_end = deployment_review
     loop_definition = None
     if deployment_review:
         loop_definition = "DEPLOYMENT_REVIEW"
-    elif candidate_review:
+    elif artifact_created is None and candidate_review:
+        review_end = candidate_review
         loop_definition = "CANDIDATE_REVIEW"
 
     warnings = []

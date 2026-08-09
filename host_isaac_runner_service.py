@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field
 from trt_core.digital_twin_adapter.result_reader import read_simulation_results
 from trt_core.isaac_startup_timing import (
     fallback_startup_timing,
+    finalized_startup_timing,
     isaac_internal_seconds,
     startup_marker_name,
 )
@@ -531,12 +532,20 @@ def _capture_process_stream(
 
 def _finalize_startup_timing(run: dict[str, Any]) -> dict[str, Any]:
     timing = dict(run.get("timing") or {})
-    if timing.get("isaac_startup_seconds") is None:
-        lines: list[str] = []
-        for key in ("stdout_path", "stderr_path"):
-            path = run.get(key)
-            if path and Path(path).exists():
-                lines.extend(Path(path).read_text(encoding="utf-8", errors="replace").splitlines())
+    lines: list[str] = []
+    for key in ("stdout_path", "stderr_path"):
+        path = run.get(key)
+        if path and Path(path).exists():
+            lines.extend(Path(path).read_text(encoding="utf-8", errors="replace").splitlines())
+    finalized = finalized_startup_timing(
+        lines,
+        command_started_at_utc=timing.get("isaac_command_started_at_utc"),
+    )
+    if finalized:
+        timing.update(finalized)
+        timing["startup_marker_events_live"] = timing.pop("startup_marker_events", [])
+        timing["startup_timing_finalized_from_logs"] = True
+    else:
         fallback = fallback_startup_timing(lines)
         if fallback:
             timing.update(fallback)

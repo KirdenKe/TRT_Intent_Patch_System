@@ -1,0 +1,44 @@
+{
+  "conversation": [],
+  "latest_dialogue_decision": null,
+  "normalized_request": {
+    "affected_lines": [],
+    "debug": false,
+    "dry_run_only": false,
+    "intent_text": "set all production lines throughput/hr to at least 90 but only apply it to no lines",
+    "kpi_updates": {
+      "min_throughput_per_hour": 90
+    },
+    "line_ids": [],
+    "operator_id": null,
+    "pending_deployment": null,
+    "pending_intent": null,
+    "query_targets": [],
+    "reason": null,
+    "run_id": null,
+    "scenario_spec_id": null,
+    "session_id": "m12-full-SMOKE_025-1786205445",
+    "simulation_config_updates": null
+  },
+  "pending_intent": {
+    "intent_text": "set all production lines throughput/hr to at least 90 but only apply it to no lines",
+    "kpi_updates": {
+      "min_throughput_per_hour": 90
+    },
+    "missing_fields": [
+      "operator_id",
+      "reason"
+    ],
+    "operator_id": null,
+    "original_intent_text": "set all production lines throughput/hr to at least 90 but only apply it to no lines",
+    "pending_status": "WAITING_FOR_REQUIRED_FIELDS",
+    "reason": null,
+    "request_types": [],
+    "simulation_config_updates": null,
+    "target_lines": [],
+    "target_scope": null
+  },
+  "session_id": "m12-full-SMOKE_025-1786205445",
+  "state": "WAITING_FOR_REQUIRED_FIELDS",
+  "updated_at": "2026-08-08T16:10:49.300932Z"
+}

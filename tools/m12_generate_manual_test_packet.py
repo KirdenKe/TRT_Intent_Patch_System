@@ -267,7 +267,7 @@ def build_smoke_extensions(smoke: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "natural_language_trigger": source["paste_into_n8n"],
             "repetitions": 3,
             "models": "Gemma; Qwen; Llama",
-            "pass_criteria": "The same prompt and structured schema are run three times against each model without client-side sampling overrides.",
+            "pass_criteria": "Direct cross-model benchmark: the same natural-language fixture, prompt, state context, and structured schema are run three times against each model without client-side sampling overrides.",
         },
     ]
 
@@ -339,6 +339,8 @@ def write_readme(output: Path, tc1: list[dict[str, Any]], tc2: list[dict[str, An
     ])
     lines.extend(markdown_table(build_smoke_extensions(smoke), ["extension_id", "test_case_id", "execution_mode", "repetitions", "models", "pass_criteria"], limit=None))
     lines.extend([
+        "",
+        "TC7 is strictly a direct cross-model benchmark. It uses Gemma, Qwen, and Llama as benchmark models and compares their structured-generation quality, consistency, latency, and token use. It does not switch models inside n8n, does not test end-to-end workflow interchangeability, and does not invoke Isaac Sim or deployment.",
         "",
         "Validate the extension plan without calling n8n, Isaac, or any model endpoint:",
         "",

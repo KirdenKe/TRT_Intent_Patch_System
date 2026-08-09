@@ -769,7 +769,7 @@ def test_intent_normalize_recovers_explicit_absolute_values_without_model_retry(
         "intent_text": (
             "my arrival time is 4 seconds, the time required to resolve the tangling issue "
             "is 5 seconds, and the recovery time is 0.5 seconds. continue until i arrive "
-            "at the production line. the allow overlap ratio is 0.9"
+            "at the production line. the allow overlap ratio is 0.9 and simulate 4 tooling per line"
         ),
         "request_types": ["SIMULATION_CONFIG_UPDATE"],
         "line_id": None,
@@ -814,10 +814,79 @@ def test_intent_normalize_recovers_explicit_absolute_values_without_model_retry(
         "resume_delay": 0.5,
         "chosen_intervention_mode": "continue-until-arrival",
         "allowed_overlap_ratio": 0.9,
+        "add_reference_number": 4,
     }
     assert result["llm_semantic_regeneration"][0]["method"] == (
         "DETERMINISTIC_EXPLICIT_VALUE_RECOVERY"
     )
+
+
+def test_dialogue_decision_retries_transient_model_timeout(monkeypatch, tmp_path):
+    repository = TRTRepository(tmp_path)
+    monkeypatch.setattr(api, "repository", repository)
+    repository.save_trt(_trt())
+    calls = 0
+
+    def fake_post(url, body, timeout_seconds):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise TimeoutError("timed out")
+        return {
+            "choices": [
+                {
+                    "message": {
+                        "content": json.dumps(
+                            {
+                                "dialogue_state": "NEEDS_CLARIFICATION",
+                                "turn_type": "TASK_REQUEST",
+                                "operator_message": "Please provide operator ID and reason.",
+                                "normalized_request": {
+                                    "operator_id": None,
+                                    "reason": None,
+                                    "intent_text": "set all production lines throughput/hr to at least 120",
+                                    "target_scope": "ALL_LINES",
+                                    "target_lines": [],
+                                    "request_types": ["KPI_UPDATE"],
+                                    "kpi_updates": {"min_throughput_per_hour": 120},
+                                    "simulation_config_updates": None,
+                                },
+                                "missing_or_unclear_items": ["operator_id", "reason"],
+                                "approval_decision": None,
+                                "deployment_decision": None,
+                            }
+                        )
+                    }
+                }
+            ]
+        }
+
+    monkeypatch.setattr(api, "_post_json", fake_post)
+    result = api.post_chat_dialogue_decision(
+        {
+            "session_id": "dialogue_retry_test",
+            "latest_user_message": "set all production lines throughput/hr to at least 120",
+        }
+    )
+
+    assert calls == 2
+    assert result["turn_type"] == "TASK_REQUEST"
+    assert result["status"] != "UNKNOWN"
+    assert result["llm_decision_raw"]["llm_call_attempts"] == [
+        {
+            "attempt": 1,
+            "stage": "MODEL_CALL",
+            "status": "SYSTEM_ERROR",
+            "error": "timed out",
+            "timeout_seconds": 120.0,
+        },
+        {
+            "attempt": 2,
+            "stage": "MODEL_CALL",
+            "status": "COMPLETED",
+            "timeout_seconds": 120.0,
+        },
+    ]
 
 
 def test_scenario_candidate_override_is_applied_without_changing_kpi(fixture_loader):
