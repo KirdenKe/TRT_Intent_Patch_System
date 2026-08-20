@@ -12,6 +12,9 @@ from uuid import uuid4
 from trt_core.digital_twin_adapter.scenario_spec import validate_scenario_spec_for_isaac
 
 
+# HANDOVER CONFIGURATION: do not customize a new machine by editing these
+# fallback constants. Put host_project_root, isaac_working_directory,
+# python_bat, entry_script, and seed_db_path in data/isaac_host_config.json.
 DEFAULT_ISAAC_WORKING_DIRECTORY = r"C:\Dev\IsaacSim"
 DEFAULT_ISAAC_PYTHON_BAT = DEFAULT_ISAAC_WORKING_DIRECTORY + r"\_build\windows-x86_64\release\python.bat"
 DEFAULT_UR5_ENTRY_SCRIPT = (

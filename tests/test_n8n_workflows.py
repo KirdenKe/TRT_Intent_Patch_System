@@ -297,7 +297,7 @@ def test_intent_candidate_vllm_budget_and_length_guard():
     assert "INTENT_LLM_TRUNCATED_AFTER_RETRIES" in retry_code
     assert "llm_action: 'ERROR'" in retry_code
     assert "This is a system issue, not an operator request issue" in retry_code
-    assert "endpoint_url: 'http://192.168.50.168:29987/v1/chat/completions'" in retry_code
+    assert "endpoint_url: 'http://192.168.50.168:26615/v1/chat/completions'" in retry_code
     assert "requested_max_tokens: 200000" in retry_code
     assert "tooling_policy_updates: extracted.tooling_policy_updates || null" in code
     assert "manipulator_priority_updates: extracted.manipulator_priority_updates || null" in code

@@ -29,6 +29,9 @@ from trt_core.isaac_startup_timing import (
 )
 
 
+# HANDOVER CONFIGURATION: scripts/start_host_isaac_runner.ps1 loads the
+# receiving machine's paths from data/isaac_host_config.json and exports them
+# to this process. These constants are only direct-launch fallbacks.
 DEFAULT_ISAAC_WORKING_DIRECTORY = r"C:\Dev\IsaacSim"
 DEFAULT_ISAAC_PYTHON_BAT = DEFAULT_ISAAC_WORKING_DIRECTORY + r"\_build\windows-x86_64\release\python.bat"
 DEFAULT_UR5_ENTRY_SCRIPT = (

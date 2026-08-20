@@ -5,6 +5,12 @@ services:
       dockerfile: Dockerfile.api
     container_name: trt-api
     environment:
+      # HANDOVER CONFIGURATION: set these two values in the project-root .env
+      # when the production vLLM model or endpoint changes. The Python defaults
+      # are fallbacks only. Direct n8n model calls are documented separately in
+      # docs/start_host_isaac_runner.md and must be kept in sync on re-import.
+      VLLM_CHAT_COMPLETIONS_URL: ${VLLM_CHAT_COMPLETIONS_URL:-http://192.168.50.168:26615/v1/chat/completions}
+      VLLM_MODEL: ${VLLM_MODEL:-cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit}
       APP_ENV: dev
       M12_AUTOMATED_COMPARISON_TEST: ${M12_AUTOMATED_COMPARISON_TEST:-false}
       ISAAC_EXECUTION_MODE: host_runner
@@ -44,5 +50,7 @@ services:
       - WEBHOOK_URL=http://localhost:5678/
       - N8N_DIAGNOSTICS_ENABLED=false
     volumes:
-      - C:/Users/$93I000-7RFCRA0J9IC9/Documents/Docker/n8n_data:/home/node/.n8n:/home/node/.n8n
+      # HANDOVER CONFIGURATION: point N8N_DATA_DIR at the receiving machine's
+      # n8n data directory. Do not commit credentials from that directory.
+      - "${N8N_DATA_DIR:-C:/Users/$$93I000-7RFCRA0J9IC9/Documents/Docker/n8n_data}:/home/node/.n8n"
       - ./n8n_workflows:/home/node/.n8n/imports:ro

@@ -1,12 +1,17 @@
 @startuml
-title TRT Uvicorn Server - UML Component Diagram
+title TRT API and Orchestration - UML Component Diagram
 
 skinparam backgroundColor white
 skinparam shadowing false
 skinparam componentStyle rectangle
 skinparam packageStyle rectangle
+skinparam defaultFontName Arial
+skinparam nodesep 30
+skinparam ranksep 45
+top to bottom direction
 
-actor "n8n workflows\nor API client" as Client
+actor "Operator" as Operator
+component "n8n chat and\nsub-workflows" as N8n
 
 node "trt-api container" {
   component "Uvicorn\n0.0.0.0:8000" as Uvicorn
@@ -15,43 +20,53 @@ node "trt-api container" {
   package "HTTP endpoint groups" {
     component "Intent and chat\n/intent/* /chat/*" as IntentChat
     component "Patch and release\n/patch/* /release/*" as PatchRelease
-    component "TRT, audit, state\n/trt/* /audit/* /state/*" as RecordsApi
-    component "Supervisor\n/supervisor/* /reconciliation/*" as SupervisorApi
+    component "TRT, audit, and state\n/trt/* /audit/* /state/*" as RecordsApi
+    component "Supervisor and reconciliation\n/supervisor/* /reconciliation/*" as SupervisorApi
     component "Scenario and simulation\n/scenario/* /simulation/*" as SimApi
+    component "Candidate strategy batches\n/strategy/*" as StrategyApi
     component "Evidence and deployment\n/evidence/* /deployment/*" as EvidenceApi
     component "Debug and M12 reports\n/debug/* /m12/* /reports/*" as OpsApi
   }
 
   package "Domain services" {
     component "Intent normalizer\nintent_normalizer.py" as IntentNormalizer
-    component "Patch validator/apply\nvalidator.py\nsemantic_rules.py\npatch_apply.py" as PatchApply
+    component "Patch validation and apply\nvalidator.py\nsemantic_rules.py\npatch_apply.py" as PatchApply
     component "Release manager\nrelease.py" as Release
     component "Supervisor reconciler\nsupervisor.py\nreconciliation.py" as Supervisor
+    component "Candidate generator and selector\nstrategy_selection.py" as Strategy
     component "Scenario generator\nscenario_generation/*" as ScenarioGen
     component "Digital twin adapter\ndigital_twin_adapter/*" as DTA
     component "Evidence extractor\nevidence_extractor/*" as Evidence
+    component "Simulated deployment guard\nsimulated_deployment.py" as Deployment
     component "Chat session store\nchat_sessions.py" as ChatSessions
-    component "M12 metrics\nm12.py" as M12
+    component "Time-Arrival state\ntime_arrival_state.py" as TimeArrival
+    component "M12 metrics and tests\nm12.py" as M12
   }
 
   package "Persistence adapters" {
     component "TRTRepository\nrepository.py" as Repo
-    component "State records\nstate_records.py" as StateRecords
+    component "Current state records\nstate_records.py" as StateRecords
     component "Line registry\nline_registry.py" as LineRegistry
     component "Audit builder\naudit.py" as Audit
     component "ENT demo data builder\nent_demo.py" as EntDemo
   }
+
+  component "Sequential strategy worker\nglobal single-Isaac lock" as StrategyWorker
 }
 
 database "JSON data store\n/app/data" as Data
+database "Strategy batches\n/app/data/strategy_batches" as StrategyData
 database "Output artifacts\n/app/outputs" as Outputs
-database "SQLite result DBs\noutputs/run_artifacts/*.sqlite" as ResultDB
+database "Run result SQLite\n/app/outputs/run_artifacts/*.sqlite" as ResultDB
 
 component "Windows Isaac host runner\nhost_isaac_runner_service.py" as HostRunner
-component "vLLM OpenAI-compatible API" as VLLM
+component "vLLM OpenAI-compatible API\n/v1/chat/completions" as VLLM
 component "Isaac Sim UR5 script\npick_up_example.py" as Isaac
 
-Client --> Uvicorn : HTTP
+Operator --> N8n : browser chat
+Operator --> Uvicorn : optional direct HTTP
+N8n --> Uvicorn : workflow HTTP calls
+N8n --> VLLM : intent extraction and\nresponse formatting
 Uvicorn --> API : ASGI
 
 API --> IntentChat
@@ -59,22 +74,35 @@ API --> PatchRelease
 API --> RecordsApi
 API --> SupervisorApi
 API --> SimApi
+API --> StrategyApi
 API --> EvidenceApi
 API --> OpsApi
 
 IntentChat --> IntentNormalizer
 IntentChat --> ChatSessions
-IntentChat --> VLLM : optional dialogue resolution
+IntentChat --> VLLM : dialogue decision and\nsemantic repair when configured
 PatchRelease --> PatchApply
 PatchRelease --> Release
 PatchRelease --> Audit
 RecordsApi --> Repo
 RecordsApi --> StateRecords
+RecordsApi --> TimeArrival
 SupervisorApi --> Supervisor
 SimApi --> ScenarioGen
 SimApi --> DTA
+StrategyApi --> Strategy
+StrategyApi --> StrategyWorker
+Strategy --> VLLM : exploratory candidate generation
+Strategy --> Repo : released TRT, plan, state
+Strategy --> TimeArrival : locked timing context
+StrategyWorker --> ScenarioGen : one ScenarioSpec per candidate
+StrategyWorker --> DTA : one synchronous run per candidate
+StrategyWorker --> Evidence : one evidence summary per completed run
+StrategyWorker --> Strategy : gate and rank candidate evidence
 EvidenceApi --> Evidence
-EvidenceApi --> StateRecords
+EvidenceApi --> Deployment
+Deployment --> StateRecords
+Deployment --> TimeArrival
 OpsApi --> M12
 OpsApi --> EntDemo
 OpsApi --> LineRegistry
@@ -90,23 +118,38 @@ Supervisor --> StateRecords
 ScenarioGen --> LineRegistry
 ScenarioGen --> Repo
 DTA --> HostRunner : HTTP host_runner mode
-DTA --> ResultDB : read results
+DTA --> ResultDB : read finalized results
 Evidence --> Outputs
 Evidence --> ResultDB
 ChatSessions --> Data
 Repo --> Data
+Repo --> StrategyData
 StateRecords --> Data
+TimeArrival --> Data
 LineRegistry --> Data
 Audit --> Data
 M12 --> Outputs
 ScenarioGen --> Outputs
 HostRunner --> Isaac : subprocess
-Isaac --> ResultDB : write run metrics
+Isaac --> ResultDB : raw metrics and RunArtifact data
+
+note right of Strategy
+  Requested batch size: 2-8.
+  Candidate 1 is deterministic and operator-faithful.
+  Remaining candidates are vLLM-generated alternatives.
+  Mandatory gates precede throughput ranking.
+  R_reset is diagnostic and non-blocking.
+end note
+
+note right of StrategyWorker
+  STRATEGY_SIMULATION_LOCK prevents concurrent
+  Isaac candidate runs inside the API process.
+end note
 
 note right of API
-  Single FastAPI app exposes the server surface.
-  Endpoint handlers coordinate deterministic services;
-  n8n remains orchestration, not domain authority.
+  n8n owns conversation orchestration.
+  FastAPI services own schemas, validation,
+  evidence gates, ranking, and persistence.
 end note
 
 @enduml

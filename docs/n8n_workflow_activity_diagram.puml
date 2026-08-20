@@ -1,11 +1,11 @@
-﻿@startuml
-title n8n Workflow Activity Diagram - Task Allocation Orchestration
+@startuml
+title n8n Workflow Activity Diagram - Intent, Candidate Evaluation, and Review
 
 skinparam backgroundColor white
 skinparam shadowing false
 skinparam defaultFontName Arial
 skinparam defaultFontSize 18
-skinparam wrapWidth 170
+skinparam wrapWidth 190
 skinparam ArrowFontSize 16
 skinparam activity {
   FontSize 18
@@ -30,7 +30,7 @@ skinparam note {
 start
 
 partition "Operator / Chat UI" {
-  :Send chat turn;
+  :Send natural-language chat turn;
 }
 
 partition "Chat Operator Task Allocation\n(parent workflow)" {
@@ -45,183 +45,214 @@ partition "Chat Operator Task Allocation\n(parent workflow)" {
 
   if (Pending deployment decision?) then (yes)
     :Build direct deployment decision turn;
-  elseif (Pending release approval?) then (yes)
-    :Build direct approval decision turn;
+  elseif (Pending patch approval?) then (yes)
+    :Build direct patch approval turn;
   elseif (Pending required fields?) then (yes)
-    :Merge required fields with chat turn;
+    :Merge required fields with stored intent;
   else (new turn)
-    :Classify dialogue turn;
+    :Classify dialogue turn through TRT API;
   endif
 
-  if (Help or config query?) then (yes)
-    :Return help/config answer;
+  if (Help or configuration query?) then (yes)
+    :Execute deterministic configuration query;
+    :Return answer;
     stop
-  elseif (Small talk or unknown?) then (yes)
-    :Return conversational response;
+  elseif (Small talk, confused, or unknown?) then (yes)
+    :Return conversational or clarification response;
     stop
   endif
 
-  :Check required operator fields\noperator_id, intent_text, reason;
-  if (Missing required fields?) then (yes)
+  :Check operator_id, intent_text, and reason\nfor task-change requests;
+  if (Required fields missing?) then (yes)
     :Save required-field session state;
-    :Ask clarification;
+    :Ask for missing values;
     stop
   endif
 }
 
 partition "Intent to Patch Review\n(sub-workflow)" {
-  :Get deterministic intent context\nfrom TRT API;
+  :GET /intent/context;
 }
 
 partition "vLLM" {
-  :Generate domain-level intent candidate;
+  :Extract schema-constrained domain intent JSON;
 }
 
 partition "Intent to Patch Review\n(sub-workflow)" {
-  if (Candidate truncated or invalid JSON?) then (yes)
-    :Retry candidate generation once;
+  if (Output truncated or invalid JSON?) then (yes)
+    :Retry model extraction once;
   endif
 
-  if (LLM proposes supported patch?) then (yes)
-    :Normalize domain candidate\nthrough TRT API;
-    if (Python normalization accepted?) then (yes)
-      :Validate candidate patch\nthrough TRT API;
-      if (Candidate patch valid?) then (yes)
-        :Return reviewed candidate patch;
-      else (no)
-        :Return revision request;
-        stop
-      endif
+  if (Supported and complete domain intent?) then (yes)
+    :POST /intent/normalize;
+    :POST /patch/validate;
+    if (IntentPatch valid?) then (yes)
+      :Return reviewed candidate patch;
     else (no)
-      :Return Python candidate rejection;
+      :Return specific revision or validation reason;
       stop
     endif
-  else (clarify / unsupported)
-    :Return clarification or unsupported request;
+  else (clarify / unsupported / system error)
+    :Return clarification, unsupported request,\nor system-recovery message;
     stop
   endif
 }
 
 partition "Chat Operator Task Allocation\n(parent workflow)" {
-  :Normalize reviewed candidate context;
   :Summarize candidate patch;
-  :Persist reviewed candidate session state;
+  :Persist patch-approval session state;
 }
 
 partition "Operator / Chat UI" {
-  :Approve, reject, or request revision;
+  :Approve, reject, or request patch revision;
 }
 
 partition "Patch Release Approval\n(sub-workflow)" {
-  :Normalize release approval input;
-  if (Candidate patch present?) then (yes)
-    :Prepare pending release\nthrough TRT API;
-    :Record operator release decision\nthrough TRT API;
-    if (Released?) then (yes)
-      :Fetch release audit bundle;
-      :Return released notification;
-    elseif (Rejected?) then (yes)
-      :Return rejected notification;
-      stop
-    else (needs revision)
-      :Return revision notification;
-      stop
-    endif
-  else (no)
-    :Return missing candidate patch error;
+  :POST /release/prepare;
+  :POST /release/decision;
+  if (Patch released?) then (yes)
+    :Fetch audit bundle;
+  else (rejected / revise)
+    :Return operator decision;
     stop
   endif
 }
 
 partition "Released TRT to Reconciliation\n(sub-workflow)" {
-  :Create supervisor reconciliation plan\nfrom released TRT and current state;
-  if (Plan ready?) then (ready)
-    :Return ready plan;
-  elseif (Waiting for checkpoint?) then (waiting)
-    :Return waiting plan;
-    stop
-  elseif (Degraded switch?) then (degraded)
-    :Return degraded plan;
-  else (rejected)
-    :Return rejected plan;
+  :POST /supervisor/reconcile;
+  :Align released TRT, current state records,\nand affected lines;
+  if (Plan ready or degraded?) then (continue)
+    :Return reconciliation plan;
+  else (waiting / rejected)
+    :Return checkpoint or rejection reason;
     stop
   endif
 }
 
-partition "Generate ScenarioSpec\n(sub-workflow)" {
-  :Validate ScenarioSpec context;
-  if (Baseline scenario needed?) then (yes)
-    :Normalize generation request;
-    if (Request complete?) then (yes)
-      :Generate ScenarioSpec\nthrough TRT API;
-    else (no)
-      :Return missing ScenarioSpec fields;
-      stop
-    endif
-  else (no effect)
+partition "Generate, Simulate, and Select\nCandidate Strategies (sub-workflow)" {
+  :Validate strategy-evaluation context;
+  if (No effective change?) then (yes)
     :Return no-effect response;
+    stop
+  elseif (Required strategy fields missing?) then (yes)
+    :Return missing-field error;
     stop
   endif
 
-  if (ScenarioSpec generated?) then (yes)
-    :Start Isaac simulation run\nasynchronously through TRT API;
-    repeat
-      :Wait before polling;
-      :Poll simulation run status;
-    repeat while (Run still active?) is (yes)
+  :POST /strategy/candidates/generate;
+}
 
-    :Return simulation run result;
-    :Summarize RunArtifact evidence\nthrough TRT API;
-    :Return evidence summary;
-  elseif (Waiting for checkpoint?) then (yes)
-    :Return waiting checkpoint;
+partition "TRT API Candidate Generator" {
+  :Load released TRT, reconciliation plan,\nstate records, and Time-Arrival state;
+  :Create deterministic operator-faithful baseline;
+}
+
+partition "vLLM" {
+  :Generate exploratory candidate strategies\nusing configured prompt profiles;
+}
+
+partition "TRT API Candidate Generator" {
+  :Validate schema, line scope, allowed overrides,\nand operator-locked fields;
+  if (Configured retries exhausted?) then (yes)
+    :Classify candidate-generation system failure;
+    :Do not reject the operator intent;
     stop
-  else (rejected)
-    :Return rejected generation;
+  endif
+  :Persist strategy batch (2-8 requested candidates);
+}
+
+partition "Generate, Simulate, and Select\nCandidate Strategies (sub-workflow)" {
+  :POST /strategy/batches/{id}/run;
+  :Wait and poll /strategy/batches/{id};
+}
+
+partition "TRT API Sequential Strategy Worker" {
+  :Acquire global single-Isaac lock;
+  while (Unevaluated candidate remains?) is (yes)
+    :Generate candidate-specific ScenarioSpec;
+    :Run candidate synchronously through Host Runner;
+    if (RunArtifact completed?) then (yes)
+      :Extract evidence and thesis metrics;
+      :Apply mandatory placement, priority,\nbatch-gating, throughput, and safety gates;
+      :Record R_reset as diagnostic, non-blocking evidence;
+    else (no)
+      :Record system/simulation failure and DATA_INCOMPLETE;
+    endif
+  endwhile (no)
+
+  :Rank eligible candidates by throughput attainment;
+  note right
+    Tie breakers:
+    1. lower strategy simulation time
+    2. candidate strategy id
+  end note
+}
+
+partition "Generate, Simulate, and Select\nCandidate Strategies (sub-workflow)" {
+  if (Selected candidate exists?) then (yes)
+    :Build candidate comparison and selected evidence;
+  elseif (Every candidate conclusively evaluated?) then (yes)
+    :Request operator refinement with evidence reasons;
+    stop
+  else (system / simulation incomplete)
+    :Return system-recovery actions;
+    :Do not ask operator to revise intent;
     stop
   endif
 }
 
 partition "Chat Operator Task Allocation\n(parent workflow)" {
-  :Summarize ScenarioSpec and evidence;
-  if (Evidence requests deployment approval?) then (yes)
-    :Save pending deployment session state;
+  :Present candidate comparison, selected strategy,\nScenarioSpec, RunArtifact, and evidence summary;
+  if (Evidence allows deployment and not dry run?) then (yes)
+    :Save selected-candidate deployment context;
   else (no)
-    :Clear completed session state;
-    :Return final summary;
+    :Return evidence-ready or blocked summary;
     stop
   endif
 }
 
 partition "Operator / Chat UI" {
-  :Approve or decline deployment;
+  :DEPLOY, DO_NOT_DEPLOY, or REQUEST_REVISION;
 }
 
 partition "Chat Operator Task Allocation\n(parent workflow)" {
-  :Parse deployment decision;
   if (Deploy?) then (yes)
-    :Validate deployment context;
-    if (Deployment context valid?) then (yes)
-      :Call simulated deployment\nthrough TRT API;
-    endif
-    :Clear deployment session state;
-    :Return deployment success;
+    :Validate selected scenario/run context;
+    :POST /deployment/simulated-deploy;
   else (no)
-    :Clear or retain session based on decision;
+    :Clear or retain session according to decision;
     :Return non-deploy decision message;
+    stop
   endif
+}
+
+partition "TRT API Deployment Guard" {
+  if (M12 automated comparison mode?) then (yes)
+    :Block deployment and record suppression reason;
+  elseif (Evidence and selected candidate match?) then (yes)
+    :Update current state, digital-twin defaults,\nTime-Arrival state, and deployment audit;
+  else (no)
+    :Reject deployment;
+  endif
+}
+
+partition "Chat Operator Task Allocation\n(parent workflow)" {
+  :Clear deployment session state;
+  :Return deployment result;
 }
 
 stop
 
 legend right
-  Abstracted from:
-  - chat_operator_task_allocation.workflow.json
-  - intent_to_patch_review.workflow.json
-  - patch_release_approval.workflow.json
-  - released_trt_to_reconciliation.workflow.json
-  - generate_scenario_spec.workflow.json
+  Primary workflow IDs:
+  - ChatOperatorTaskAllocationDemo
+  - IntentToPatchReviewDemo
+  - PatchReleaseApprovalDemo
+  - ReleasedTRTToReconciliationDemo
+  - GenerateScenarioSpecDemo
+
+  Candidate simulations are strictly sequential.
+  Post-simulation LLM regeneration is not performed.
 endlegend
 
 @enduml
-

@@ -40,7 +40,7 @@
                   {
                       "parameters":  {
                                          "method":  "POST",
-                                         "url":  "http://192.168.50.168:29987/v1/chat/completions",
+                                         "url":  "http://192.168.50.168:26615/v1/chat/completions",
                                          "sendHeaders":  true,
                                          "headerParameters":  {
                                                                   "parameters":  [
@@ -121,7 +121,7 @@
                   {
                       "parameters":  {
                                          "method":  "POST",
-                                         "url":  "http://192.168.50.168:29987/v1/chat/completions",
+                                         "url":  "http://192.168.50.168:26615/v1/chat/completions",
                                          "sendHeaders":  true,
                                          "headerParameters":  {
                                                                   "parameters":  [

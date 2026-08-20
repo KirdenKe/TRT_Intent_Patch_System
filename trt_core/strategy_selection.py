@@ -572,6 +572,9 @@ def generate_candidate_batch(
         candidate_line_ids=valid_line_ids,
         prompt_profiles=prompt_profiles,
     )
+    # HANDOVER CONFIGURATION: VLLM_MODEL and VLLM_CHAT_COMPLETIONS_URL come
+    # from the project-root .env through Docker Compose. The literals below
+    # are last-resort defaults and must match chat_sessions.py.
     model = os.getenv("VLLM_MODEL", "cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit")
     body = {
         "model": model,
@@ -582,7 +585,7 @@ def generate_candidate_batch(
     started = now_utc()
     endpoint = os.getenv(
         "VLLM_CHAT_COMPLETIONS_URL",
-        "http://192.168.50.168:29987/v1/chat/completions",
+        "http://192.168.50.168:26615/v1/chat/completions",
     )
     max_attempts = max(1, int(os.getenv("STRATEGY_CANDIDATE_GENERATION_ATTEMPTS", "3")))
     attempts: list[dict[str, Any]] = []

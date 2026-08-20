@@ -5,7 +5,7 @@
 This document inventories the runtime prompts used by `trt-api` and the active n8n workflows when they interact with:
 
 ```text
-http://192.168.50.168:29987/v1/chat/completions
+http://192.168.50.168:26615/v1/chat/completions
 ```
 
 It covers direct n8n HTTP calls and indirect calls in which n8n calls `trt-api`, which then calls the chat-completions endpoint. Test utilities, evaluation scripts, archived execution records, and inactive historical workflow snapshots are not counted as runtime prompt components.
@@ -51,7 +51,7 @@ The `trt-api` components P1-P3 use:
 
 ```python
 VLLM_CHAT_COMPLETIONS_URL  # environment override
-default: http://192.168.50.168:29987/v1/chat/completions
+default: http://192.168.50.168:26615/v1/chat/completions
 
 VLLM_MODEL                # environment override
 default: cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit
@@ -60,7 +60,7 @@ default: cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit
 The n8n components P4-P6 hard-code both the endpoint and model in their workflow nodes:
 
 ```text
-endpoint: http://192.168.50.168:29987/v1/chat/completions
+endpoint: http://192.168.50.168:26615/v1/chat/completions
 model: cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit
 ```
 
@@ -341,7 +341,7 @@ The schema is injected dynamically from `Get Intent Context.llm_candidate_genera
 - Workflow: `ChatOperatorTaskAllocationDemo`
 - Builder node: `Build vLLM User Response Format Body`
 - HTTP node: `vLLM Format User Response`
-- Direct final endpoint: `http://192.168.50.168:29987/v1/chat/completions`
+- Direct final endpoint: `http://192.168.50.168:26615/v1/chat/completions`
 
 ### Request settings
 

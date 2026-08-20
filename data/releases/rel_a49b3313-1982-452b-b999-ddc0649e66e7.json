@@ -1,0 +1,249 @@
+{
+  "audit_id": "audit-4671b0d4-4f4f-4986-816e-fa5ec981d2e6",
+  "base_version": "v193",
+  "candidate_patch": {
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "base_version": "v193",
+    "dry_run_only": false,
+    "intent_text": "today there are two production lines. my arrival time is 4 seconds, the time required to resolve the tangling issue is 5 seconds, and the recovery time is 0.5 seconds. in the event of an anomaly, pls configure the logic so that continue until i arrive at the production line. the allow overlap ratio is 0.9. adjust the throughput/hr for all production lines to at least 85; set the tooling picking target for production lines 2 to knife handle; and adjust the tooling picking order for production lines 1 to prioritize picking tooling other than ent tooling set.",
+    "message": "The candidate patch passed validation. It will apply the requested composite changes across 4 sub-requests. Please approve, reject, or request revision.",
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/lines/line_1/kpi/min_throughput_per_hour",
+        "value": 85
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/kpi/min_throughput_per_hour",
+        "value": 85
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_3/kpi/min_throughput_per_hour",
+        "value": 85
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_4/kpi/min_throughput_per_hour",
+        "value": 85
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/tooling_policy/required_scope",
+        "value": "SELECTED_TOOLING"
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/selected_tool_ids",
+        "value": [
+          "tool_16",
+          "tool_17",
+          "tool_18"
+        ]
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_2/selected_normalized_types",
+        "value": [
+          "KNIFE_HANDLE"
+        ]
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/manipulator_priority",
+        "value": {
+          "enabled": true,
+          "ordered_normalized_types": [],
+          "ordered_tool_ids": [],
+          "policy": "UNWANTED_FIRST",
+          "tie_breaker": "FCFS"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/lines/line_1/target_set_id",
+        "value": "ENT_SURGICAL_TOOLING_SET"
+      }
+    ],
+    "operator_id": "op_001",
+    "patch_id": "patch-1787238557146",
+    "reason": "testing",
+    "request_types": [
+      "SIMULATION_CONFIG_UPDATE",
+      "KPI_LIMIT_UPDATE",
+      "TOOLING_POLICY_UPDATE",
+      "MANIPULATOR_PRIORITY_UPDATE",
+      "INSTRUMENT_SCOPE_UPDATE"
+    ],
+    "simulation_config_updates": {
+      "allowed_overlap_ratio": 0.9,
+      "chosen_intervention_mode": "continue-until-arrival",
+      "episode_success_requires_reset_cycles": null,
+      "fix_duration": 5,
+      "num_envs": 2,
+      "resume_delay": 0.5,
+      "travel_time": 4
+    },
+    "status": "REVIEWED",
+    "sub_requests": [
+      {
+        "affected_lines": [
+          "line_1",
+          "line_2",
+          "line_3",
+          "line_4"
+        ],
+        "operation_paths": [],
+        "request_type": "SIMULATION_CONFIG_UPDATE",
+        "request_types": [
+          "SIMULATION_CONFIG_UPDATE"
+        ],
+        "simulation_config_updates": {
+          "allowed_overlap_ratio": 0.9,
+          "chosen_intervention_mode": "continue-until-arrival",
+          "episode_success_requires_reset_cycles": null,
+          "fix_duration": 5,
+          "num_envs": 2,
+          "resume_delay": 0.5,
+          "travel_time": 4
+        },
+        "target_lines": [],
+        "target_scope": "ALL_LINES"
+      },
+      {
+        "affected_lines": [
+          "line_1",
+          "line_2",
+          "line_3",
+          "line_4"
+        ],
+        "kpi_updates": {
+          "min_throughput_per_hour": 85
+        },
+        "operation_paths": [
+          "/lines/line_1/kpi/min_throughput_per_hour",
+          "/lines/line_2/kpi/min_throughput_per_hour",
+          "/lines/line_3/kpi/min_throughput_per_hour",
+          "/lines/line_4/kpi/min_throughput_per_hour"
+        ],
+        "request_type": "KPI_LIMIT_UPDATE",
+        "request_types": [
+          "KPI_LIMIT_UPDATE"
+        ],
+        "simulation_config_updates": {},
+        "target_lines": [],
+        "target_scope": "ALL_LINES"
+      },
+      {
+        "affected_lines": [
+          "line_2"
+        ],
+        "clarification_questions": [
+          "Should I target all knife handles or a specific knife handle instance for line 2?"
+        ],
+        "operation_paths": [
+          "/lines/line_2/tooling_policy/required_scope",
+          "/lines/line_2/selected_tool_ids",
+          "/lines/line_2/selected_normalized_types"
+        ],
+        "operator_text": "set the tooling picking target for production lines 2 to knife handle",
+        "request_type": "TOOLING_POLICY_UPDATE",
+        "request_types": [
+          "TOOLING_POLICY_UPDATE",
+          "INSTRUMENT_SCOPE_UPDATE"
+        ],
+        "selected_normalized_types": [
+          "KNIFE_HANDLE"
+        ],
+        "simulation_config_updates": {},
+        "target_lines": [
+          "line_2"
+        ],
+        "target_scope": "SINGLE_LINE",
+        "tooling_policy": {
+          "required_scope": "SELECTED_TOOLING"
+        }
+      },
+      {
+        "affected_lines": [
+          "line_1"
+        ],
+        "clarification_questions": [],
+        "manipulator_priority": {
+          "enabled": true,
+          "ordered_normalized_types": [],
+          "ordered_tool_ids": [],
+          "policy": "UNWANTED_FIRST",
+          "tie_breaker": "FCFS"
+        },
+        "operation_paths": [
+          "/lines/line_1/manipulator_priority",
+          "/lines/line_1/target_set_id"
+        ],
+        "operator_text": "and adjust the tooling picking order for production lines 1 to prioritize picking tooling other than ent tooling set.",
+        "request_type": "MANIPULATOR_PRIORITY_UPDATE",
+        "request_types": [
+          "MANIPULATOR_PRIORITY_UPDATE",
+          "TOOLING_POLICY_UPDATE"
+        ],
+        "simulation_config_updates": {},
+        "target_lines": [
+          "line_1"
+        ],
+        "target_scope": "SINGLE_LINE"
+      }
+    ],
+    "trt_id": "trt-demo"
+  },
+  "candidate_summary": {
+    "affected_fields": [
+      "/lines/line_1/kpi/min_throughput_per_hour",
+      "/lines/line_2/kpi/min_throughput_per_hour",
+      "/lines/line_3/kpi/min_throughput_per_hour",
+      "/lines/line_4/kpi/min_throughput_per_hour",
+      "/lines/line_2/tooling_policy/required_scope",
+      "/lines/line_2/selected_tool_ids",
+      "/lines/line_2/selected_normalized_types",
+      "/lines/line_1/manipulator_priority",
+      "/lines/line_1/target_set_id"
+    ],
+    "affected_lines": [
+      "line_1",
+      "line_2",
+      "line_3",
+      "line_4"
+    ],
+    "intent_text": "today there are two production lines. my arrival time is 4 seconds, the time required to resolve the tangling issue is 5 seconds, and the recovery time is 0.5 seconds. in the event of an anomaly, pls configure the logic so that continue until i arrive at the production line. the allow overlap ratio is 0.9. adjust the throughput/hr for all production lines to at least 85; set the tooling picking target for production lines 2 to knife handle; and adjust the tooling picking order for production lines 1 to prioritize picking tooling other than ent tooling set.",
+    "reason": "testing"
+  },
+  "created_at_utc": "2026-08-20T15:09:27.060172Z",
+  "current_trt_path": "/app/data/trt/current_trt.json",
+  "operator_decision": {
+    "comment": "Testing",
+    "decision": "APPROVE",
+    "operator_id": "op_001",
+    "timestamp_utc": "2026-08-20T15:09:27.399157Z"
+  },
+  "operator_id": "op_001",
+  "patch_id": "patch-1787238557146",
+  "previous_trt_version": "v193",
+  "release_id": "rel_a49b3313-1982-452b-b999-ddc0649e66e7",
+  "status": "RELEASED",
+  "trt_id": "trt-demo",
+  "trt_version": "v194",
+  "updated_at_utc": "2026-08-20T15:09:27.399157Z",
+  "validation_results_at_prepare": {
+    "base_version": true,
+    "path_whitelist": true,
+    "readonly": true,
+    "schema": true,
+    "semantic": true
+  },
+  "version_path": "/app/data/trt_versions/trt-demo_v194.json"
+}

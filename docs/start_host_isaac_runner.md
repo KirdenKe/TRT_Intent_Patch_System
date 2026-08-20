@@ -1,82 +1,166 @@
-# Start The Isaac Host Runner
+# Start the TRT System and Isaac Host Runner
 
-The correct execution path is:
+The runtime crosses three environments:
 
 ```text
-Docker trt-api -> Windows host runner -> Isaac Sim python.bat -> pick_up_example.py
+Operator -> n8n -> Docker trt-api -> Windows host runner
+         -> configured vLLM              -> Isaac Sim python.bat
+                                           -> pick_up_example.py
 ```
 
-The Docker container must not try to execute the Windows Isaac Sim path directly.
+The vLLM servers and Isaac Sim project are external dependencies. A new
+machine must configure their locations before starting the system. Docker must
+not attempt to execute a Windows Isaac Sim path directly.
 
-## Fresh Clone Bootstrap
+## Handover Configuration Map
 
-From a newly cloned repository, run these steps from Windows PowerShell in the project root.
+| Setting | Authoritative file or location | When to change it |
+| --- | --- | --- |
+| Production vLLM endpoint and model used by `trt-api` | Project-root `.env`, copied from `.env.example`: `VLLM_CHAT_COMPLETIONS_URL`, `VLLM_MODEL` | The production model, host, or port changes |
+| Direct n8n vLLM calls | `n8n_workflows/chat_operator_task_allocation.workflow.json`, node `vLLM Format User Response`; `n8n_workflows/intent_to_patch_review.workflow.json`, nodes `LLM Generate Intent Patch` and `Retry LLM Generate Intent Patch` | Keep these nodes synchronized with the production model and endpoint, then re-import and publish the workflows |
+| TC7 comparison models | `tools/llm_generation_benchmark.py`, constant `MODELS` | A benchmark model or endpoint changes |
+| Windows project and Isaac paths | `data/isaac_host_config.json` | The repository, Isaac installation, entry script, or seed database moves |
+| Docker-to-host runner URL | Project-root `.env`: `ISAAC_HOST_RUNNER_URL` | Hostname, IP address, or runner port changes |
+| n8n data directory | Project-root `.env`: `N8N_DATA_DIR` | n8n is installed in a different host directory |
 
-### 1. Create the local Python environment
+The Python and PowerShell source files contain conspicuous `HANDOVER
+CONFIGURATION` comments beside their fallback values. Configure the files in
+the table instead of customizing those fallback constants.
+
+## Current vLLM Endpoints
+
+| Purpose | Model | Endpoint |
+| --- | --- | --- |
+| Production default | `cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit` | `http://192.168.50.168:26615/v1/chat/completions` |
+| TC7 benchmark | `Qwen/Qwen3.6-35B-A3B-FP8` | `http://192.168.50.168:21909/v1/chat/completions` |
+| TC7 benchmark | `meta-llama/Llama-3.1-8B-Instruct` | `http://192.168.50.168:22530/v1/chat/completions` |
+
+Changing `.env` updates `trt-api` after the container is recreated. It does
+not rewrite an already published n8n workflow. When the production model
+changes, update the checked-in n8n nodes listed above, import them into n8n,
+and publish the updated parent and sub-workflows.
+
+## 1. Prepare a Fresh Clone
+
+From Windows PowerShell in the project root:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -e ".[dev]"
-pytest
+python -m pytest tests/test_chat_sessions.py `
+  tests/test_strategy_selection.py `
+  tests/test_digital_twin_adapter.py `
+  tests/test_n8n_strategy_generation_failure.py `
+  tests/test_m12_runner_strategy_selection.py -q
 ```
 
-The editable install provides both the TRT API package and the host-runner dependencies used by `host_isaac_runner_service.py`.
+These focused startup and integration tests currently pass. The complete test
+suite also includes older structural assertions in `tests/test_n8n_workflows.py`
+that have not yet been rewritten for the current multi-candidate and
+session-aware workflows. See **Future Tasks** below before interpreting a full
+`pytest` result.
 
-### 2. Create the Docker containers
-
-Create `.env` next to `docker-compose.yml` so Docker can reach the Windows host runner:
-
-```text
-ISAAC_HOST_RUNNER_URL=http://host.docker.internal:8765
-```
-
-If you need to override the project path through Compose, add `HOST_PROJECT_ROOT=<absolute Windows clone path>`. When the path contains a literal `$`, prefer `data/isaac_host_config.json`; otherwise escape `$` as `$$` in `.env` or Compose values.
-
-Build and start the services:
+Create the local environment file:
 
 ```powershell
-docker compose build trt-api
-docker compose up -d trt-api
-Invoke-RestMethod http://localhost:8000/health
+Copy-Item .env.example .env
 ```
 
-To start n8n from a fresh clone, first make sure the `n8n` volume host path in `docker-compose.yml` points to a real local n8n data directory for your machine. Then run `docker compose up -d n8n`.
+Edit `.env` for the receiving machine. At minimum, verify:
 
-Use `docker compose up -d --force-recreate trt-api` after changing `.env` or `docker-compose.yml`; `docker compose restart` keeps the old container environment.
+```text
+VLLM_CHAT_COMPLETIONS_URL=http://192.168.50.168:26615/v1/chat/completions
+VLLM_MODEL=cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit
+ISAAC_HOST_RUNNER_URL=http://host.docker.internal:8765
+N8N_DATA_DIR=C:/path/to/n8n_data
+```
 
-### 3. Configure host_runner paths
+Do not commit `.env`; it is ignored by Git.
 
-Edit `data/isaac_host_config.json` for the cloned machine:
+## 2. Configure Windows and Isaac Paths
+
+Edit `data/isaac_host_config.json` and replace every machine-specific path:
 
 ```json
 {
   "host_project_root": "C:\\path\\to\\trt_intent_patch_system",
   "container_project_root": "/app",
-  "isaac_working_directory": "C:\\Dev\\IsaacSim",
-  "python_bat": "C:\\Dev\\IsaacSim\\_build\\windows-x86_64\\release\\python.bat",
-  "entry_script": "C:\\Dev\\IsaacSim\\_build\\windows-x86_64\\release\\standalone_examples\\api\\isaacsim.robot.manipulators\\ur5\\pick_up_example.py",
-  "seed_db_path": "C:\\Dev\\IsaacSim\\_build\\windows-x86_64\\release\\standalone_examples\\api\\isaacsim.robot.manipulators\\ur5\\tasks\\seed_sweep.sqlite3"
+  "isaac_working_directory": "C:\\path\\to\\IsaacSim",
+  "python_bat": "C:\\path\\to\\IsaacSim\\_build\\windows-x86_64\\release\\python.bat",
+  "entry_script": "C:\\path\\to\\IsaacSim\\_build\\windows-x86_64\\release\\standalone_examples\\api\\isaacsim.robot.manipulators\\ur5\\pick_up_example.py",
+  "seed_db_path": "C:\\path\\to\\IsaacSim\\_build\\windows-x86_64\\release\\standalone_examples\\api\\isaacsim.robot.manipulators\\ur5\\tasks\\seed_sweep.sqlite3"
 }
 ```
 
-Start the host runner:
+`host_project_root` maps container artifact paths such as
+`/app/outputs/scenario_specs/...` to the Windows clone. `seed_db_path` is a
+layout input database; it is not the per-run result database under
+`outputs/run_artifacts/`.
+
+The launcher reads this JSON automatically. Command-line parameters remain
+available as one-time overrides:
+
+```powershell
+.\scripts\start_host_isaac_runner.ps1 `
+  -WorkingDirectory "D:\IsaacSim" `
+  -PythonBat "D:\IsaacSim\_build\windows-x86_64\release\python.bat" `
+  -EntryScript "D:\IsaacSim\...\pick_up_example.py"
+```
+
+Prefer the JSON file for a persistent installation. It also avoids Docker
+Compose interpolation problems when a Windows username contains `$`.
+
+## 3. Start and Verify the Host Runner
+
+Start it outside Docker:
 
 ```powershell
 .\scripts\start_host_isaac_runner.ps1 -Port 8765
 ```
 
-In another PowerShell window, recreate and verify `trt-api`:
+The startup output prints the configuration file and all resolved Isaac paths.
+In another PowerShell window:
 
 ```powershell
-docker compose up -d --force-recreate trt-api
 Invoke-RestMethod http://127.0.0.1:8765/health
-Invoke-RestMethod http://localhost:8000/debug/isaac-host-runner-status
+```
+
+Expected fields:
+
+```text
+status = OK
+python_bat_exists = true
+entry_script_exists = true
+working_directory_exists = true
+```
+
+If these are false, correct `data/isaac_host_config.json` before starting
+Docker. Do not continue with a fallback path that belongs to another machine.
+
+## 4. Start Docker Services
+
+Build and start `trt-api`:
+
+```powershell
+docker compose config
+docker compose build trt-api
+docker compose up -d --force-recreate trt-api
+Invoke-RestMethod http://localhost:8000/health
+```
+
+Recreate rather than restart after changing `.env`; `docker compose restart`
+retains the old container environment.
+
+Verify Docker can reach the Windows process:
+
+```powershell
 .\scripts\check_isaac_host_runner_from_container.ps1
+Invoke-RestMethod http://localhost:8000/debug/isaac-host-runner-status
 ```
 
-Expected high-level status:
+Expected high-level result:
 
 ```text
 status = OK
@@ -84,263 +168,147 @@ host_runner_url_configured = true
 available = true
 ```
 
-## 1. Start The Host Runner
-
-Open Windows PowerShell.
+Then start n8n:
 
 ```powershell
-cd C:\Users\$93I000-7RFCRA0J9IC9\Documents\Docker\n8n_data\trt_intent_patch_system
-.\scripts\start_host_isaac_runner.ps1 -Port 8765
+docker compose up -d n8n
 ```
 
-The service defaults to:
+Import the workflow JSON files under `n8n_workflows/` into a new n8n instance
+and publish the parent workflow and referenced sub-workflows. Files in
+`n8n_exports/` are snapshots for audit/recovery; editing a snapshot does not
+change the live n8n database.
 
-```text
-http://127.0.0.1:8765
-```
+## 5. Verify vLLM Connectivity
 
-From the Windows host, check:
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:8765/health
-```
-
-Expected shape:
-
-```json
-{
-  "status": "OK",
-  "service": "host_isaac_runner",
-  "python_bat_exists": true,
-  "entry_script_exists": true,
-  "working_directory_exists": true
-}
-```
-
-## 2. Configure host paths
-
-Set the host runner URL for Docker. With Docker Desktop, `host.docker.internal` points from the Linux container to the Windows host.
-
-Documentation is not runtime configuration. The API reads Windows host paths from `data/isaac_host_config.json` so paths containing a literal `$` do not depend on Docker Compose interpolation.
-
-For this project, use `data/isaac_host_config.json` because the Windows username contains `$`:
-
-```json
-{
-  "host_project_root": "C:\\Users\\$93I000-7RFCRA0J9IC9\\Documents\\Docker\\n8n_data\\trt_intent_patch_system",
-  "container_project_root": "/app",
-  "isaac_working_directory": "C:\\Dev\\IsaacSim",
-  "python_bat": "C:\\Dev\\IsaacSim\\_build\\windows-x86_64\\release\\python.bat",
-  "entry_script": "C:\\Dev\\IsaacSim\\_build\\windows-x86_64\\release\\standalone_examples\\api\\isaacsim.robot.manipulators\\ur5\\pick_up_example.py",
-  "seed_db_path": "C:\\Dev\\IsaacSim\\_build\\windows-x86_64\\release\\standalone_examples\\api\\isaacsim.robot.manipulators\\ur5\\tasks\\seed_sweep.sqlite3"
-}
-```
-
-`seed_db_path` is the database-mode layout/seed input DB for `pick_up_example.py`. It is not the per-run KPI/result database. The per-run output DB remains under `outputs/run_artifacts/sim_*.sqlite`.
-
-## 3. Configure trt-api
-
-Do not use `docker compose restart trt-api` after changing Compose environment variables. `restart` keeps the existing container environment. Recreate the container so Compose interpolates the new values.
-
-Option A, recommended: create a `.env` file next to `docker-compose.yml` for Docker-only values:
-
-```text
-ISAAC_HOST_RUNNER_URL=http://host.docker.internal:8765
-```
-
-Then run:
-
-```powershell
-docker compose config
-docker compose up -d --force-recreate trt-api
-```
-
-Option B: set PowerShell environment variables and recreate the container in the same terminal:
-
-```powershell
-$env:ISAAC_HOST_RUNNER_URL = "http://host.docker.internal:8765"
-docker compose config
-docker compose up -d --force-recreate trt-api
-```
-
-If `host.docker.internal` is not available in your environment, use the Windows host IP address instead:
-
-```powershell
-$env:ISAAC_HOST_RUNNER_URL = "http://<windows-host-ip>:8765"
-docker compose config
-docker compose up -d --force-recreate trt-api
-```
-
-If you choose to use `HOST_PROJECT_ROOT` as an environment override, escape `$` as `$$` in Compose. The safer path for this workspace is `data/isaac_host_config.json`.
-
-## 4. Check From trt-api
-
-After recreating `trt-api`, call:
-
-```powershell
-Invoke-RestMethod http://localhost:8000/debug/isaac-host-runner-status
-```
-
-This endpoint reports:
-
-- `ISAAC_EXECUTION_MODE`
-- whether `ISAAC_HOST_RUNNER_URL` is configured
-- whether the host runner is reachable
-- whether `python.bat`, `pick_up_example.py`, and `C:\Dev\IsaacSim` exist on the host
-- the host project root source: `config_file` or `env`
-- the sample container ScenarioSpec path and mapped Windows host path
-
-Expected:
-
-```text
-status = OK
-host_runner_url_configured = true
-available = true
-```
-
-## Startup Verification Checklist
-
-A. Start the host runner on Windows:
-
-```powershell
-python -m uvicorn host_isaac_runner_service:app --host 0.0.0.0 --port 8765
-```
-
-B. Test from the Windows host:
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:8765/health
-```
-
-C. Recreate `trt-api`:
-
-```powershell
-docker compose up -d --force-recreate trt-api
-```
-
-D. Test from inside the container:
-
-```powershell
-docker compose exec trt-api python -c "import urllib.request; print(urllib.request.urlopen('http://host.docker.internal:8765/health', timeout=3).read().decode())"
-```
-
-E. Test backend status:
-
-```powershell
-Invoke-RestMethod http://localhost:8000/debug/isaac-host-runner-status
-```
-
-## 5. Dry-Run The Isaac Command
-
-Use the host runner dry-run endpoint before launching Isaac:
+Test the production endpoint from Windows:
 
 ```powershell
 $body = @{
+  model = "cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit"
+  messages = @(@{ role = "user"; content = "Reply with OK." })
+  max_tokens = 8
+} | ConvertTo-Json -Depth 5
+
+Invoke-RestMethod -Method Post `
+  -Uri "http://192.168.50.168:26615/v1/chat/completions" `
+  -ContentType "application/json" `
+  -Body $body
+```
+
+For a new server, verify that `/v1/models` reports the same model identifier
+used in `.env` and the n8n request bodies. A reachable port with a mismatched
+model name still causes request failures.
+
+## 6. Dry-Run the Isaac Command
+
+Before launching Isaac, use the host-runner dry-run endpoint:
+
+```powershell
+$root = (Resolve-Path .).Path
+$body = @{
   scenario_spec_id = "scn_preview"
-  scenario_spec_path = "C:\Users\$93I000-7RFCRA0J9IC9\Documents\Docker\n8n_data\trt_intent_patch_system\outputs\scenario_specs\scn_preview.json"
-  output_db_path = "C:\Users\$93I000-7RFCRA0J9IC9\Documents\Docker\n8n_data\trt_intent_patch_system\outputs\run_artifacts\sim_preview.sqlite"
+  scenario_spec_path = "$root\outputs\scenario_specs\scn_preview.json"
+  output_db_path = "$root\outputs\run_artifacts\sim_preview.sqlite"
   run_id = "sim_preview"
   command_args = @{
     num_envs = 4
     headless = $false
-    global_seed = $null
+    global_seed = 65
+    max_seed_trials = 1
+    reuse_precomputed_layouts = $true
     layout_source = "auto"
     episode_success_requires_reset_cycles = 1
     allowed_overlap_ratio = 0.99
-    chosen_intervention_mode = "continue-until-arrival"
-    travel_time = 5
-    fix_duration = 8
-    resume_delay = 0.5
-    add_reference_number = 27
-    reuse_verified_seed = $true
-    seed_db_path = "C:\Dev\IsaacSim\_build\windows-x86_64\release\standalone_examples\api\isaacsim.robot.manipulators\ur5\tasks\seed_sweep.sqlite3"
+    chosen_intervention_mode = "immediate-stop"
+    travel_time = 1.0
+    fix_duration = 3.0
+    resume_delay = 1.0
+    add_reference_number = 5
   }
 } | ConvertTo-Json -Depth 8
 
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8765/isaac/dry-run -ContentType "application/json" -Body $body
+Invoke-RestMethod -Method Post `
+  -Uri http://127.0.0.1:8765/isaac/dry-run `
+  -ContentType "application/json" `
+  -Body $body
 ```
 
-The dry-run command should be equivalent to:
+Confirm that the returned command uses the receiving machine's `python.bat`,
+`pick_up_example.py`, project path, and result database path. The current
+last-resort simulation defaults shown above are not a substitute for values
+explicitly compiled into a ScenarioSpec.
 
-```text
-C:\Dev\IsaacSim\_build\windows-x86_64\release\python.bat
-C:\Dev\IsaacSim\_build\windows-x86_64\release\standalone_examples\api\isaacsim.robot.manipulators\ur5\pick_up_example.py
---num_envs 4
---headless false
---layout_source auto
---episode_success_requires_reset_cycles 1
---allowed_overlap_ratio 0.99
---chosen_intervention_mode continue-until-arrival
---travel_time 5
---fix_duration 8
---resume_delay 0.5
---add_reference_number 27
---run_id sim_preview
---output_db_path C:\Users\$93I000-7RFCRA0J9IC9\Documents\Docker\n8n_data\trt_intent_patch_system\outputs\run_artifacts\sim_preview.sqlite
---seed_db_path C:\Dev\IsaacSim\_build\windows-x86_64\release\standalone_examples\api\isaacsim.robot.manipulators\ur5\tasks\seed_sweep.sqlite3
---reuse_verified_seed
-```
+## 7. Troubleshooting
 
-`--global_seed`, `--max_seed_trials`, and `--reuse_precomputed_layouts` are omitted by default. `--seed_db_path` is only passed from host config when a non-empty host-visible path is configured and exists. If it is missing, the dry-run reports a warning and omits the flag. `--output_db_path` is the per-run KPI/result database and must be different from `seed_sweep.sqlite3`.
+### `trt-api` cannot reach the host runner
 
-## 6. Test /simulation/run
+- Confirm the host runner is listening on `0.0.0.0` when Docker Desktop cannot
+  reach a runner bound only to `127.0.0.1`:
 
-Once `/debug/isaac-host-runner-status` is OK, call:
+  ```powershell
+  .\scripts\start_host_isaac_runner.ps1 -HostAddress 0.0.0.0 -Port 8765
+  ```
 
-```powershell
-$body = @{
-  scenario_spec_id = "scn_preview"
-  scenario_spec_path = "outputs/scenario_specs/scn_preview.json"
-  run_mode = "SYNC"
-  headless = $false
-} | ConvertTo-Json
+- If `host.docker.internal` is unavailable, set
+  `ISAAC_HOST_RUNNER_URL=http://<windows-host-ip>:8765` in `.env`, then recreate
+  `trt-api`.
 
-Invoke-RestMethod -Method Post -Uri http://localhost:8000/simulation/run -ContentType "application/json" -Body $body
-```
+### Isaac exits without a result database
 
-If the host runner URL is missing, `/simulation/run` returns a controlled setup error with instructions instead of attempting to run Isaac from Docker.
+`SIMULATION_COMPLETED_BUT_RESULT_DB_MISSING` means Isaac returned exit code 0
+but `pick_up_example.py` did not create the requested per-run SQLite artifact.
+Check the entry-script version and confirm it supports `--run_id` and
+`--output_db_path`.
 
-If Isaac exits with return code `0` but does not create the per-run SQLite file, `/simulation/run` returns `SIMULATION_COMPLETED_BUT_RESULT_DB_MISSING`. That means Isaac launched and shut down cleanly, but `pick_up_example.py` did not satisfy the result artifact contract. The response includes both the seed DB input path and the expected output DB path so they are not confused.
+### vLLM requests fail after a model change
 
-## 7. Manual Result DB Smoke Test
+Verify all three layers:
 
-From Windows PowerShell, run the entry point directly with both the seed DB input path and a separate result DB output path:
+1. `.env` production model and URL.
+2. Direct n8n URL/model values in the two checked-in workflow files.
+3. `MODELS` in `tools/llm_generation_benchmark.py` for TC7 only.
 
-```powershell
-cd C:\Dev\IsaacSim
+After changing n8n files, re-import and publish them. After changing `.env`,
+recreate `trt-api`.
 
-.\_build\windows-x86_64\release\python.bat `
-  .\_build\windows-x86_64\release\standalone_examples\api\isaacsim.robot.manipulators\ur5\pick_up_example.py `
-  --num_envs 4 `
-  --headless false `
-  --layout_source auto `
-  --episode_success_requires_reset_cycles 1 `
-  --allowed_overlap_ratio 0.99 `
-  --chosen_intervention_mode continue-until-arrival `
-  --travel_time 5 `
-  --fix_duration 8 `
-  --resume_delay 0.5 `
-  --add_reference_number 27 `
-  --run_id manual_test `
-  --output_db_path C:\Users\$93I000-7RFCRA0J9IC9\Documents\Docker\n8n_data\trt_intent_patch_system\outputs\run_artifacts\manual_test.sqlite `
-  --seed_db_path C:\Dev\IsaacSim\_build\windows-x86_64\release\standalone_examples\api\isaacsim.robot.manipulators\ur5\tasks\seed_sweep.sqlite3 `
-  --reuse_verified_seed
+## 8. Future Tasks
 
-Test-Path C:\Users\$93I000-7RFCRA0J9IC9\Documents\Docker\n8n_data\trt_intent_patch_system\outputs\run_artifacts\manual_test.sqlite
-```
+### Align n8n workflow tests with the current architecture
 
-Expected: `Test-Path` returns `True`, and the SQLite file contains `simulation_runs`, `line_kpis`, and `tool_events`.
+**Status:** Pending maintenance work. This does not mean that 22 live workflow
+executions failed. It means that 22 automated assertions in
+`tests/test_n8n_workflows.py` still expect nodes, connections, or prompt text
+from an older workflow design.
 
-Inspect finalization from Windows PowerShell:
+This is sometimes called **test debt**: the application has evolved, but part
+of its automated test code has not yet been updated to describe the intended
+current behavior. Until this work is completed, the full test-suite result can
+mix genuine regressions with failures caused by obsolete expectations.
 
-```powershell
-sqlite3 "C:\Users\$93I000-7RFCRA0J9IC9\Documents\Docker\n8n_data\trt_intent_patch_system\outputs\run_artifacts\manual_test.sqlite" "select run_id,status,completed_at,error_message from simulation_runs;"
-sqlite3 "C:\Users\$93I000-7RFCRA0J9IC9\Documents\Docker\n8n_data\trt_intent_patch_system\outputs\run_artifacts\manual_test.sqlite" "select count(*) from line_kpis;"
-sqlite3 "C:\Users\$93I000-7RFCRA0J9IC9\Documents\Docker\n8n_data\trt_intent_patch_system\outputs\run_artifacts\manual_test.sqlite" "select * from line_kpis limit 5;"
-```
+Required work:
 
-Expected:
+1. Replace assertions for removed single-scenario nodes with assertions for
+   candidate-batch generation, sequential candidate simulation, evidence
+   gating, ranking, and selected-candidate handling.
+2. Update chat-routing assertions for session loading, global cancellation,
+   required-field continuation, release approval, and deployment decisions.
+3. Update prompt assertions to match the current policy of omitting explicit
+   sampling controls and using the current prompt wording.
+4. Preserve endpoint checks for the production vLLM URL and model, without
+   coupling unrelated workflow tests to a machine-specific port where an
+   environment override is supported.
+5. Add checks that the checked-in workflow sources and published n8n workflow
+   have equivalent critical nodes, connections, model identifiers, and
+   endpoints.
+6. Run the complete suite and manually inspect every remaining failure instead
+   of automatically treating it as an application defect.
 
-- `simulation_runs.status = COMPLETED`
-- `completed_at` is not null
-- `line_kpis` count is at least `--num_envs`
+Completion criteria:
+
+- `tests/test_n8n_workflows.py` describes the current published workflow rather
+  than retired nodes or connections.
+- Every workflow assertion has a clear behavioral purpose.
+- The complete test suite passes, or any remaining failure is documented as a
+  reproducible current-system defect.
+- The focused 79-test backend and adapter regression set continues to pass.

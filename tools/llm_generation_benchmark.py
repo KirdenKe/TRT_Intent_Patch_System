@@ -21,18 +21,21 @@ from jsonschema import ValidationError, validate
 from trt_core.api import _build_dialogue_decision_prompt, _dialogue_decision_schema
 
 
+# HANDOVER CONFIGURATION: TC7 uses this explicit comparison matrix rather than
+# the production VLLM_MODEL setting. Update both model and endpoint together
+# when a benchmark server is replaced or moved.
 MODELS = [
     {
         "model": "cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit",
-        "endpoint": "http://192.168.50.168:29987/v1/chat/completions",
+        "endpoint": "http://192.168.50.168:26615/v1/chat/completions",
     },
     {
         "model": "Qwen/Qwen3.6-35B-A3B-FP8",
-        "endpoint": "http://192.168.50.168:29022/v1/chat/completions",
+        "endpoint": "http://192.168.50.168:21909/v1/chat/completions",
     },
     {
         "model": "meta-llama/Llama-3.1-8B-Instruct",
-        "endpoint": "http://192.168.50.168:26337/v1/chat/completions",
+        "endpoint": "http://192.168.50.168:22530/v1/chat/completions",
     },
 ]
 PROMPT_VERSION = "tc7-cross-model-dialogue-decision-v1"

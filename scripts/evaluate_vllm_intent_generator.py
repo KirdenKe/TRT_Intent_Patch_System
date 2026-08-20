@@ -22,7 +22,10 @@ REPORTS_DIR = ROOT / "reports"
 RESULTS_PATH = REPORTS_DIR / "llm_eval_results.jsonl"
 SUMMARY_PATH = REPORTS_DIR / "llm_eval_summary.json"
 
-VLLM_BASE_URL = os.getenv("VLLM_BASE_URL", "http://192.168.50.168:29987/v1").rstrip("/")
+# HANDOVER CONFIGURATION: this standalone evaluator uses VLLM_BASE_URL rather
+# than the Compose VLLM_CHAT_COMPLETIONS_URL variable. Override both model and
+# base URL when evaluating a different production server.
+VLLM_BASE_URL = os.getenv("VLLM_BASE_URL", "http://192.168.50.168:26615/v1").rstrip("/")
 VLLM_MODEL = os.getenv("VLLM_MODEL", "cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit")
 TRT_API_BASE_URL = os.getenv("TRT_API_BASE_URL", "http://localhost:8000").rstrip("/")
 VLLM_API_KEY = os.getenv("VLLM_API_KEY", "EMPTY")

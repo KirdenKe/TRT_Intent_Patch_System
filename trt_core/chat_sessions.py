@@ -25,7 +25,10 @@ CHAT_SESSION_STATES = {
     "CANCELLED",
 }
 
-DEFAULT_VLLM_CHAT_COMPLETIONS_URL = "http://192.168.50.168:29987/v1/chat/completions"
+# HANDOVER CONFIGURATION: production deployments should set VLLM_MODEL and
+# VLLM_CHAT_COMPLETIONS_URL in the project-root .env (passed by Compose).
+# Keep these values as usable fallbacks and keep direct n8n nodes synchronized.
+DEFAULT_VLLM_CHAT_COMPLETIONS_URL = "http://192.168.50.168:26615/v1/chat/completions"
 DEFAULT_VLLM_MODEL = "cyankiwi/gemma-4-26B-A4B-it-AWQ-8bit"
 
 
