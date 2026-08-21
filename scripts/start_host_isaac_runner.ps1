@@ -77,6 +77,22 @@ if ($SeedDbPath -and -not (Test-Path -LiteralPath $SeedDbPath -PathType Leaf)) {
     Write-Warning "Seed database does not exist: $SeedDbPath. The runner will start, but this path will not be passed to Isaac Sim."
 }
 
+$ExistingRunner = $null
+try {
+    $ExistingRunner = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/health" -TimeoutSec 2
+} catch {
+    $ExistingRunner = $null
+}
+if ($ExistingRunner) {
+    $ExistingVersion = if ($ExistingRunner.runner_version) { $ExistingRunner.runner_version } else { "pre-versioned" }
+    $ExistingIoMode = if ($ExistingRunner.process_io_mode) { $ExistingRunner.process_io_mode } else { "unknown" }
+    Write-Host "An Isaac host runner is already listening on port $Port." -ForegroundColor Red
+    Write-Host "Existing runner version: $ExistingVersion"
+    Write-Host "Existing process I/O mode: $ExistingIoMode"
+    Write-Host "Stop the existing runner with Ctrl+C in its PowerShell window, then run this script again." -ForegroundColor Yellow
+    exit 1
+}
+
 $env:ISAAC_HOST_RUNNER_HOST = $HostAddress
 $env:ISAAC_HOST_RUNNER_PORT = [string]$Port
 $env:ISAAC_WORKING_DIRECTORY = $WorkingDirectory

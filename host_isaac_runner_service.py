@@ -41,7 +41,9 @@ DEFAULT_UR5_ENTRY_SCRIPT = (
     + r"\isaacsim.robot.manipulators\ur5\pick_up_example.py"
 )
 
-app = FastAPI(title="Isaac UR5 Host Runner", version="0.2.0")
+RUNNER_VERSION = "0.3.0"
+PROCESS_IO_MODE = "REGULAR_FILES_WITH_OBSERVER"
+app = FastAPI(title="Isaac UR5 Host Runner", version=RUNNER_VERSION)
 # Reuse Uvicorn's configured error logger so launch diagnostics are visible in
 # the same PowerShell window as the access log on fresh installations.
 logger = logging.getLogger("uvicorn.error")
@@ -120,6 +122,8 @@ def _run_summary(run: dict[str, Any]) -> dict[str, Any]:
         "completed_at": run.get("completed_at"),
         "launch_attempted": run.get("launch_attempted", False),
         "process_started": run.get("process_started", False),
+        "runner_version": run.get("runner_version"),
+        "process_io_mode": run.get("process_io_mode"),
         "launch_method": run.get("launch_method"),
         "pid": run.get("pid"),
         "return_code": run.get("return_code"),
@@ -527,60 +531,98 @@ def _write_timing_sidecar(run: dict[str, Any]) -> None:
         return
 
 
-def _capture_process_stream(
+def _record_process_output_line(
     run_id: str,
     stream_name: str,
-    stream: Any,
-    log_path: Path,
+    line: str,
 ) -> None:
     console = sys.stdout if stream_name == "stdout" else sys.stderr
     stream_to_console = os.environ.get("ISAAC_STREAM_TO_CONSOLE", "true").lower() in {"1", "true", "yes"}
-    with log_path.open("w", encoding="utf-8", errors="replace") as handle:
-        for line in iter(stream.readline, ""):
-            observed_at = _now_utc()
-            observed_monotonic = time.monotonic()
-            handle.write(line)
-            handle.flush()
-            if stream_to_console:
-                console.write(line)
-                console.flush()
-            marker = startup_marker_name(line)
-            if marker is None:
-                continue
-            with RUN_LOCK:
-                run = RUNS.get(run_id)
-                if run is None:
-                    continue
-                timing = dict(run.get("timing") or {})
-                events = list(timing.get("startup_marker_events") or [])
-                events.append(
-                    {
-                        "observed_at_utc": observed_at,
-                        "process_elapsed_seconds": max(
-                            0.0,
-                            observed_monotonic - float(run["started_monotonic"]),
-                        ),
-                        "stream": stream_name,
-                        "pattern": marker,
-                        "isaac_internal_seconds": isaac_internal_seconds(line),
-                    }
-                )
-                latest = max(events, key=lambda event: event["process_elapsed_seconds"])
-                timing.update(
-                    {
-                        "startup_reference_at_utc": latest["observed_at_utc"],
-                        "startup_reference_source": "SYSTEM_LOG_CAPTURE",
-                        "startup_reference_pattern": latest["pattern"],
-                        "isaac_startup_seconds": latest["process_elapsed_seconds"],
-                        "startup_marker_count": len(events),
-                        "startup_marker_events": events,
-                        "data_quality_status": "OK",
-                    }
-                )
-                run = {**run, "timing": timing}
-                RUNS[run_id] = run
-                _write_timing_sidecar(run)
-    stream.close()
+    observed_at = _now_utc()
+    observed_monotonic = time.monotonic()
+    if stream_to_console:
+        console.write(line)
+        console.flush()
+    marker = startup_marker_name(line)
+    if marker is None:
+        return
+    with RUN_LOCK:
+        run = RUNS.get(run_id)
+        if run is None:
+            return
+        timing = dict(run.get("timing") or {})
+        events = list(timing.get("startup_marker_events") or [])
+        events.append(
+            {
+                "observed_at_utc": observed_at,
+                "process_elapsed_seconds": max(
+                    0.0,
+                    observed_monotonic - float(run["started_monotonic"]),
+                ),
+                "stream": stream_name,
+                "pattern": marker,
+                "isaac_internal_seconds": isaac_internal_seconds(line),
+            }
+        )
+        latest = max(events, key=lambda event: event["process_elapsed_seconds"])
+        timing.update(
+            {
+                "startup_reference_at_utc": latest["observed_at_utc"],
+                "startup_reference_source": "SYSTEM_LOG_FILE_MONITOR",
+                "startup_reference_pattern": latest["pattern"],
+                "isaac_startup_seconds": latest["process_elapsed_seconds"],
+                "startup_marker_count": len(events),
+                "startup_marker_events": events,
+                "data_quality_status": "OK",
+            }
+        )
+        run = {**run, "timing": timing}
+        RUNS[run_id] = run
+        _write_timing_sidecar(run)
+
+
+def _monitor_process_log(run_id: str, stream_name: str, log_path: Path) -> None:
+    """Tail a child-owned log without attaching a PIPE to the Isaac process.
+
+    Isaac writes directly to a regular file, matching the original working
+    host-runner behavior. This observer only reads appended lines, mirrors them
+    to the service console, and timestamps startup markers.
+    """
+
+    offset = 0
+    incomplete = ""
+    while True:
+        try:
+            with log_path.open("r", encoding="utf-8", errors="replace") as handle:
+                handle.seek(offset)
+                chunk = handle.read()
+                offset = handle.tell()
+        except OSError:
+            chunk = ""
+
+        if chunk:
+            buffered = incomplete + chunk
+            lines = buffered.splitlines(keepends=True)
+            incomplete = ""
+            if lines and not lines[-1].endswith(("\n", "\r")):
+                incomplete = lines.pop()
+            for line in lines:
+                _record_process_output_line(run_id, stream_name, line)
+
+        with RUN_LOCK:
+            process = PROCESSES.get(run_id)
+        if process is None or process.poll() is not None:
+            try:
+                with log_path.open("r", encoding="utf-8", errors="replace") as handle:
+                    handle.seek(offset)
+                    final_chunk = handle.read()
+            except OSError:
+                final_chunk = ""
+            final_text = incomplete + final_chunk
+            for line in final_text.splitlines(keepends=True):
+                _record_process_output_line(run_id, stream_name, line)
+            return
+        time.sleep(0.05)
 
 
 def _finalize_startup_timing(run: dict[str, Any]) -> dict[str, Any]:
@@ -649,6 +691,8 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
             "return_code": None,
             "launch_attempted": False,
             "process_started": False,
+            "runner_version": RUNNER_VERSION,
+            "process_io_mode": PROCESS_IO_MODE,
             "errors": errors,
             "missing_paths": validation["missing_paths"],
             "warnings": validation["warnings"],
@@ -673,14 +717,16 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
     launch_method = "DIRECT"
     process: subprocess.Popen | None = None
     launch_error: OSError | None = None
+    stdout_handle = stdout_path.open("w", encoding="utf-8", errors="replace")
+    stderr_handle = stderr_path.open("w", encoding="utf-8", errors="replace")
     try:
         process = subprocess.Popen(
             actual_launch_command,
             cwd=command_info["working_directory"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=stdout_handle,
+            stderr=stderr_handle,
+            stdin=None,
             text=True,
-            bufsize=1,
         )
     except OSError as direct_exc:
         fallback_command = command_info["fallback_launch_command"]
@@ -696,10 +742,10 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
                 process = subprocess.Popen(
                     actual_launch_command,
                     cwd=command_info["working_directory"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    stdout=stdout_handle,
+                    stderr=stderr_handle,
+                    stdin=None,
                     text=True,
-                    bufsize=1,
                 )
             except OSError as fallback_exc:
                 launch_error = fallback_exc
@@ -707,6 +753,9 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
                 launch_error = None
         else:
             launch_error = direct_exc
+    finally:
+        stdout_handle.close()
+        stderr_handle.close()
 
     if process is None or launch_error is not None:
         exc = launch_error
@@ -730,6 +779,8 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
             "return_code": None,
             "launch_attempted": True,
             "process_started": False,
+            "runner_version": RUNNER_VERSION,
+            "process_io_mode": PROCESS_IO_MODE,
             "launch_method": launch_method,
             "actual_launch_command": actual_launch_command,
             "errors": [f"Could not launch Isaac process: {exc}"],
@@ -768,6 +819,8 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
         "return_code": None,
         "launch_attempted": True,
         "process_started": True,
+        "runner_version": RUNNER_VERSION,
+        "process_io_mode": PROCESS_IO_MODE,
         "launch_method": launch_method,
         "actual_launch_command": actual_launch_command,
         "errors": [],
@@ -797,13 +850,13 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
     )
     threads = [
         threading.Thread(
-            target=_capture_process_stream,
-            args=(request.run_id, "stdout", process.stdout, stdout_path),
+            target=_monitor_process_log,
+            args=(request.run_id, "stdout", stdout_path),
             daemon=True,
         ),
         threading.Thread(
-            target=_capture_process_stream,
-            args=(request.run_id, "stderr", process.stderr, stderr_path),
+            target=_monitor_process_log,
+            args=(request.run_id, "stderr", stderr_path),
             daemon=True,
         ),
     ]
@@ -929,6 +982,8 @@ def get_health() -> dict[str, Any]:
         "status": "OK" if ready else "MISCONFIGURED",
         "ready": ready,
         "service": "host_isaac_runner",
+        "runner_version": RUNNER_VERSION,
+        "process_io_mode": PROCESS_IO_MODE,
         "bind_address": os.environ.get("ISAAC_HOST_RUNNER_HOST", "127.0.0.1"),
         "port": int(os.environ.get("ISAAC_HOST_RUNNER_PORT", "8765")),
         "run_endpoint": "/isaac/run",

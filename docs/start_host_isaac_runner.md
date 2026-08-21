@@ -364,10 +364,26 @@ First copy `actual_launch_command` from `GET /isaac/runs` and confirm the same
 argument vector succeeds when entered manually.
 
 The host runner uses `launch_method = DIRECT` by default to match that manual
-execution. Older revisions forced every batch through an additional
-`cmd.exe /c` wrapper; that wrapper could change batch-process behavior on some
-Isaac installations. Update and restart the host runner before retesting. A
-`COMSPEC_FALLBACK` is now used only when direct process creation itself fails.
+execution. It also gives Isaac ordinary output-file handles instead of Python
+`PIPE` handles. A separate observer tails those files for console output and
+startup timestamps; it does not sit in Isaac's process-I/O path. Older
+revisions forced every batch through an additional `cmd.exe /c` wrapper or
+captured Kit through Python pipes. Both can differ from a known-good manual
+launch on some Isaac installations. Update and restart the host runner before
+retesting. A `COMSPEC_FALLBACK` is now used only when direct process creation
+itself fails.
+
+After updating the repository, stop the old runner with `Ctrl+C` before
+starting it again. The launcher refuses to reuse an occupied port and reports
+the existing process version. Confirm that the replacement process is loaded:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8765/health |
+  Select-Object runner_version, process_io_mode
+```
+
+The corrected launch boundary reports `runner_version = 0.3.0` and
+`process_io_mode = REGULAR_FILES_WITH_OBSERVER`.
 
 If the updated direct launch still stalls, preserve the run's `stdout_path`,
 `stderr_path`, `actual_launch_command`, working directory, and `command_args`.

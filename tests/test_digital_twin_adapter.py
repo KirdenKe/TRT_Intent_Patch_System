@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import sqlite3
+import subprocess
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -646,6 +647,47 @@ def test_windows_batch_launch_can_use_comspec_fallback(monkeypatch):
     assert "--num_envs 2" in launch_command[4]
 
 
+def test_host_runner_writes_child_output_directly_to_regular_files(monkeypatch, tmp_path):
+    fake_script = Path(__file__).parent / "fixtures" / "fake_pick_up_example.py"
+    fake_python = tmp_path / "python.bat"
+    fake_python.write_text("@echo off\n", encoding="utf-8")
+    scenario_path = tmp_path / "scenario.json"
+    scenario_path.write_text("{}", encoding="utf-8")
+    popen_calls = []
+
+    class FakeProcess:
+        pid = 1003
+        returncode = 0
+
+        def __init__(self, *args, **kwargs):
+            popen_calls.append((args, kwargs))
+
+        def poll(self):
+            return self.returncode
+
+    monkeypatch.setattr("host_isaac_runner_service.subprocess.Popen", FakeProcess)
+    request = IsaacRunRequest(
+        scenario_spec_id="scn_regular_files",
+        scenario_spec_path=str(scenario_path),
+        output_db_path=str(tmp_path / "regular_files.sqlite"),
+        run_id="sim_regular_files",
+        run_mode="ASYNC",
+        python_bat=str(fake_python),
+        entry_script=str(fake_script),
+        working_directory=str(tmp_path),
+    )
+
+    result = post_isaac_run(request)
+    kwargs = popen_calls[0][1]
+
+    assert result["status"] == "RUNNING"
+    assert kwargs["stdout"] != subprocess.PIPE
+    assert kwargs["stderr"] != subprocess.PIPE
+    assert kwargs["stdout"].name == result["stdout_path"]
+    assert kwargs["stderr"].name == result["stderr_path"]
+    assert kwargs["stdin"] is None
+
+
 def test_host_runner_health_is_misconfigured_when_required_paths_are_missing(monkeypatch, tmp_path):
     monkeypatch.setenv("ISAAC_WORKING_DIRECTORY", str(tmp_path / "missing_workdir"))
     monkeypatch.setenv("ISAAC_PYTHON_BAT", str(tmp_path / "missing_python.bat"))
@@ -673,6 +715,8 @@ def test_host_runner_health_is_ready_when_required_paths_exist(monkeypatch, tmp_
 
     assert health["status"] == "OK"
     assert health["ready"] is True
+    assert health["runner_version"] == "0.3.0"
+    assert health["process_io_mode"] == "REGULAR_FILES_WITH_OBSERVER"
 
 
 def test_host_runner_lists_prelaunch_validation_failures(tmp_path):
