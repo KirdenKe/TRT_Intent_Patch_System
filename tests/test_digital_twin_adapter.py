@@ -14,6 +14,7 @@ from host_isaac_runner_service import (
     build_pick_up_example_args,
     finalize_successful_result_db,
     get_health,
+    list_isaac_runs,
     post_isaac_dry_run,
     post_isaac_run,
 )
@@ -663,6 +664,30 @@ def test_host_runner_health_is_ready_when_required_paths_exist(monkeypatch, tmp_
 
     assert health["status"] == "OK"
     assert health["ready"] is True
+
+
+def test_host_runner_lists_prelaunch_validation_failures(tmp_path):
+    request = IsaacRunRequest(
+        scenario_spec_id="scn_missing",
+        scenario_spec_path=str(tmp_path / "missing_scenario.json"),
+        output_db_path=str(tmp_path / "missing_result.sqlite"),
+        run_id="sim_prelaunch_failure",
+        python_bat=str(tmp_path / "missing_python.bat"),
+        entry_script=str(tmp_path / "missing_entry.py"),
+        working_directory=str(tmp_path / "missing_workdir"),
+    )
+
+    result = post_isaac_run(request)
+    listed = list_isaac_runs()
+    summary = next(run for run in listed["runs"] if run["run_id"] == request.run_id)
+
+    assert result["status"] == "FAILED"
+    assert result["launch_attempted"] is False
+    assert result["process_started"] is False
+    assert summary["status"] == "FAILED"
+    assert summary["launch_attempted"] is False
+    assert summary["process_started"] is False
+    assert summary["missing_paths"]
 
 
 def test_host_runner_dry_run_rejects_invalid_layout_source(tmp_path):

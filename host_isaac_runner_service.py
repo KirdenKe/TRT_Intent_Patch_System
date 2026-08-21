@@ -106,6 +106,28 @@ def _now_utc() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def _run_summary(run: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "run_id": run.get("run_id"),
+        "scenario_spec_id": run.get("scenario_spec_id"),
+        "status": run.get("status"),
+        "accepted_at": run.get("accepted_at"),
+        "started_at": run.get("started_at"),
+        "completed_at": run.get("completed_at"),
+        "launch_attempted": run.get("launch_attempted", False),
+        "process_started": run.get("process_started", False),
+        "pid": run.get("pid"),
+        "return_code": run.get("return_code"),
+        "scenario_spec_path": run.get("scenario_spec_path"),
+        "output_db_path": run.get("output_db_path"),
+        "stdout_path": run.get("stdout_path"),
+        "stderr_path": run.get("stderr_path"),
+        "errors": list(run.get("errors") or []),
+        "missing_paths": list(run.get("missing_paths") or []),
+        "warnings": list(run.get("warnings") or []),
+    }
+
+
 def _model_to_dict(value: Any) -> dict[str, Any]:
     if hasattr(value, "model_dump"):
         return value.model_dump()
@@ -595,6 +617,7 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
         result = {
             "run_id": request.run_id,
             "scenario_spec_id": request.scenario_spec_id,
+            "scenario_spec_path": request.scenario_spec_path,
             "status": "FAILED",
             "accepted_at": _now_utc(),
             "started_at": None,
@@ -609,6 +632,7 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
             "stdout_tail": "",
             "stderr_tail": "",
             "return_code": None,
+            "launch_attempted": False,
             "process_started": False,
             "errors": errors,
             "missing_paths": validation["missing_paths"],
@@ -638,6 +662,7 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
         result = {
             "run_id": request.run_id,
             "scenario_spec_id": request.scenario_spec_id,
+            "scenario_spec_path": request.scenario_spec_path,
             "status": "FAILED",
             "accepted_at": _now_utc(),
             "started_at": None,
@@ -652,6 +677,7 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
             "stdout_tail": _tail_file(str(stdout_path)),
             "stderr_tail": _tail_file(str(stderr_path)),
             "return_code": None,
+            "launch_attempted": True,
             "process_started": False,
             "errors": [f"Could not launch Isaac process: {exc}"],
             "warnings": validation["warnings"],
@@ -665,6 +691,7 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
     result = {
         "run_id": request.run_id,
         "scenario_spec_id": request.scenario_spec_id,
+        "scenario_spec_path": request.scenario_spec_path,
         "status": "RUNNING",
         "accepted_at": accepted_at,
         "started_at": command_started_at,
@@ -681,6 +708,7 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
         "stdout_tail": "",
         "stderr_tail": "",
         "return_code": None,
+        "launch_attempted": True,
         "process_started": True,
         "errors": [],
         "warnings": validation["warnings"],
@@ -815,6 +843,7 @@ def get_health() -> dict[str, Any]:
         active_run_ids = [
             run_id for run_id, run in RUNS.items() if run.get("status") == "RUNNING"
         ]
+        recent_runs = [_run_summary(run) for run in list(RUNS.values())[-10:]]
     return {
         "status": "OK" if ready else "MISCONFIGURED",
         "ready": ready,
@@ -824,6 +853,7 @@ def get_health() -> dict[str, Any]:
         "run_endpoint": "/isaac/run",
         "async_run_endpoint": "/isaac/runs",
         "active_run_ids": active_run_ids,
+        "recent_runs": recent_runs,
         "python_bat_exists": python_bat_exists,
         "entry_script_exists": entry_script_exists,
         "working_directory_exists": working_directory_exists,
@@ -844,6 +874,18 @@ def post_isaac_run(request: IsaacRunRequest) -> dict[str, Any]:
 @app.post("/isaac/runs")
 def post_isaac_runs(request: IsaacRunRequest) -> dict[str, Any]:
     return _start_isaac_async(request)
+
+
+@app.get("/isaac/runs")
+def list_isaac_runs() -> dict[str, Any]:
+    with RUN_LOCK:
+        run_ids = list(RUNS.keys())
+    runs = [_run_summary(_refresh_isaac_run(run_id)) for run_id in run_ids]
+    return {
+        "status": "OK",
+        "run_count": len(runs),
+        "runs": runs,
+    }
 
 
 def _run_isaac_sync(request: IsaacRunRequest) -> dict[str, Any]:

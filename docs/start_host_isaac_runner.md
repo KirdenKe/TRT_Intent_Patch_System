@@ -270,6 +270,17 @@ launch does not depend on implicit batch-file behavior in the installed Python
 version. The per-run `stdout_path` and `stderr_path` identify the logs to inspect
 if the process starts and then exits.
 
+List every request retained by the current host-runner process:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8765/isaac/runs |
+  ConvertTo-Json -Depth 8
+```
+
+For each run, distinguish `launch_attempted` from `process_started`. The host
+runner can return HTTP 200 with `status = FAILED` for a request rejected before
+launch, so the HTTP access log alone is not evidence that Isaac Sim started.
+
 ## 7. Troubleshooting
 
 ### `trt-api` cannot reach the host runner
@@ -290,8 +301,9 @@ if the process starts and then exits.
   blocked by the firewall.
 
 - Run `scripts/check_isaac_host_runner_from_container.ps1`. It checks Windows,
-  the Docker boundary, and the backend in that order and stops with a concise
-  diagnosis instead of emitting a Python connection traceback.
+  recent host-runner requests, the Docker boundary, `trt-api` health, and the
+  backend debug route in that order. It reports the HTTP error body and relevant
+  recovery commands instead of emitting an unexplained Python traceback.
 
 ### The route exists but Isaac Sim does not start
 
