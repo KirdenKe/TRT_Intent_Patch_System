@@ -142,6 +142,10 @@ First edit `data/isaac_host_config.json` for the local Isaac installation, scrip
 powershell -ExecutionPolicy Bypass -File scripts\start_host_isaac_runner.ps1
 ```
 
+The launcher validates all required paths and binds to `0.0.0.0` so Docker can
+reach it. This command starts the HTTP bridge; Isaac Sim itself starts only
+after `trt-api` submits an accepted run request. Keep the runner terminal open.
+
 Verify it in another terminal:
 
 ```powershell

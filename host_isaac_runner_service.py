@@ -446,10 +446,30 @@ def build_host_command(request: IsaacRunRequest) -> dict[str, Any]:
     command = [request.python_bat, request.entry_script] + build_pick_up_example_args(request_dict)
     return {
         "command": command,
+        "launch_command": _platform_launch_command(command),
         "working_directory": request.working_directory,
         "python_bat": request.python_bat,
         "entry_script": request.entry_script,
     }
+
+
+def _platform_launch_command(
+    command: list[str],
+    *,
+    platform_name: str | None = None,
+) -> list[str]:
+    """Return an executable command for the current host platform.
+
+    Windows CreateProcess cannot execute a batch file directly in every Python
+    and system configuration. Invoke Isaac Sim's python.bat explicitly through
+    COMSPEC so an accepted host request consistently creates the Isaac process.
+    """
+
+    effective_platform = platform_name or os.name
+    if effective_platform == "nt" and Path(command[0]).suffix.lower() in {".bat", ".cmd"}:
+        comspec = os.environ.get("COMSPEC", "cmd.exe")
+        return [comspec, "/d", "/s", "/c", subprocess.list2cmdline(command)]
+    return list(command)
 
 
 def _log_paths_for_run(output_db_path: str, run_id: str) -> tuple[Path, Path]:
@@ -589,6 +609,7 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
             "stdout_tail": "",
             "stderr_tail": "",
             "return_code": None,
+            "process_started": False,
             "errors": errors,
             "missing_paths": validation["missing_paths"],
             "warnings": validation["warnings"],
@@ -606,7 +627,7 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
     started_monotonic = time.monotonic()
     try:
         process = subprocess.Popen(
-            command_info["command"],
+            command_info["launch_command"],
             cwd=command_info["working_directory"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -631,6 +652,7 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
             "stdout_tail": _tail_file(str(stdout_path)),
             "stderr_tail": _tail_file(str(stderr_path)),
             "return_code": None,
+            "process_started": False,
             "errors": [f"Could not launch Isaac process: {exc}"],
             "warnings": validation["warnings"],
             "timeout_seconds": request.timeout_seconds,
@@ -659,6 +681,7 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
         "stdout_tail": "",
         "stderr_tail": "",
         "return_code": None,
+        "process_started": True,
         "errors": [],
         "warnings": validation["warnings"],
         "timeout_seconds": request.timeout_seconds,
@@ -784,12 +807,26 @@ def get_health() -> dict[str, Any]:
     working_directory = os.environ.get("ISAAC_WORKING_DIRECTORY", DEFAULT_ISAAC_WORKING_DIRECTORY)
     python_bat = os.environ.get("ISAAC_PYTHON_BAT", DEFAULT_ISAAC_PYTHON_BAT)
     entry_script = os.environ.get("ISAAC_UR5_ENTRY_SCRIPT", DEFAULT_UR5_ENTRY_SCRIPT)
+    python_bat_exists = Path(python_bat).is_file()
+    entry_script_exists = Path(entry_script).is_file()
+    working_directory_exists = Path(working_directory).is_dir()
+    ready = python_bat_exists and entry_script_exists and working_directory_exists
+    with RUN_LOCK:
+        active_run_ids = [
+            run_id for run_id, run in RUNS.items() if run.get("status") == "RUNNING"
+        ]
     return {
-        "status": "OK",
+        "status": "OK" if ready else "MISCONFIGURED",
+        "ready": ready,
         "service": "host_isaac_runner",
-        "python_bat_exists": Path(python_bat).exists(),
-        "entry_script_exists": Path(entry_script).exists(),
-        "working_directory_exists": Path(working_directory).exists(),
+        "bind_address": os.environ.get("ISAAC_HOST_RUNNER_HOST", "127.0.0.1"),
+        "port": int(os.environ.get("ISAAC_HOST_RUNNER_PORT", "8765")),
+        "run_endpoint": "/isaac/run",
+        "async_run_endpoint": "/isaac/runs",
+        "active_run_ids": active_run_ids,
+        "python_bat_exists": python_bat_exists,
+        "entry_script_exists": entry_script_exists,
+        "working_directory_exists": working_directory_exists,
         "python_bat": python_bat,
         "entry_script": entry_script,
         "working_directory": working_directory,

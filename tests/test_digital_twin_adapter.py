@@ -9,9 +9,11 @@ from fastapi.testclient import TestClient
 
 from host_isaac_runner_service import (
     IsaacRunRequest,
+    _platform_launch_command,
     build_host_command,
     build_pick_up_example_args,
     finalize_successful_result_db,
+    get_health,
     post_isaac_dry_run,
     post_isaac_run,
 )
@@ -619,6 +621,48 @@ def test_host_runner_dry_run_returns_command_without_launching(tmp_path):
     assert result["command"][0] == str(fake_python)
     assert result["command"][1] == str(fake_script)
     assert result["missing_paths"] == []
+
+
+def test_windows_batch_launch_uses_comspec(monkeypatch):
+    monkeypatch.setenv("COMSPEC", r"C:\Windows\System32\cmd.exe")
+
+    launch_command = _platform_launch_command(
+        [r"C:\Isaac Sim\python.bat", r"C:\Project\pick_up_example.py", "--num_envs", "2"],
+        platform_name="nt",
+    )
+
+    assert launch_command[:4] == [r"C:\Windows\System32\cmd.exe", "/d", "/s", "/c"]
+    assert '"C:\\Isaac Sim\\python.bat"' in launch_command[4]
+    assert "--num_envs 2" in launch_command[4]
+
+
+def test_host_runner_health_is_misconfigured_when_required_paths_are_missing(monkeypatch, tmp_path):
+    monkeypatch.setenv("ISAAC_WORKING_DIRECTORY", str(tmp_path / "missing_workdir"))
+    monkeypatch.setenv("ISAAC_PYTHON_BAT", str(tmp_path / "missing_python.bat"))
+    monkeypatch.setenv("ISAAC_UR5_ENTRY_SCRIPT", str(tmp_path / "missing_entry.py"))
+
+    health = get_health()
+
+    assert health["status"] == "MISCONFIGURED"
+    assert health["ready"] is False
+    assert health["python_bat_exists"] is False
+    assert health["entry_script_exists"] is False
+    assert health["working_directory_exists"] is False
+
+
+def test_host_runner_health_is_ready_when_required_paths_exist(monkeypatch, tmp_path):
+    python_bat = tmp_path / "python.bat"
+    entry_script = tmp_path / "pick_up_example.py"
+    python_bat.write_text("@echo off\n", encoding="utf-8")
+    entry_script.write_text("print('ok')\n", encoding="utf-8")
+    monkeypatch.setenv("ISAAC_WORKING_DIRECTORY", str(tmp_path))
+    monkeypatch.setenv("ISAAC_PYTHON_BAT", str(python_bat))
+    monkeypatch.setenv("ISAAC_UR5_ENTRY_SCRIPT", str(entry_script))
+
+    health = get_health()
+
+    assert health["status"] == "OK"
+    assert health["ready"] is True
 
 
 def test_host_runner_dry_run_rejects_invalid_layout_source(tmp_path):

@@ -117,10 +117,23 @@ Compose interpolation problems when a Windows username contains `$`.
 Start it outside Docker:
 
 ```powershell
-.\scripts\start_host_isaac_runner.ps1 -Port 8765
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\start_host_isaac_runner.ps1 -Port 8765
 ```
 
-The startup output prints the configuration file and all resolved Isaac paths.
+The launcher binds to `0.0.0.0` by default so both Windows and Docker Desktop
+can reach it. It performs a strict preflight before opening the service and
+stops with actionable errors when `host_project_root`, `python.bat`, the Isaac
+working directory, or `pick_up_example.py` still points to another machine.
+
+Starting this script starts the HTTP host-runner service only. It intentionally
+does **not** launch Isaac Sim immediately. Isaac Sim starts when `trt-api` or a
+diagnostic client sends an accepted `POST /isaac/run` or `POST /isaac/runs`
+request. A visible `/isaac/run` route therefore proves that the bridge is
+listening; it does not prove that an Isaac subprocess has been requested.
+
+The startup output prints the configuration file, resolved Isaac paths,
+Windows health URL, and Docker target URL. Keep this PowerShell process open.
 In another PowerShell window:
 
 ```powershell
@@ -131,13 +144,17 @@ Expected fields:
 
 ```text
 status = OK
+ready = true
 python_bat_exists = true
 entry_script_exists = true
 working_directory_exists = true
+bind_address = 0.0.0.0
 ```
 
-If these are false, correct `data/isaac_host_config.json` before starting
-Docker. Do not continue with a fallback path that belongs to another machine.
+`status = MISCONFIGURED` or any false path check means that the service must
+not accept an Isaac launch. Correct `data/isaac_host_config.json` before
+starting Docker. Do not continue with a fallback path that belongs to another
+machine.
 
 ## 4. Start Docker Services
 
@@ -239,12 +256,26 @@ Confirm that the returned command uses the receiving machine's `python.bat`,
 last-resort simulation defaults shown above are not a substitute for values
 explicitly compiled into a ScenarioSpec.
 
+The dry-run endpoint validates and displays the command but does not launch
+Isaac. A real run response contains:
+
+```text
+process_started = true
+pid = <Windows process ID>
+launch_command = [cmd.exe, /d, /s, /c, ...python.bat...]
+```
+
+On Windows, the runner invokes `python.bat` explicitly through `COMSPEC` so the
+launch does not depend on implicit batch-file behavior in the installed Python
+version. The per-run `stdout_path` and `stderr_path` identify the logs to inspect
+if the process starts and then exits.
+
 ## 7. Troubleshooting
 
 ### `trt-api` cannot reach the host runner
 
-- Confirm the host runner is listening on `0.0.0.0` when Docker Desktop cannot
-  reach a runner bound only to `127.0.0.1`:
+- Current launchers listen on `0.0.0.0` by default. For an older checkout or an
+  explicit override, start it as follows:
 
   ```powershell
   .\scripts\start_host_isaac_runner.ps1 -HostAddress 0.0.0.0 -Port 8765
@@ -253,6 +284,37 @@ explicitly compiled into a ScenarioSpec.
 - If `host.docker.internal` is unavailable, set
   `ISAAC_HOST_RUNNER_URL=http://<windows-host-ip>:8765` in `.env`, then recreate
   `trt-api`.
+
+- Allow inbound TCP port 8765 in Windows Firewall for the applicable network
+  profile. A local `127.0.0.1` health check can pass while Docker remains
+  blocked by the firewall.
+
+- Run `scripts/check_isaac_host_runner_from_container.ps1`. It checks Windows,
+  the Docker boundary, and the backend in that order and stops with a concise
+  diagnosis instead of emitting a Python connection traceback.
+
+### The route exists but Isaac Sim does not start
+
+1. Read `GET http://127.0.0.1:8765/health`. It must report `status = OK` and
+   `ready = true`.
+2. Confirm that a real `POST /isaac/run` or `POST /isaac/runs` occurred. Starting
+   the host service and calling `/isaac/dry-run` never launch Isaac.
+3. Inspect the run response. `process_started = false` means preflight or
+   process creation failed; read `errors` and `missing_paths`.
+4. If `process_started = true`, inspect `pid`, `return_code`, `stdout_path`, and
+   `stderr_path`. An immediate nonzero return code is an Isaac/script failure,
+   not a connectivity failure.
+5. Verify that `scenario_spec_path` exists on Windows. A stale
+   `host_project_root` can make the API generate a path from the previous
+   machine, in which case the runner rejects the request before launching.
+
+### Compose warns that `HOST_PROJECT_ROOT` is not set
+
+Current Compose configuration no longer interpolates `HOST_PROJECT_ROOT`.
+`data/isaac_host_config.json` is authoritative because `$` in Windows usernames
+can be altered by Compose interpolation. If this warning still appears, update
+the checkout and recreate `trt-api`; do not add a blank variable merely to hide
+the warning.
 
 ### Isaac exits without a result database
 
