@@ -2,8 +2,8 @@ param(
     [string]$LocalHostRunnerHealthUrl = "http://127.0.0.1:8765/health",
     [string]$LocalHostRunnerRunsUrl = "http://127.0.0.1:8765/isaac/runs",
     [string]$HostRunnerHealthUrl = "http://host.docker.internal:8765/health",
-    [string]$BackendHealthUrl = "http://localhost:8000/health",
-    [string]$BackendStatusUrl = "http://localhost:8000/debug/isaac-host-runner-status"
+    [string]$BackendHealthUrl = "http://127.0.0.1:8000/health",
+    [string]$BackendStatusUrl = "http://127.0.0.1:8000/debug/isaac-host-runner-status"
 )
 
 $ErrorActionPreference = "Stop"
@@ -46,10 +46,10 @@ Write-Host "== recent host-runner requests =="
 try {
     $RecentRuns = Invoke-RestMethod -Uri $LocalHostRunnerRunsUrl -TimeoutSec 3
     if ($RecentRuns.run_count -eq 0) {
-        Write-Host "No run requests have been recorded since this host-runner process started."
+        Write-Host "No run requests have been recorded since this host-runner process started. This is normal before an operator workflow reaches simulation."
     } else {
         $RecentRuns.runs |
-            Select-Object run_id, status, launch_attempted, process_started, pid, return_code, errors, missing_paths |
+            Select-Object run_id, status, launch_attempted, process_started, launch_method, pid, return_code, actual_launch_command, errors, missing_paths, stdout_path, stderr_path |
             Format-List
     }
 } catch {
@@ -85,33 +85,54 @@ $ContainerProbe | ForEach-Object { Write-Host $_ }
 
 Write-Host ""
 Write-Host "== Windows -> trt-api health =="
+$WindowsBackendAccessible = $true
 try {
     $BackendHealth = Invoke-RestMethod -Uri $BackendHealthUrl -TimeoutSec 5
     $BackendHealth | ConvertTo-Json -Depth 4
 } catch {
-    Write-Host "FAILED: Could not read $BackendHealthUrl" -ForegroundColor Red
+    $WindowsBackendAccessible = $false
+    Write-Host "WARNING: Windows could not read the published API port at $BackendHealthUrl" -ForegroundColor Yellow
     Write-HttpFailureDetail $_
-    Write-Host "Inspect the active container:" -ForegroundColor Yellow
-    Write-Host "  docker compose ps trt-api"
-    Write-Host "  docker compose logs --tail=200 trt-api"
-    Write-Host "Then rebuild and recreate it if necessary:"
-    Write-Host "  docker compose up -d --build --force-recreate trt-api"
-    exit 1
+    Write-Host "Checking the same API from inside the container to separate port forwarding from application health..."
+    $InternalBackendHealth = docker compose exec -T trt-api python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read().decode())" 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "FAILED: trt-api is also unreachable from inside its own container." -ForegroundColor Red
+        Write-Host "  docker compose ps trt-api"
+        Write-Host "  docker compose logs --tail=200 trt-api"
+        Write-Host "  docker compose up -d --build --force-recreate trt-api"
+        exit 1
+    }
+    $InternalBackendHealth | ForEach-Object { Write-Host $_ }
+    Write-Host "trt-api is healthy internally. The remaining issue is Windows/Docker published-port access, not the API process." -ForegroundColor Yellow
+    Write-Host "Try: curl.exe --noproxy `"*`" http://127.0.0.1:8000/health"
+    Write-Host "Also inspect: Test-NetConnection 127.0.0.1 -Port 8000"
 }
 
 Write-Host ""
 Write-Host "== backend host-runner status =="
-try {
-    $BackendStatus = Invoke-RestMethod -Uri $BackendStatusUrl -TimeoutSec 8
-    $BackendStatus | ConvertTo-Json -Depth 8
-} catch {
-    Write-Host "FAILED: trt-api health passed, but $BackendStatusUrl failed." -ForegroundColor Red
-    Write-HttpFailureDetail $_
-    Write-Host "This usually means the running trt-api image is stale or the debug route raised an application error." -ForegroundColor Yellow
-    Write-Host "Inspect and recreate it:"
-    Write-Host "  docker compose logs --tail=200 trt-api"
-    Write-Host "  docker compose up -d --build --force-recreate trt-api"
-    exit 1
+if ($WindowsBackendAccessible) {
+    try {
+        $BackendStatus = Invoke-RestMethod -Uri $BackendStatusUrl -TimeoutSec 8
+        $BackendStatus | ConvertTo-Json -Depth 8
+    } catch {
+        Write-Host "FAILED: trt-api health passed, but $BackendStatusUrl failed." -ForegroundColor Red
+        Write-HttpFailureDetail $_
+        Write-Host "This usually means the running trt-api image is stale or the debug route raised an application error." -ForegroundColor Yellow
+        Write-Host "Inspect and recreate it:"
+        Write-Host "  docker compose logs --tail=200 trt-api"
+        Write-Host "  docker compose up -d --build --force-recreate trt-api"
+        exit 1
+    }
+} else {
+    $InternalBackendStatus = docker compose exec -T trt-api python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/debug/isaac-host-runner-status', timeout=8).read().decode())" 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "FAILED: The backend debug route failed inside trt-api." -ForegroundColor Red
+        $InternalBackendStatus | ForEach-Object { Write-Host $_ }
+        exit 1
+    }
+    $BackendStatusText = ($InternalBackendStatus | Out-String).Trim()
+    Write-Host $BackendStatusText
+    $BackendStatus = $BackendStatusText | ConvertFrom-Json
 }
 
 if (-not $BackendStatus.available) {
@@ -120,4 +141,9 @@ if (-not $BackendStatus.available) {
 }
 
 Write-Host ""
-Write-Host "PASS: Windows, Docker, and trt-api can all reach the configured Isaac host runner." -ForegroundColor Green
+if ($WindowsBackendAccessible) {
+    Write-Host "PASS: Windows, Docker, and trt-api can all reach the configured Isaac host runner." -ForegroundColor Green
+} else {
+    Write-Host "PASS WITH WARNING: The runtime container path is healthy, but Windows cannot reach the published trt-api port." -ForegroundColor Yellow
+}
+Write-Host "Rerun this checker after a strategy batch to inspect launch_attempted, process_started, PID, return code, and per-run errors."

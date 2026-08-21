@@ -624,12 +624,21 @@ def test_host_runner_dry_run_returns_command_without_launching(tmp_path):
     assert result["missing_paths"] == []
 
 
-def test_windows_batch_launch_uses_comspec(monkeypatch):
+def test_windows_batch_launch_is_direct_by_default():
+    command = [r"C:\Isaac Sim\python.bat", r"C:\Project\pick_up_example.py", "--num_envs", "2"]
+
+    launch_command = _platform_launch_command(command, platform_name="nt")
+
+    assert launch_command == command
+
+
+def test_windows_batch_launch_can_use_comspec_fallback(monkeypatch):
     monkeypatch.setenv("COMSPEC", r"C:\Windows\System32\cmd.exe")
 
     launch_command = _platform_launch_command(
         [r"C:\Isaac Sim\python.bat", r"C:\Project\pick_up_example.py", "--num_envs", "2"],
         platform_name="nt",
+        use_comspec=True,
     )
 
     assert launch_command[:4] == [r"C:\Windows\System32\cmd.exe", "/d", "/s", "/c"]

@@ -40,6 +40,10 @@ Candidate batches contain 2-8 strategies, with a default of 3:
 - Invalid model output may be regenerated before simulation using deterministic validation feedback.
 - Simulation failure does not trigger post-simulation LLM regeneration. If all candidates have conclusive but ineligible evidence, the operator is asked to refine the request. If evidence is incomplete because of a system, simulator, ScenarioSpec, RunArtifact, or evidence-pipeline problem, the system reports a recovery issue instead of blaming the operator input.
 
+Therefore, one normal approved request produces three sequential
+`POST /isaac/run` calls. These represent three distinct candidates, not three
+automatic retries of one strategy.
+
 The mandatory eligibility gates are:
 
 - a completed RunArtifact and readable evidence;
@@ -166,9 +170,9 @@ docker compose up -d --build
 Verify the API and host-runner connection:
 
 ```powershell
-Invoke-RestMethod http://localhost:8000/health
-Invoke-RestMethod http://localhost:8000/debug/runtime-config
-Invoke-RestMethod http://localhost:8000/debug/isaac-host-runner-status
+Invoke-RestMethod http://127.0.0.1:8000/health
+Invoke-RestMethod http://127.0.0.1:8000/debug/runtime-config
+Invoke-RestMethod http://127.0.0.1:8000/debug/isaac-host-runner-status
 ```
 
 Service URLs:

@@ -7,6 +7,7 @@ command for Isaac Sim.
 
 from __future__ import annotations
 
+import logging
 import os
 import sqlite3
 import subprocess
@@ -41,6 +42,9 @@ DEFAULT_UR5_ENTRY_SCRIPT = (
 )
 
 app = FastAPI(title="Isaac UR5 Host Runner", version="0.2.0")
+# Reuse Uvicorn's configured error logger so launch diagnostics are visible in
+# the same PowerShell window as the access log on fresh installations.
+logger = logging.getLogger("uvicorn.error")
 RUNS: dict[str, dict[str, Any]] = {}
 PROCESSES: dict[str, subprocess.Popen] = {}
 STREAM_THREADS: dict[str, list[threading.Thread]] = {}
@@ -116,12 +120,14 @@ def _run_summary(run: dict[str, Any]) -> dict[str, Any]:
         "completed_at": run.get("completed_at"),
         "launch_attempted": run.get("launch_attempted", False),
         "process_started": run.get("process_started", False),
+        "launch_method": run.get("launch_method"),
         "pid": run.get("pid"),
         "return_code": run.get("return_code"),
         "scenario_spec_path": run.get("scenario_spec_path"),
         "output_db_path": run.get("output_db_path"),
         "stdout_path": run.get("stdout_path"),
         "stderr_path": run.get("stderr_path"),
+        "actual_launch_command": run.get("actual_launch_command"),
         "errors": list(run.get("errors") or []),
         "missing_paths": list(run.get("missing_paths") or []),
         "warnings": list(run.get("warnings") or []),
@@ -469,6 +475,7 @@ def build_host_command(request: IsaacRunRequest) -> dict[str, Any]:
     return {
         "command": command,
         "launch_command": _platform_launch_command(command),
+        "fallback_launch_command": _platform_launch_command(command, use_comspec=True),
         "working_directory": request.working_directory,
         "python_bat": request.python_bat,
         "entry_script": request.entry_script,
@@ -479,16 +486,17 @@ def _platform_launch_command(
     command: list[str],
     *,
     platform_name: str | None = None,
+    use_comspec: bool = False,
 ) -> list[str]:
-    """Return an executable command for the current host platform.
+    """Return a direct command or an explicit Windows batch fallback.
 
-    Windows CreateProcess cannot execute a batch file directly in every Python
-    and system configuration. Invoke Isaac Sim's python.bat explicitly through
-    COMSPEC so an accepted host request consistently creates the Isaac process.
+    Direct execution most closely matches the known-good manual PowerShell
+    command and is the default. COMSPEC is reserved for systems where direct
+    batch execution raises an OSError during process creation.
     """
 
     effective_platform = platform_name or os.name
-    if effective_platform == "nt" and Path(command[0]).suffix.lower() in {".bat", ".cmd"}:
+    if use_comspec and effective_platform == "nt" and Path(command[0]).suffix.lower() in {".bat", ".cmd"}:
         comspec = os.environ.get("COMSPEC", "cmd.exe")
         return [comspec, "/d", "/s", "/c", subprocess.list2cmdline(command)]
     return list(command)
@@ -613,6 +621,13 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
     validation = _validate_host_request(_model_to_dict(request))
     command_args = validation["args"]
     errors: list[str] = list(validation["errors"]) + list(validation["missing_paths"])
+    logger.info(
+        "isaac_run.request run_id=%s scenario_spec_id=%s mode=%s scenario_spec_path=%s",
+        request.run_id,
+        request.scenario_spec_id,
+        request.run_mode,
+        request.scenario_spec_path,
+    )
     if errors:
         result = {
             "run_id": request.run_id,
@@ -642,6 +657,11 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
         }
         with RUN_LOCK:
             RUNS[request.run_id] = result
+        logger.error(
+            "isaac_run.rejected_before_launch run_id=%s errors=%s",
+            request.run_id,
+            errors,
+        )
         return result
 
     stdout_path, stderr_path = _log_paths_for_run(request.output_db_path, request.run_id)
@@ -649,16 +669,47 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
     accepted_at = _now_utc()
     command_started_at = _now_utc()
     started_monotonic = time.monotonic()
+    actual_launch_command = command_info["launch_command"]
+    launch_method = "DIRECT"
+    process: subprocess.Popen | None = None
+    launch_error: OSError | None = None
     try:
         process = subprocess.Popen(
-            command_info["launch_command"],
+            actual_launch_command,
             cwd=command_info["working_directory"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
             bufsize=1,
         )
-    except OSError as exc:
+    except OSError as direct_exc:
+        fallback_command = command_info["fallback_launch_command"]
+        if fallback_command != actual_launch_command:
+            logger.warning(
+                "isaac_run.direct_process_creation_failed run_id=%s error=%s; retrying with COMSPEC",
+                request.run_id,
+                direct_exc,
+            )
+            actual_launch_command = fallback_command
+            launch_method = "COMSPEC_FALLBACK"
+            try:
+                process = subprocess.Popen(
+                    actual_launch_command,
+                    cwd=command_info["working_directory"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    bufsize=1,
+                )
+            except OSError as fallback_exc:
+                launch_error = fallback_exc
+            else:
+                launch_error = None
+        else:
+            launch_error = direct_exc
+
+    if process is None or launch_error is not None:
+        exc = launch_error
         result = {
             "run_id": request.run_id,
             "scenario_spec_id": request.scenario_spec_id,
@@ -679,6 +730,8 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
             "return_code": None,
             "launch_attempted": True,
             "process_started": False,
+            "launch_method": launch_method,
+            "actual_launch_command": actual_launch_command,
             "errors": [f"Could not launch Isaac process: {exc}"],
             "warnings": validation["warnings"],
             "timeout_seconds": request.timeout_seconds,
@@ -686,6 +739,11 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
         }
         with RUN_LOCK:
             RUNS[request.run_id] = result
+        logger.exception(
+            "isaac_run.process_creation_failed run_id=%s launch_command=%s",
+            request.run_id,
+            actual_launch_command,
+        )
         return result
 
     result = {
@@ -710,6 +768,8 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
         "return_code": None,
         "launch_attempted": True,
         "process_started": True,
+        "launch_method": launch_method,
+        "actual_launch_command": actual_launch_command,
         "errors": [],
         "warnings": validation["warnings"],
         "timeout_seconds": request.timeout_seconds,
@@ -728,6 +788,13 @@ def _start_isaac_async(request: IsaacRunRequest) -> dict[str, Any]:
     with RUN_LOCK:
         RUNS[request.run_id] = result
         PROCESSES[request.run_id] = process
+    logger.info(
+        "isaac_run.process_started run_id=%s pid=%s launch_method=%s output_db_path=%s",
+        request.run_id,
+        process.pid,
+        launch_method,
+        request.output_db_path,
+    )
     threads = [
         threading.Thread(
             target=_capture_process_stream,
@@ -775,6 +842,12 @@ def _refresh_isaac_run(run_id: str) -> dict[str, Any]:
                 "return_code": process.returncode,
                 "errors": [*run.get("errors", []), f"Isaac process timed out after {timeout_seconds} seconds."],
             }
+            logger.error(
+                "isaac_run.timeout run_id=%s pid=%s timeout_seconds=%s",
+                run_id,
+                run.get("pid"),
+                timeout_seconds,
+            )
         elif process.poll() is None:
             return {
                 **run,
@@ -811,6 +884,14 @@ def _refresh_isaac_run(run_id: str) -> dict[str, Any]:
                 "errors": errors,
                 "result_db_diagnostics": result_db_diagnostics,
             }
+            logger.info(
+                "isaac_run.finished run_id=%s pid=%s status=%s return_code=%s output_db_exists=%s",
+                run_id,
+                run.get("pid"),
+                status,
+                return_code,
+                output_db_exists,
+            )
 
     if process is not None and process.poll() is not None:
         for thread in STREAM_THREADS.get(run_id, []):

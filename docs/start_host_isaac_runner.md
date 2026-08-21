@@ -132,6 +132,13 @@ diagnostic client sends an accepted `POST /isaac/run` or `POST /isaac/runs`
 request. A visible `/isaac/run` route therefore proves that the bridge is
 listening; it does not prove that an Isaac subprocess has been requested.
 
+One approved operator intent generates three candidate strategies by default:
+one deterministic operator-faithful baseline and two exploratory candidates.
+The strategy worker evaluates them strictly sequentially, so the normal host
+access log contains exactly three `POST /isaac/run` entries unless
+`candidate_count` was explicitly changed. This is one request per candidate,
+not the same candidate being retried three times.
+
 The startup output prints the configuration file, resolved Isaac paths,
 Windows health URL, and Docker target URL. Keep this PowerShell process open.
 In another PowerShell window:
@@ -164,7 +171,7 @@ Build and start `trt-api`:
 docker compose config
 docker compose build trt-api
 docker compose up -d --force-recreate trt-api
-Invoke-RestMethod http://localhost:8000/health
+Invoke-RestMethod http://127.0.0.1:8000/health
 ```
 
 Recreate rather than restart after changing `.env`; `docker compose restart`
@@ -174,7 +181,7 @@ Verify Docker can reach the Windows process:
 
 ```powershell
 .\scripts\check_isaac_host_runner_from_container.ps1
-Invoke-RestMethod http://localhost:8000/debug/isaac-host-runner-status
+Invoke-RestMethod http://127.0.0.1:8000/debug/isaac-host-runner-status
 ```
 
 Expected high-level result:
@@ -262,13 +269,15 @@ Isaac. A real run response contains:
 ```text
 process_started = true
 pid = <Windows process ID>
-launch_command = [cmd.exe, /d, /s, /c, ...python.bat...]
+launch_method = DIRECT
+actual_launch_command = [...python.bat, ...pick_up_example.py, ...]
 ```
 
-On Windows, the runner invokes `python.bat` explicitly through `COMSPEC` so the
-launch does not depend on implicit batch-file behavior in the installed Python
-version. The per-run `stdout_path` and `stderr_path` identify the logs to inspect
-if the process starts and then exits.
+The runner launches the same `python.bat` argument vector used by the known-good
+manual PowerShell command. If Windows rejects direct batch process creation, it
+retries once through `COMSPEC` and records `launch_method = COMSPEC_FALLBACK`.
+The per-run `stdout_path` and `stderr_path` identify the logs to inspect if the
+process starts and then exits.
 
 List every request retained by the current host-runner process:
 
@@ -280,6 +289,8 @@ Invoke-RestMethod http://127.0.0.1:8765/isaac/runs |
 For each run, distinguish `launch_attempted` from `process_started`. The host
 runner can return HTTP 200 with `status = FAILED` for a request rejected before
 launch, so the HTTP access log alone is not evidence that Isaac Sim started.
+Run the checker again after the candidate batch; running it only before the
+operator workflow naturally reports no recent runs.
 
 ## 7. Troubleshooting
 
@@ -305,6 +316,27 @@ launch, so the HTTP access log alone is not evidence that Isaac Sim started.
   backend debug route in that order. It reports the HTTP error body and relevant
   recovery commands instead of emitting an unexplained Python traceback.
 
+### Windows cannot reach `trt-api` on port 8000
+
+The Docker health check runs inside the container. Therefore, a container can
+be marked `healthy` even when Windows-to-container port forwarding is blocked.
+Use the numeric loopback address first to avoid `localhost` proxy or name
+resolution behavior:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/health
+curl.exe --noproxy "*" http://127.0.0.1:8000/health
+Test-NetConnection 127.0.0.1 -Port 8000
+```
+
+If the checker reports that the API is healthy inside its container but the
+Windows request times out, n8n-to-`trt-api` and `trt-api`-to-host-runner traffic
+can still operate on the Compose network. The remaining problem is limited to
+the published Windows port. Check proxy environment variables, VPN/security
+software, Windows Firewall, and Docker Desktop port forwarding. The absence of
+a Windows request in `docker compose logs trt-api` confirms that the request
+never reached Uvicorn.
+
 ### The route exists but Isaac Sim does not start
 
 1. Read `GET http://127.0.0.1:8765/health`. It must report `status = OK` and
@@ -319,6 +351,28 @@ launch, so the HTTP access log alone is not evidence that Isaac Sim started.
 5. Verify that `scenario_spec_path` exists on Windows. A stale
    `host_project_root` can make the API generate a path from the previous
    machine, in which case the runner rejects the request before launching.
+6. Read the explicit console event printed before each access-log line:
+   `isaac_run.rejected_before_launch`, `isaac_run.process_started`, or
+   `isaac_run.finished`. Three bare HTTP 200 lines are not sufficient evidence
+   of three successful launches.
+
+### Isaac reaches `app ready` but simulation does not begin
+
+This symptom is distinct from a missing path or failed process creation: Isaac
+has started, but the Python workload has not advanced past application startup.
+First copy `actual_launch_command` from `GET /isaac/runs` and confirm the same
+argument vector succeeds when entered manually.
+
+The host runner uses `launch_method = DIRECT` by default to match that manual
+execution. Older revisions forced every batch through an additional
+`cmd.exe /c` wrapper; that wrapper could change batch-process behavior on some
+Isaac installations. Update and restart the host runner before retesting. A
+`COMSPEC_FALLBACK` is now used only when direct process creation itself fails.
+
+If the updated direct launch still stalls, preserve the run's `stdout_path`,
+`stderr_path`, `actual_launch_command`, working directory, and `command_args`.
+Those fields are required to compare the service launch with the successful
+manual launch; an `app ready` screenshot alone does not identify the boundary.
 
 ### Compose warns that `HOST_PROJECT_ROOT` is not set
 
